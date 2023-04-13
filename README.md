@@ -1,4 +1,4 @@
-# An OpenGL Project Example
+# An OpenGL Cad-like toy program
 
 3rd-party libraries:
 - glfw
@@ -14,11 +14,8 @@ Cross Platform:
 - Apple
 - Windows
 
-Cross Compiler:
+Cross Compiler: C++20 required.
 - GCC
 - Clang
-- MSVC
+- MSVC (2022 recommanded)
 - Clang-cl
-
-Usage:
-- Search for all "OpenGLExample", replace to your project name.
