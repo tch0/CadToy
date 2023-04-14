@@ -8,6 +8,8 @@
 - magic_enum
 - rapidjson
 - sqlite
+- fmt
+- imgui
 
 Cross Platform:
 - UNIX-like

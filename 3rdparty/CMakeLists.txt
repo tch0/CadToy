@@ -22,3 +22,13 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include/GLFW DESTINATION incl
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/format_bridge DESTINATION include)
 # install fmt headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include/fmt DESTINATION include)
+
+# install imgui sources to imgui/
+file(GLOB imgui_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.cpp)
+file(GLOB imgui_backend_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.cpp)
+file(GLOB imgui_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.h)
+file(GLOB imgui_backend_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.h)
+install(FILES ${imgui_sources} DESTINATION ../imgui)
+install(FILES ${imgui_headers} DESTINATION ../imgui)
+install(FILES ${imgui_backend_sources} DESTINATION ../imgui/backends)
+install(FILES ${imgui_backend_headers} DESTINATION ../imgui/backends)

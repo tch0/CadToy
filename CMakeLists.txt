@@ -192,7 +192,7 @@ set (CMAKE_UNITY_BUILD_BATCH_SIZE 16)
 #            3rd party libraries
 #-------------------------------------------------------------------------------------#
 # 3rdparty libraries
-list(APPEND 3rdparty_libs glad glfw soil2)
+list(APPEND 3rdparty_libs glad glfw soil2 imgui)
 # header-only libraries: glm rapidjson magic_enum
 
 set(3rdparty_include_dir ${CMAKE_SOURCE_DIR}/3rdparty-install/include)
@@ -220,6 +220,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(3rdparty/glfw EXCLUDE_FROM_ALL)
 
 list(APPEND essential_libs ${GLFW_LIBRARIES} format_bridge)
+
+add_subdirectory(imgui)
 
 add_subdirectory(tchGeneral)    # cross-platform basis
 add_subdirectory(tchPlatform)   # multi-platform basis

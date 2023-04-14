@@ -2,3 +2,7 @@
 /build/
 /3rdparty-install/
 /3rdparty/build/
+
+# imgui files, installed from 3rdparty/imgui, do not track them!
+/imgui/**
+!/imgui/CMakeLists.txt
