@@ -158,19 +158,21 @@ target_compile_options(general_cxx_compiler_flags
 #-------------------------------------------------------------------------------------#
 #            macros that help to collect headers and sources
 #-------------------------------------------------------------------------------------#
-# collect header directories
-macro(collect_header_dirs dir_name return_list)
-    file(GLOB_RECURSE new_list 
+# collect header directories and header files
+macro(collect_header_files dir_name return_dir_list return_header_list)
+    set(header_list "")
+    file(GLOB_RECURSE header_list
         ${CMAKE_CURRENT_SOURCE_DIR}/${dir_name}/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/${dir_name}/*.hpp
     )
-    SET(dir_list "")
-    FOREACH(file_path ${new_list})
-        GET_FILENAME_COMPONENT(dir_path ${file_path} PATH)
-        SET(dir_list ${dir_list} ${dir_path})
-    ENDFOREACH()
-    LIST(REMOVE_DUPLICATES dir_list)
-    SET(${return_list} ${dir_list})
+    set(dir_list "")
+    foreach(file_path ${header_list})
+        get_filename_component(dir_path ${file_path} PATH)
+        set(dir_list ${dir_list} ${dir_path})
+    endforeach()
+    list(REMOVE_DUPLICATES dir_list)
+    set(${return_dir_list} ${dir_list})
+    set(${return_header_list} ${header_list})
 endmacro()
 
 macro(collect_sources_files dir_name return_list)

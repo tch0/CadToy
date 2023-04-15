@@ -1,17 +1,18 @@
 add_library(tchPlatform STATIC)
 
-collect_header_dirs("inc" tch_platform_header_dirs)
+collect_header_files("inc" tch_platform_header_dirs tch_platform_headers)
 collect_sources_files("src/win32" tch_platform_win32_sources)
 collect_sources_files("src/unix" tch_platform_unix_sources)
 
 if (UNIX)
-    target_sources(tchPlatform PRIVATE ${tch_platform_unix_sources})
+    set(tch_platform_sources ${tch_platform_unix_sources})
 elseif(WIN32)
-    target_sources(tchPlatform PRIVATE ${tch_platform_win32_sources})
+    set(tch_platform_sources ${tch_platform_win32_sources})
 else()
     message("## unsupported platform for tchPlatform module!")
 endif()
 
+target_sources(tchPlatform PRIVATE ${tch_platform_sources} ${tch_platform_headers})
 target_include_directories(tchPlatform
     PUBLIC
         ${tch_platform_header_dirs}
@@ -29,3 +30,5 @@ target_link_libraries(tchPlatform
         ${essential_libs}
         general_cxx_compiler_flags
 )
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_platform_sources} ${tch_platform_headers})

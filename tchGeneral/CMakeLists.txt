@@ -1,7 +1,7 @@
-collect_header_dirs("inc" tch_general_header_dirs)
+collect_header_files("inc" tch_general_header_dirs tch_general_headers)
 collect_sources_files("src" tch_general_sources)
 
-add_library(tchGeneral STATIC ${tch_general_sources})
+add_library(tchGeneral STATIC ${tch_general_sources} ${tch_general_headers})
 
 target_include_directories(tchGeneral
     PUBLIC
@@ -19,3 +19,5 @@ target_link_libraries(tchGeneral
         ${essential_libs}
         general_cxx_compiler_flags
 )
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_general_sources} ${tch_general_headers})
