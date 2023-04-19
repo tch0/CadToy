@@ -46,9 +46,12 @@ inline float g_CommandLineWindowHeight = 250;
 inline float g_StatusBarHeight = 35;
 inline float g_PropertiesSideBarWidth = 430;
 
+// properties window open or close
+inline bool g_bPropertiesSideBarOpen = true;
+
 // global window objects
 // command line window
-CommandLineWindow g_CmdWindow;
+inline CommandLineWindow g_CmdWindow;
 
 // =========================================================================================================
 // ------------------------------------- global functions

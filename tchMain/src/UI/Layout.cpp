@@ -9,8 +9,14 @@ void calculateLayout()
     int width, height;
     glfwGetWindowSize(g_pWindow, &width, &height);
 
+    float propertiesWidth = g_PropertiesSideBarWidth;
+    if (!g_bPropertiesSideBarOpen)
+    {
+        propertiesWidth = 0.0f;
+    }
+
     // command line window
-    g_CommandLineWindowSize.x = width - g_PropertiesSideBarWidth + 10.0f; // move right some pixels to avoid right side resizing
+    g_CommandLineWindowSize.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
     g_CommandLineWindowSize.y = g_CommandLineWindowHeight;
     g_CommandLineWindowPos.x = 0.0f;
     g_CommandLineWindowPos.y = height - g_StatusBarHeight - g_CommandLineWindowHeight;
@@ -22,9 +28,9 @@ void calculateLayout()
     g_StatusBarPos.y = height - g_StatusBarHeight;
 
     // properties side bar
-    g_PropertiesSideBarSize.x = g_PropertiesSideBarWidth;
+    g_PropertiesSideBarSize.x = propertiesWidth;
     g_PropertiesSideBarSize.y = height - g_StatusBarHeight;
-    g_PropertiesSideBarPos.x = width - g_PropertiesSideBarWidth + 10.0f; // move right some pixels to avoid right side resizing
+    g_PropertiesSideBarPos.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
     g_PropertiesSideBarPos.y = 0.0f;
 }
 
@@ -35,6 +41,9 @@ void setWindowLayout()
     ImGui::SetWindowPos(g_CommandLineWindowTitle, g_CommandLineWindowPos);
     ImGui::SetWindowSize(g_StatusBarTitle, g_StatusBarSize);
     ImGui::SetWindowPos(g_StatusBarTitle, g_StatusBarPos);
-    ImGui::SetWindowSize(g_PropertiesSideBarTitle, g_PropertiesSideBarSize);
-    ImGui::SetWindowPos(g_PropertiesSideBarTitle, g_PropertiesSideBarPos);
+    if (g_bPropertiesSideBarOpen)
+    {
+        ImGui::SetWindowSize(g_PropertiesSideBarTitle, g_PropertiesSideBarSize);
+        ImGui::SetWindowPos(g_PropertiesSideBarTitle, g_PropertiesSideBarPos);
+    }
 }

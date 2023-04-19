@@ -3,6 +3,7 @@
 
 #include <CommandLineWindow.h>
 #include <Logger.h>
+#include <Global.h>
 
 
 CommandLineWindow::CommandLineWindow()
@@ -11,7 +12,6 @@ CommandLineWindow::CommandLineWindow()
     , m_bScrollToBottom(false)
 {
     m_InputBuffer.resize(256);
-    addLog("hello");
 }
 
 CommandLineWindow::~CommandLineWindow()
@@ -40,12 +40,12 @@ void CommandLineWindow::draw(const char* title, bool* pOpen, ImGuiWindowFlags fl
     }
     // for layout calculating
     windowHeight = ImGui::GetWindowSize().y;
-
-    // text
-    ImGui::Text("Command line window test");
     
     // draw filter
-    m_Filter.Draw("Filter", 200);
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Filter: ");
+    ImGui::SameLine();
+    m_Filter.Draw("##Filter", -1.0f); // align 1 pixel to the right of the window
     ImGui::Separator();
 
     // reserve enough left-over for 1 separator + 1 input text
@@ -120,6 +120,11 @@ void CommandLineWindow::draw(const char* title, bool* pOpen, ImGuiWindowFlags fl
     ImGui::EndChild();
     ImGui::Separator();
 
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Command: ");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-1.0f); // align 1 pixel to the right of the window
+
     // command line input
     bool bReclaimFocus = false;
     ImGuiInputTextFlags inputTextFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackEdit;
@@ -127,9 +132,9 @@ void CommandLineWindow::draw(const char* title, bool* pOpen, ImGuiWindowFlags fl
         CommandLineWindow* pWindow = (CommandLineWindow*)data->UserData;
         return pWindow->textEditCallback(data);
     };
-    if (ImGui::InputText("Input", m_InputBuffer.data(), m_InputBuffer.size(), inputTextFlags, callback, (void*)this))
+    if (ImGui::InputTextWithHint("##Command Input", "Input command here", m_InputBuffer.data(), m_InputBuffer.size(), inputTextFlags, callback, (void*)this))
     {
-        executeCommand(m_InputBuffer);
+        executeCommand(m_InputBuffer.c_str());
         std::fill(m_InputBuffer.begin(), m_InputBuffer.end(), 0); // clear input buffer
         bReclaimFocus = true;
     }
@@ -160,7 +165,21 @@ void CommandLineWindow::executeCommand(const std::string& command)
     }
     m_History.push_back(command);
     addLog(std::format("Command: {}", command));
-    addLog("No command supported now! To be implemented!");
+
+    // todo: trim command, ignore case
+    if (command == "properties")
+    {
+        g_bPropertiesSideBarOpen = true;
+    }
+    else if (command == "propertiesclose")
+    {
+        g_bPropertiesSideBarOpen = false;
+    }
+    else
+    {
+        addLog("To be implemented!");
+    }
+    
     m_bScrollToBottom = true;
 }
 

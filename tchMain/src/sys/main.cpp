@@ -92,19 +92,22 @@ int main(int argc, char const *argv[])
             glm::vec3 currentP = currentHoverPoint();
             ImGui::Begin(g_StatusBarTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Text("%.4f, %.4f, %.4f", currentP.x, currentP.y, currentP.z);
-            // other icons
+            // todo: other icons
             ImGui::End();
+        }
+        // properties side bar
+        {
+            if (g_bPropertiesSideBarOpen)
+            {
+                ImGui::Begin(g_PropertiesSideBarTitle, &g_bPropertiesSideBarOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+                ImGui::Text("properties test");
+                g_PropertiesSideBarWidth = ImGui::GetWindowSize().x;
+                ImGui::End();
+            }
         }
         // command line
         {
             g_CmdWindow.draw(g_CommandLineWindowTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove, g_CommandLineWindowHeight);
-        }
-        // properties side bar
-        {
-            ImGui::Begin(g_PropertiesSideBarTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
-            ImGui::Text("properties test");
-            g_PropertiesSideBarWidth = ImGui::GetWindowSize().x;
-            ImGui::End();
         }
 
         // calculate layout and set to windows for Command line window/status bar/properties side bar
