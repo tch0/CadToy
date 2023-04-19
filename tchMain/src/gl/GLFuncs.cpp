@@ -24,8 +24,8 @@ void openglInit()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // prevent resizing window
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    g_pWindow = glfwCreateWindow(g_WindowSz.x, g_WindowSz.y, "tchMain", nullptr, nullptr);
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    g_pWindow = glfwCreateWindow(g_WindowSize.x, g_WindowSize.y, "tchMain", nullptr, nullptr);
     if (!g_pWindow)
     {
         globalLogger().fatal("GLFW create window failed!");

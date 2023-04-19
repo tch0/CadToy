@@ -48,6 +48,8 @@ project(CadToy
 # some directories of project
 message("## proejct: ${PROJECT_NAME} ${PROJECT_VERSION}")
 message("## CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
+message("## CMAKE_ARCHIVE_OUTPUT_DIRECTORY: ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
+message("## CMAKE_LIBRARY_OUTPUT_DIRECTORY: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 message("## CMAKE_RUNTIME_OUTPUT_DIRECTORY: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 #-------------------------------------------------------------------------------------#

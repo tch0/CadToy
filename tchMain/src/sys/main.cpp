@@ -1,5 +1,7 @@
 #include <iostream>
 #include <format>
+#include <filesystem>
+#include <string>
 
 #include <glm/glm.hpp>
 #include <imgui.h>
@@ -10,6 +12,14 @@
 #include <Global.h>
 #include <GLFuncs.h>
 #include <Logger.h>
+#include <Layout.h>
+#include <CommandLineWindow.h>
+
+// for test temporarily
+glm::vec3 currentHoverPoint()
+{
+    return glm::vec3(0.0f, 0.0f, 0.0f);
+}
 
 int main(int argc, char const *argv[])
 {
@@ -38,6 +48,18 @@ int main(int argc, char const *argv[])
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    
+    // ini file
+    g_WindowConfigFile = g_PathCwd / "imgui.ini";
+    g_WindowConfigFileStr = g_WindowConfigFile.string();
+    io.IniFilename = g_WindowConfigFileStr.c_str();
+    globalLogger().info(std::format("Window config file: {}", g_WindowConfigFileStr));
+
+    // default log file
+    g_ImguiLogFile = g_PathCwd / "imgui_log.txt";
+    g_ImguiLogFileStr = g_ImguiLogFile.string();
+    io.LogFilename = g_ImguiLogFileStr.c_str();
+    globalLogger().info(std::format("Imgui log file: {}", g_ImguiLogFileStr));
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -48,8 +70,6 @@ int main(int argc, char const *argv[])
     ImGui_ImplOpenGL3_Init("#version 130");
 
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     //==========================================//
@@ -67,42 +87,34 @@ int main(int argc, char const *argv[])
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        // status bar
         {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            glm::vec3 currentP = currentHoverPoint();
+            ImGui::Begin(g_StatusBarTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Text("%.4f, %.4f, %.4f", currentP.x, currentP.y, currentP.z);
+            // other icons
+            ImGui::End();
+        }
+        // command line
+        {
+            g_CmdWindow.draw(g_CommandLineWindowTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove, g_CommandLineWindowHeight);
+        }
+        // properties side bar
+        {
+            ImGui::Begin(g_PropertiesSideBarTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+            ImGui::Text("properties test");
+            g_PropertiesSideBarWidth = ImGui::GetWindowSize().x;
             ImGui::End();
         }
 
-        // 3. Show another simple window.
-        if (show_another_window)
+        // calculate layout and set to windows for Command line window/status bar/properties side bar
         {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
+            calculateLayout();
+            setWindowLayout();
         }
+
+        // show demo window as an example
+        ImGui::ShowDemoWindow();
 
         // Rendering
         ImGui::Render();

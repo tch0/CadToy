@@ -13,9 +13,9 @@ void checkOS()
 // build current working directory from exe path
 void buildCwd(const char* exePath)
 {
-    g_pathCwd = fs::absolute(fs::path(exePath));
-    g_pathCwd.remove_filename();
-    globalLogger().info(std::format("cwd: {}", g_pathCwd.string()));
+    g_PathCwd = fs::absolute(fs::path(exePath));
+    g_PathCwd.remove_filename();
+    globalLogger().info(std::format("cwd: {}", g_PathCwd.string()));
 }
 
 // create a directory p if it does not exist
