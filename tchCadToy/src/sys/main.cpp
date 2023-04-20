@@ -23,26 +23,26 @@ glm::vec3 currentHoverPoint()
 
 int main(int argc, char const *argv[])
 {
-    //==========================================//
+    //====================================================================================//
     //                 logger
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     globalLogger().setLowestOutputLevel(Logger::Trace); // the most detailed informations
 
-    //==========================================//
+    //====================================================================================//
     //                 prepare
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     checkOS();
     buildCwd(argv[0]);
     checkAndCreateImportantDirs();
 
-    //==========================================//
+    //====================================================================================//
     //         OpenGL init: glfw/glad
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     openglInit();
 
-    //==========================================//
+    //====================================================================================//
     //         imgui context setup
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -61,6 +61,22 @@ int main(int argc, char const *argv[])
     io.LogFilename = g_ImguiLogFileStr.c_str();
     globalLogger().info(std::format("Imgui log file: {}", g_ImguiLogFileStr));
 
+    // load font
+    g_ConsolasFontPath = g_PathCwd / "fonts/consolas.ttf";
+    g_ConsolasFontPathStr = g_ConsolasFontPath.string();
+    if (std::filesystem::exists(g_ConsolasFontPath))
+    {
+        // load consolas and set to default
+        g_ConsolasFontSize = 16.0f;
+        ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(g_ConsolasFontPathStr.c_str(), g_ConsolasFontSize);
+        io.FontDefault = consolasFont;
+        consolasFont->Scale = 1.0;
+    }
+    else
+    {
+        globalLogger().warning(std::format("Font file {} load failed, use default font!", g_ConsolasFontPathStr));
+    }
+
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
@@ -72,9 +88,9 @@ int main(int argc, char const *argv[])
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    //==========================================//
+    //====================================================================================//
     //         main render loop
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     while (!glfwWindowShouldClose(g_pWindow))
     {
         // main logic here
@@ -131,14 +147,14 @@ int main(int argc, char const *argv[])
         glfwSwapBuffers(g_pWindow);
     }
 
-    // Cleanup
+    // Imgui cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    //==========================================//
+    //====================================================================================//
     //         glfw terminate
-    //------------------------------------------//
+    //------------------------------------------------------------------------------------//
     glfwTerminate();
     globalLogger().info("Program terminated properly!");
     return 0;

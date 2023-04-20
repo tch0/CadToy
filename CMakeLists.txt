@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------------#
 #                    CMake version
 #-------------------------------------------------------------------------------------#
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 message("## cmake: ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
 
@@ -216,6 +216,24 @@ endif()
 
 
 #-------------------------------------------------------------------------------------#
+#            copy necessary files after every build (only when different)
+#-------------------------------------------------------------------------------------#
+function(copy_dir_to_target_file_dir target dirname source)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${source} $<TARGET_FILE_DIR:${target}>/${dirname} # copy_directory_if_different need cmake 3.26
+            COMMAND_EXPAND_LISTS
+        )
+    elseif()
+            add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${source} $<TARGET_FILE_DIR:${target}>/${dirname}
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+endfunction()
+
+
+#-------------------------------------------------------------------------------------#
 #            targets
 #-------------------------------------------------------------------------------------#
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -229,17 +247,6 @@ add_subdirectory(imgui)
 
 add_subdirectory(tchGeneral)    # cross-platform basis
 add_subdirectory(tchPlatform)   # multi-platform basis
-add_subdirectory(tchCadToy)       # cross-platform execuatable
+add_subdirectory(tchCadToy)     # cross-platform execuatable
 
 set_target_properties(tchCadToy PROPERTIES UNITY_BUILD ON) # UNITY building
-
-
-#-------------------------------------------------------------------------------------#
-#            copy necessary files after every build (only when different)
-#-------------------------------------------------------------------------------------#
-function(copy_dir_to_target_file_dir target dirname source)
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${source} $<TARGET_FILE_DIR:${target}>/${dirname} # copy_directory_if_different need cmake 3.26
-        COMMAND_EXPAND_LISTS
-    )
-endfunction()

@@ -26,6 +26,11 @@ inline std::string g_WindowConfigFileStr;
 inline std::filesystem::path g_ImguiLogFile;
 inline std::string g_ImguiLogFileStr;
 
+// consolas font path, use consolas for now
+inline std::filesystem::path g_ConsolasFontPath;
+inline std::string g_ConsolasFontPathStr;
+inline float g_ConsolasFontSize;
+
 // window size
 inline glm::ivec2 g_WindowSize {1920, 1080};
 inline bool g_bFullScreen = false;
