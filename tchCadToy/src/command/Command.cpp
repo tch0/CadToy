@@ -10,7 +10,7 @@ void registerCommand(const std::string& commandName, Command* pCommand, int cate
 {
     // case unsensitive, so save lower case command only.
     std::string command = commandName;
-    std::for_each(command.begin(), command.end(), [](char c)->char { return std::tolower(c); });
+    std::for_each(command.begin(), command.end(), [](char& c)->void { c = std::tolower(c); });
 
     if (getCommandsMap().find(command) != getCommandsMap().end())
     {

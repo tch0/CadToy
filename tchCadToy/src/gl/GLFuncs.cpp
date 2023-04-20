@@ -25,7 +25,7 @@ void openglInit()
 
     // prevent resizing window
     //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    g_pWindow = glfwCreateWindow(g_WindowSize.x, g_WindowSize.y, "tchMain", nullptr, nullptr);
+    g_pWindow = glfwCreateWindow(g_WindowSize.x, g_WindowSize.y, "tchCadToy", nullptr, nullptr);
     if (!g_pWindow)
     {
         globalLogger().fatal("GLFW create window failed!");
