@@ -2,15 +2,18 @@
 #include <string>
 #include <filesystem>
 #include <string>
+#include <map>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <imgui.h>
+
 #include <CommandLineWindow.h>
+#include <Command.h>
 
 // =========================================================================================================
-// ------------------------------------- global variables
+// ----------------------------------- global variables: windows/path
 // =========================================================================================================
 
 // cwd: current working directory
@@ -52,6 +55,25 @@ inline bool g_bPropertiesSideBarOpen = true;
 // global window objects
 // command line window
 inline CommandLineWindow g_CmdWindow;
+
+// =========================================================================================================
+// ------------------------------------- global variables: commands
+// =========================================================================================================
+
+// the global map that saves all commands
+std::map<std::string, std::pair<Command*, int>>& getCommandsMap();
+
+// the unprocessed input string that will be either pass to command (if the command is executing now) as inputs 
+//      or be parsed as next command (if pervious command do not need inputs, when pervious command finish).
+inline std::string g_UnprocessedInput;
+
+// if we are current in the execution of a command
+// specifically:
+//  - a command is excuting and waiting for text/point/... input.
+//  - the command pops up a modal dialog, and is waiting to process/close.
+//  - ... (other kind, to be added here)
+// How to maintain this value?
+inline bool g_bInCommandExecution {false};
 
 // =========================================================================================================
 // ------------------------------------- global functions
