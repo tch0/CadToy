@@ -6,6 +6,7 @@
 // call at the first frame and everying time after resizing
 void calculateLayout()
 {
+    // UIs are in imgui screen coordinate (left-top as origin, float type)
     int width, height;
     glfwGetWindowSize(g_pWindow, &width, &height);
 
@@ -32,6 +33,12 @@ void calculateLayout()
     g_PropertiesSideBarSize.y = height - g_StatusBarHeight;
     g_PropertiesSideBarPos.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
     g_PropertiesSideBarPos.y = 0.0f;
+
+    // canvas is in OpenGL screen coordinate (left bottom as origin, int type)
+    g_CanvasLeftBottomX = 0;
+    g_CanvasLeftBottomY = int(g_StatusBarHeight + g_CommandLineWindowHeight);
+    g_CanvasWidth = int(g_CommandLineWindowSize.x);
+    g_CanvasHeight = height - g_CanvasLeftBottomY;
 }
 
 // set window layout

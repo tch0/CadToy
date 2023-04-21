@@ -85,16 +85,11 @@ int main(int argc, char const *argv[])
     ImGui_ImplGlfw_InitForOpenGL(g_pWindow, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    // Our state
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
     //====================================================================================//
     //         main render loop
     //------------------------------------------------------------------------------------//
     while (!glfwWindowShouldClose(g_pWindow))
     {
-        // main logic here
-        
         // check events, swap buffers
         glfwPollEvents();
 
@@ -126,7 +121,7 @@ int main(int argc, char const *argv[])
             g_CmdWindow.draw(g_CommandLineWindowTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove, g_CommandLineWindowHeight);
         }
 
-        // calculate layout and set to windows for Command line window/status bar/properties side bar
+        // calculate layout and set to windows, for Command line window/status bar/properties side bar
         {
             calculateLayout();
             setWindowLayout();
@@ -135,14 +130,21 @@ int main(int argc, char const *argv[])
         // show demo window as an example
         ImGui::ShowDemoWindow();
 
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(g_pWindow, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // first draw canvas
+        {
+            glViewport(g_CanvasLeftBottomX, g_CanvasLeftBottomY, g_CanvasWidth, g_CanvasHeight);
+            glClearColor(g_CanvasBackgroundColor.x, g_CanvasBackgroundColor.y, g_CanvasBackgroundColor.z, g_CanvasBackgroundColor.w);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+
+        // then draw UI
+        {
+            ImGui::Render();
+            int displayWidth, displayHeight;
+            glfwGetFramebufferSize(g_pWindow, &displayWidth, &displayHeight);
+            glViewport(0, 0, displayWidth, displayHeight);
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        }
 
         glfwSwapBuffers(g_pWindow);
     }

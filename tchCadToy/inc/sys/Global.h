@@ -80,6 +80,21 @@ inline std::string g_UnprocessedInput;
 // How to maintain this value?
 inline bool g_bInCommandExecution {false};
 
+
+// =========================================================================================================
+// ------------------------------------- global variables: canvas related
+// =========================================================================================================
+
+// canvas background color, same for all UI styles
+inline glm::vec4 g_CanvasBackgroundColor {0.129f, 0.156f, 0.188f, 1.0f}; // RGB: 33,40,48
+
+// OpenGL screen coordinate of canvas (left bottom as origin), changes as the UI (command line window/properties window)
+inline int g_CanvasLeftBottomX;
+inline int g_CanvasLeftBottomY;
+inline int g_CanvasWidth;
+inline int g_CanvasHeight;
+
+
 // =========================================================================================================
 // ------------------------------------- global functions
 // =========================================================================================================
