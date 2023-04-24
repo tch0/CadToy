@@ -143,8 +143,8 @@ void Canvas::update()
     g_LastCursorPosX = g_CursorPosX;
     g_LastCursorPosY = g_CursorPosY;
 
-    // update canvas OpenGL 3D coordinates by update scale factor (chagned through mouse wheel)
-    // and yoffset is treated just like xoffset(when scrool the mouse wheel and press Shift at the same time)
+    // update canvas OpenGL 3D coordinates by update scale factor (changed through mouse wheel), and update center point at the same time.
+    // yoffset is treated just like xoffset (when scrool the mouse wheel and press Shift at the same time)
     if (g_ScrollXOffset == 0)
     {
         g_ScrollXOffset = g_ScrollYOffset;
@@ -152,16 +152,27 @@ void Canvas::update()
     g_ScrollYOffset = 0;
     if (g_ScrollXOffset != 0)
     {
+        glm::vec3 leftBottomToHoverVec = glm::vec3(g_CanvasLeft, g_CanvasBottom, 0.0f) - g_CurrentHoverPoint;
+        glm::vec3 rightTopToHoverVec = glm::vec3(g_CanvasRight, g_CanvasTop, 0.0f) - g_CurrentHoverPoint;
+
         while (g_ScrollXOffset >= 1)
         {
             g_CanvasScaleFactor *= 0.8f;
             g_ScrollXOffset -= 1;
+            leftBottomToHoverVec *= 0.8f;
+            rightTopToHoverVec *= 0.8f;
         }
         while (g_ScrollXOffset <= -1)
         {
             g_CanvasScaleFactor *= 1.25f;
             g_ScrollXOffset += 1;
+            leftBottomToHoverVec *= 1.25f;
+            rightTopToHoverVec *= 1.25f;
         }
+        // calculate new center point
+        g_CanvasCenterX = (rightTopToHoverVec.x + g_CurrentHoverPoint.x + leftBottomToHoverVec.x + g_CurrentHoverPoint.x) / 2.0f;
+        g_CanvasCenterY = (rightTopToHoverVec.y + g_CurrentHoverPoint.y + leftBottomToHoverVec.y + g_CurrentHoverPoint.y) / 2.0f;
+
         g_ScrollXOffset = 0;
     }
 
