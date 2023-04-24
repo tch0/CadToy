@@ -131,9 +131,6 @@ int main(int argc, char const *argv[])
 
         // first draw canvas
         {
-            glViewport(g_CanvasLeftBottomX, g_CanvasLeftBottomY, g_CanvasWidth, g_CanvasHeight);
-            glClearColor(g_CanvasBackgroundColor.x, g_CanvasBackgroundColor.y, g_CanvasBackgroundColor.z, g_CanvasBackgroundColor.w);
-            glClear(GL_COLOR_BUFFER_BIT);
             g_Canvas.update();
             g_Canvas.draw();
         }
