@@ -31,6 +31,17 @@ private:
         // update cursor datas
         void updateVertices();
     };
+    class Grid
+    {
+    private:
+        std::vector<glm::vec3> m_MainGridVertices;
+        std::vector<glm::vec3> m_SubGridVertices;
+    public:
+        Grid();
+        void updateVertices();
+        const std::vector<glm::vec3>& mainGridVertices();
+        const std::vector<glm::vec3>& subGridVertices();
+    };
 private:
     Shader m_BasicPureColorShader;
     glm::mat4 m_ModelMatrix {0.0f};
@@ -40,6 +51,13 @@ private:
     CustomCursor m_Cursor;
     GLuint m_CursorVao {0};
     GLuint m_CursorVbo {0};
+    // grid
+    Grid m_Grid;
+    GLuint m_MainGridVao {0};
+    GLuint m_MainGridVbo {0};
+    GLuint m_SubGridVao{ 0 };
+    GLuint m_SubGridVbo{ 0 };
+    bool m_bGridUpdatedFirstTime {false};
 public:
     Canvas();
     // compile opengl shader, register callbacks

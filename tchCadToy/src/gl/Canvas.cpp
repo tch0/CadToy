@@ -1,4 +1,5 @@
 #include <vector>
+#include <cmath>
 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
@@ -34,6 +35,9 @@ void main(void)
 }
 )glsl";
 
+// =========================================================================================================
+// ------------------------------------- CustomCursor
+// =========================================================================================================
 Canvas::CustomCursor::CustomCursor()
 {
     m_Vertices.reserve(16);
@@ -96,14 +100,17 @@ void Canvas::CustomCursor::updateVertices()
         glm::vec3 rightMiddle = g_CurrentHoverPoint + glm::vec3(pickBoxHalfWidth, 0.0f, 0.0f);
         glm::vec3 topMiddle = g_CurrentHoverPoint + glm::vec3(0.0f, pickBoxHalfWidth, 0.0f);
         glm::vec3 bottomMiddle = g_CurrentHoverPoint + glm::vec3(0.0f, -pickBoxHalfWidth, 0.0f);
-        m_Vertices.push_back(left);
-        m_Vertices.push_back(leftMiddle);
-        m_Vertices.push_back(right);
-        m_Vertices.push_back(rightMiddle);
-        m_Vertices.push_back(top);
-        m_Vertices.push_back(topMiddle);
-        m_Vertices.push_back(bottom);
-        m_Vertices.push_back(bottomMiddle);
+        if (m_PickBoxSize < m_CursorSize)
+        {
+            m_Vertices.push_back(left);
+            m_Vertices.push_back(leftMiddle);
+            m_Vertices.push_back(right);
+            m_Vertices.push_back(rightMiddle);
+            m_Vertices.push_back(top);
+            m_Vertices.push_back(topMiddle);
+            m_Vertices.push_back(bottom);
+            m_Vertices.push_back(bottomMiddle);
+        }
         m_Vertices.push_back(pickBoxLeftTop);
         m_Vertices.push_back(pickBoxRightTop);
         m_Vertices.push_back(pickBoxRightTop);
@@ -121,6 +128,59 @@ const std::vector<glm::vec3>& Canvas::CustomCursor::vertices()
 }
 
 
+// =========================================================================================================
+// ------------------------------------- Grid
+// =========================================================================================================
+Canvas::Grid::Grid()
+{
+    m_MainGridVertices.reserve(100);
+    m_SubGridVertices.reserve(400);
+}
+
+void Canvas::Grid::updateVertices()
+{
+    m_MainGridVertices.resize(0);
+    m_SubGridVertices.resize(0);
+    float gridLeft = std::floor(g_CanvasLeft / g_GridScaleFactor) * g_GridScaleFactor;
+    float gridRight = std::ceil(g_CanvasRight / g_GridScaleFactor) * g_GridScaleFactor;
+    float gridBottom = std::floor(g_CanvasBottom / g_GridScaleFactor) * g_GridScaleFactor;
+    float gridTop = std::ceil(g_CanvasTop / g_GridScaleFactor) * g_GridScaleFactor;
+    for (float x = gridLeft; x <= gridRight; x += g_GridScaleFactor)
+    {
+        m_MainGridVertices.emplace_back(x, gridBottom, 0.0f);
+        m_MainGridVertices.emplace_back(x, gridTop, 0.0f);
+        for (int i = 1; i <= 4; i++)
+        {
+            m_SubGridVertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridBottom, 0.0f);
+            m_SubGridVertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridTop, 0.0f);
+        }
+    }
+    for (float y = gridBottom; y <= gridTop; y += g_GridScaleFactor)
+    {
+        m_MainGridVertices.emplace_back(gridLeft, y, 0.0f);
+        m_MainGridVertices.emplace_back(gridRight, y, 0.0f);
+        for (int i = 1; i <= 4; i++)
+        {
+            m_SubGridVertices.emplace_back(gridLeft, y + i / 5.0f * g_GridScaleFactor, 0.0f);
+            m_SubGridVertices.emplace_back(gridRight, y + i / 5.0f * g_GridScaleFactor, 0.0f);
+        }
+    }
+}
+
+const std::vector<glm::vec3>& Canvas::Grid::mainGridVertices()
+{
+    return m_MainGridVertices;
+}
+
+const std::vector<glm::vec3>& Canvas::Grid::subGridVertices()
+{
+    return m_SubGridVertices;
+}
+
+
+// =========================================================================================================
+// ------------------------------------- Canvas
+// =========================================================================================================
 Canvas::Canvas()
 {
 }
@@ -154,6 +214,11 @@ void Canvas::init()
     // init cursor vao, vbo
     //m_Cursor.setPickBoxSize(0);
     generateVaoVbo(m_CursorVao, m_CursorVbo, m_Cursor.vertices());
+
+    // grid vao, vbo
+    m_Grid.updateVertices();
+    generateVaoVbo(m_MainGridVao, m_MainGridVbo, m_Grid.mainGridVertices());
+    generateVaoVbo(m_SubGridVao, m_SubGridVbo, m_Grid.subGridVertices());
 
     // set callbacks
     auto cursorPosCallback = [](GLFWwindow* pWindow, double xpos, double ypos) -> void {
@@ -229,7 +294,7 @@ void Canvas::update()
         updateVertexArrayBufferData(m_CursorVao, m_CursorVbo, m_Cursor.vertices());
     }
 
-    // hide cursor and draw custom cursor if cursor is inside the canvas (and it's not captures by any floating windows).
+    // hide cursor and draw custom cursor if cursor is inside the canvas (and it's not captured by any floating window).
     if (g_bHideCursor)
     {
         glfwSetInputMode(g_pWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -240,6 +305,7 @@ void Canvas::update()
     g_LastCursorPosX = g_CursorPosX;
     g_LastCursorPosY = g_CursorPosY;
 
+    bool bShouldUpdateGrid = false;
     // update canvas OpenGL 3D coordinates by update scale factor (changed through mouse wheel), and update center point at the same time.
     // yoffset is treated just like xoffset (when scrool the mouse wheel and press Shift at the same time)
     if (g_ScrollXOffset == 0)
@@ -258,6 +324,7 @@ void Canvas::update()
             g_ScrollXOffset -= 1;
             leftBottomToHoverVec *= 0.8f;
             rightTopToHoverVec *= 0.8f;
+            g_GridAutoAjustFactor *= 0.8f;
         }
         while (g_ScrollXOffset <= -1)
         {
@@ -265,6 +332,18 @@ void Canvas::update()
             g_ScrollXOffset += 1;
             leftBottomToHoverVec *= 1.25f;
             rightTopToHoverVec *= 1.25f;
+            g_GridAutoAjustFactor *= 1.25f;
+        }
+        // adjust grid scale factor
+        if (g_GridAutoAjustFactor >= 5.0f)
+        {
+            g_GridAutoAjustFactor /= 5.0f;
+            g_GridScaleFactor *= 5.0f;
+        }
+        else if (g_GridAutoAjustFactor <= 1.0f)
+        {
+            g_GridAutoAjustFactor *= 5.0f;
+            g_GridScaleFactor /= 5.0f;
         }
         // calculate new center point
         g_CanvasCenterX = (rightTopToHoverVec.x + g_CurrentHoverPoint.x + leftBottomToHoverVec.x + g_CurrentHoverPoint.x) / 2.0f;
@@ -272,6 +351,9 @@ void Canvas::update()
         // update cursor data
         m_Cursor.updateVertices();
         updateVertexArrayBufferData(m_CursorVao, m_CursorVbo, m_Cursor.vertices());
+        // grid will be updated after canvas coorindates are updated
+        bShouldUpdateGrid = true;
+
         // set scroll offset to 0
         g_ScrollXOffset = 0;
     }
@@ -281,6 +363,15 @@ void Canvas::update()
     g_CanvasBottom = g_CanvasCenterY - g_CanvasScaleFactor * 0.5f * g_CanvasHeight;
     g_CanvasLeft = g_CanvasCenterX - g_CanvasScaleFactor * 0.5f * g_CanvasWidth;
     g_CanvasRight = g_CanvasCenterX + g_CanvasScaleFactor * 0.5f * g_CanvasWidth;
+
+    // update grid
+    if (bShouldUpdateGrid || !m_bGridUpdatedFirstTime)
+    {
+        m_bGridUpdatedFirstTime = true;
+        m_Grid.updateVertices();
+        updateVertexArrayBufferData(m_MainGridVao, m_MainGridVbo, m_Grid.mainGridVertices());
+        updateVertexArrayBufferData(m_SubGridVao, m_SubGridVbo, m_Grid.subGridVertices());
+    }
 
     // calculate hover point OpenGL 3D coordinates, update it only when it's inside canvas.
     if (g_CursorPosX > 0 && g_CursorPosX < g_CanvasLeftBottomX + g_CanvasWidth &&
@@ -310,10 +401,22 @@ void Canvas::draw()
     m_BasicPureColorShader.setMat4("projMatrix", m_ProjMatrix);
     m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
     
+    // draw grid
+    m_BasicPureColorShader.setVec4("inputColor", g_MainGridColor);
+    glBindVertexArray(m_MainGridVao);
+    glDrawArrays(GL_LINES, 0, m_Grid.mainGridVertices().size() * 3);
+    m_BasicPureColorShader.setVec4("inputColor", g_SubGridColor);
+    glBindVertexArray(m_SubGridVao);
+    glDrawArrays(GL_LINES, 0, m_Grid.subGridVertices().size() * 3);
+    // draw a test object
     glBindVertexArray(g_vao);
+    m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
     glDrawArrays(GL_LINES, 0, g_gridVertices.size() * 3);
+    // draw custom cursor
     glBindVertexArray(m_CursorVao);
+    m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
     glDrawArrays(GL_LINES, 0, m_Cursor.vertices().size() * 3);
+
     glBindVertexArray(0);
 }
 
