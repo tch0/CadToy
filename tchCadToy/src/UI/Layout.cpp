@@ -9,6 +9,8 @@ void calculateLayout()
     // UIs are in imgui screen coordinate (left-top as origin, float type)
     int width, height;
     glfwGetWindowSize(g_pWindow, &width, &height);
+    g_WindowWidth = width;
+    g_WindowHeight = height;
 
     float propertiesWidth = g_PropertiesSideBarWidth;
     if (!g_bPropertiesSideBarOpen)

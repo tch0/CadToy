@@ -243,6 +243,11 @@ add_subdirectory(3rdparty/glfw EXCLUDE_FROM_ALL)
 
 list(APPEND essential_libs ${GLFW_LIBRARIES} format_bridge)
 
+if (WIN32)
+    list(APPEND essential_libs opengl32)
+elseif(UNIX)
+endif()
+
 add_subdirectory(imgui)
 
 add_subdirectory(tchGeneral)    # cross-platform basis
