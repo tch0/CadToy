@@ -133,6 +133,10 @@ inline float g_GridScaleFactor {5.0f};
 // A fixed parameter for grid auto-ajusting, change along with g_CanvasScaleFactor and g_GridScaleFactor.
 inline float g_GridAutoAjustFactor {4.98f};
 
+// axises color
+inline glm::vec4 g_XAxisColor { 97.0f / 256.0f, 37.0f / 256.0f, 39.0f / 256.0f, 1.0f}; // RGB: 97,37,39
+inline glm::vec4 g_YAxisColor { 34.0f / 256.0f, 89.0f / 256.0f, 41.0f / 256.0f, 1.0f}; // RGB: 34,89,41
+
 // =========================================================================================================
 // ------------------------------------- global variables: inputs related
 // =========================================================================================================

@@ -42,6 +42,19 @@ private:
         const std::vector<glm::vec3>& mainGridVertices();
         const std::vector<glm::vec3>& subGridVertices();
     };
+    class Axises
+    {
+    private:
+        std::vector<glm::vec3> m_XAxisVertices;
+        std::vector<glm::vec3> m_YAxisVertices;
+        float m_Width {0.0f};
+        float m_Height {0.0f};
+    public:
+        Axises();
+        void updateVertices();
+        const std::vector<glm::vec3>& xVertices();
+        const std::vector<glm::vec3>& yVertices();
+    };
 private:
     Shader m_BasicPureColorShader;
     glm::mat4 m_ModelMatrix {0.0f};
@@ -58,6 +71,12 @@ private:
     GLuint m_SubGridVao{ 0 };
     GLuint m_SubGridVbo{ 0 };
     bool m_bGridUpdatedFirstTime {false};
+    // axises
+    Axises m_Axises;
+    GLuint m_XAxisVao {0};
+    GLuint m_XAxisVbo {0};
+    GLuint m_YAxisVao {0};
+    GLuint m_YAxisVbo {0};
 public:
     Canvas();
     // compile opengl shader, register callbacks

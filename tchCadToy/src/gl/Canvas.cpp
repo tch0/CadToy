@@ -179,37 +179,55 @@ const std::vector<glm::vec3>& Canvas::Grid::subGridVertices()
 
 
 // =========================================================================================================
+// ------------------------------------- Axises
+// =========================================================================================================
+Canvas::Axises::Axises()
+{
+    m_XAxisVertices.reserve(2);
+    m_YAxisVertices.reserve(2);
+}
+
+void Canvas::Axises::updateVertices()
+{
+    float width = g_CanvasRight - g_CanvasLeft;
+    float height = g_CanvasTop - g_CanvasBottom;
+    // update only when necessary
+    if (width > m_Width || height > m_Height)
+    {
+        m_Width = width;
+        m_Height = height;
+        m_XAxisVertices.resize(0);
+        m_YAxisVertices.resize(0);
+        m_XAxisVertices.emplace_back(0.0f, 0.0f, 0.0f);
+        m_XAxisVertices.emplace_back(m_Width, 0.0f, 0.0f);
+        m_YAxisVertices.emplace_back(0.0f, 0.0f, 0.0f);
+        m_YAxisVertices.emplace_back(0.0f, m_Height, 0.0f);
+    }
+}
+
+const std::vector<glm::vec3>& Canvas::Axises::xVertices()
+{
+    return m_XAxisVertices;
+}
+
+const std::vector<glm::vec3>& Canvas::Axises::yVertices()
+{
+    return m_YAxisVertices;
+}
+
+
+// =========================================================================================================
 // ------------------------------------- Canvas
 // =========================================================================================================
 Canvas::Canvas()
 {
 }
 
-static GLuint g_vao = 0;
-static GLuint g_vbo = 0;
-static std::vector<glm::vec3> g_gridVertices;
-
 // compile opengl shader, register callbacks
 void Canvas::init()
 {
     // compile shader
     m_BasicPureColorShader.setShaderSource(basicPureColorVertexShader, basicPureColorFragmentShader);
-
-    // initialize the grid
-    static bool bInitialized = false;
-    if (!bInitialized)
-    {
-        bInitialized = true;
-        // grid: from (0, 0) to (10, 10)
-        for (int i = -10; i <= 10; i++)
-        {
-            g_gridVertices.emplace_back(-10.0f, i * 1.0f, 0.0f);
-            g_gridVertices.emplace_back( 10.0f, i * 1.0f, 0.0f);
-            g_gridVertices.emplace_back(i * 1.0f, -10.0f, 0.0f);
-            g_gridVertices.emplace_back(i * 1.0f,  10.0f, 0.0f);
-        }
-        generateVaoVbo(g_vao, g_vbo, g_gridVertices);
-    }
 
     // init cursor vao, vbo
     //m_Cursor.setPickBoxSize(0);
@@ -219,6 +237,11 @@ void Canvas::init()
     m_Grid.updateVertices();
     generateVaoVbo(m_MainGridVao, m_MainGridVbo, m_Grid.mainGridVertices());
     generateVaoVbo(m_SubGridVao, m_SubGridVbo, m_Grid.subGridVertices());
+
+    // axises vao, vbo
+    m_Axises.updateVertices();
+    generateVaoVbo(m_XAxisVao, m_XAxisVbo, m_Axises.xVertices());
+    generateVaoVbo(m_YAxisVao, m_YAxisVbo, m_Axises.yVertices());
 
     // set callbacks
     auto cursorPosCallback = [](GLFWwindow* pWindow, double xpos, double ypos) -> void {
@@ -373,6 +396,11 @@ void Canvas::update()
         updateVertexArrayBufferData(m_SubGridVao, m_SubGridVbo, m_Grid.subGridVertices());
     }
 
+    // update axises
+    m_Axises.updateVertices();
+    updateVertexArrayBufferData(m_XAxisVao, m_XAxisVbo, m_Axises.xVertices());
+    updateVertexArrayBufferData(m_YAxisVao, m_YAxisVbo, m_Axises.yVertices());
+
     // calculate hover point OpenGL 3D coordinates, update it only when it's inside canvas.
     if (g_CursorPosX > 0 && g_CursorPosX < g_CanvasLeftBottomX + g_CanvasWidth &&
         g_CursorPosY > 0 && g_CursorPosY < g_CanvasLeftBottomY + g_CanvasHeight)
@@ -408,10 +436,13 @@ void Canvas::draw()
     m_BasicPureColorShader.setVec4("inputColor", g_SubGridColor);
     glBindVertexArray(m_SubGridVao);
     glDrawArrays(GL_LINES, 0, m_Grid.subGridVertices().size() * 3);
-    // draw a test object
-    glBindVertexArray(g_vao);
-    m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
-    glDrawArrays(GL_LINES, 0, g_gridVertices.size() * 3);
+    // draw axises
+    glBindVertexArray(m_XAxisVao);
+    m_BasicPureColorShader.setVec4("inputColor", g_XAxisColor);
+    glDrawArrays(GL_LINES, 0, m_Axises.xVertices().size() * 3);
+    glBindVertexArray(m_YAxisVao);
+    m_BasicPureColorShader.setVec4("inputColor", g_YAxisColor);
+    glDrawArrays(GL_LINES, 0, m_Axises.yVertices().size() * 3);
     // draw custom cursor
     glBindVertexArray(m_CursorVao);
     m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
