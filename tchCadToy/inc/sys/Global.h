@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <map>
+#include <vector>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -10,6 +11,7 @@
 #include <imgui.h>
 
 #include <CommandLineWindow.h>
+#include <MainMenuBar.h>
 #include <Command.h>
 #include <Canvas.h>
 
@@ -49,7 +51,7 @@ inline const char* g_PropertiesSideBarTitle = "Properties";
 inline int g_WindowWidth;
 inline int g_WindowHeight;
 
-// window layout properties: command line/status bar/properties side bar
+// window layout properties: command line/status bar/properties side bar: in imgui screen coordinate (top-left as origin)
 inline ImVec2 g_CommandLineWindowPos;
 inline ImVec2 g_CommandLineWindowSize;
 inline ImVec2 g_StatusBarPos;
@@ -59,6 +61,7 @@ inline ImVec2 g_PropertiesSideBarSize;
 inline float g_CommandLineWindowHeight = 250;
 inline float g_StatusBarHeight = 35;
 inline float g_PropertiesSideBarWidth = 430;
+inline float g_MainMenuBarHeight = 26;
 
 // properties window open or close
 inline bool g_bPropertiesSideBarOpen = true;
@@ -66,6 +69,8 @@ inline bool g_bPropertiesSideBarOpen = true;
 // global window objects
 // command line window
 inline CommandLineWindow g_CmdWindow;
+// menu bar
+inline MainMenuBar g_MainMenuBar;
 
 
 // =========================================================================================================
@@ -155,6 +160,12 @@ inline bool g_bMiddleMouesButtonHold {false};
 // scroll input: in OpenGL screen coordinate
 inline int g_ScrollXOffset;
 inline int g_ScrollYOffset;
+
+// =========================================================================================================
+// ------------------------------------- global variables: document related
+// =========================================================================================================
+std::vector<std::string> g_RecentFiles;
+
 
 // =========================================================================================================
 // ------------------------------------- global functions

@@ -17,6 +17,8 @@ void calculateLayout()
     {
         propertiesWidth = 0.0f;
     }
+    // main menu bar
+    g_MainMenuBarHeight = ImGui::GetFrameHeight();
 
     // command line window
     g_CommandLineWindowSize.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
@@ -32,15 +34,25 @@ void calculateLayout()
 
     // properties side bar
     g_PropertiesSideBarSize.x = propertiesWidth;
-    g_PropertiesSideBarSize.y = height - g_StatusBarHeight;
+    g_PropertiesSideBarSize.y = height - g_StatusBarHeight - g_MainMenuBarHeight;
     g_PropertiesSideBarPos.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
-    g_PropertiesSideBarPos.y = 0.0f;
+    g_PropertiesSideBarPos.y = g_MainMenuBarHeight;
 
     // canvas is in OpenGL screen coordinate (left bottom as origin, int type)
     g_CanvasLeftBottomX = 0;
     g_CanvasLeftBottomY = int(g_StatusBarHeight + g_CommandLineWindowHeight);
     g_CanvasWidth = int(g_CommandLineWindowSize.x);
-    g_CanvasHeight = height - g_CanvasLeftBottomY;
+    g_CanvasHeight = height - g_CanvasLeftBottomY - g_MainMenuBarHeight;
+
+    // fix g_CanvasWidth/g_CanvasHeight being negative when minization.
+    if (g_CanvasWidth < 0)
+    {
+        g_CanvasWidth = 0;
+    }
+    if (g_CanvasHeight < 0)
+    {
+        g_CanvasHeight = 0;
+    }
 }
 
 // set window layout

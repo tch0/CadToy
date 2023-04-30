@@ -449,6 +449,7 @@ void Canvas::draw()
     glDrawArrays(GL_LINES, 0, m_Cursor.vertices().size() * 3);
 
     glBindVertexArray(0);
+    checkOpenGLError();
 }
 
 // generate vao, generate vbo, and bind data to vertex buffer

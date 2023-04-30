@@ -97,6 +97,10 @@ int main(int argc, char const *argv[])
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // menu bar
+        {
+            g_MainMenuBar.draw();
+        }
         // status bar
         {
             glm::vec3 hoverPoint = g_CurrentHoverPoint;
@@ -120,7 +124,7 @@ int main(int argc, char const *argv[])
             g_CmdWindow.draw(g_CommandLineWindowTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove, g_CommandLineWindowHeight);
         }
 
-        // calculate layout and set to windows, for Command line window/status bar/properties side bar
+        // calculate layout and set to windows, for Command line window/status bar/properties side bar/main menu bar
         {
             calculateLayout();
             setWindowLayout();
