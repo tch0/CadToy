@@ -108,7 +108,7 @@ void CommandLineWindow::draw(const char* title, bool* pOpen, ImGuiWindowFlags fl
             ImGui::LogFinish();
         }
 
-        // Keep up at the bottom of the scroll region if we were already at the bottom at the beginning of the frame.
+        // Keep up at the bottom of the scroll region if it was already at the bottom at the beginning of the frame.
         // Using a scrollbar or mouse-wheel will take away from the bottom edge.
         if (m_bScrollToBottom || (m_bAutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
         {
@@ -167,7 +167,7 @@ void CommandLineWindow::executeCommand(const std::string& command, bool bFromInp
     // add input command to unprocessed input
     g_UnprocessedInput += command;
 
-    // do not execute if we are in the execution of a command, the executing command will extract input from g_UnprocessedInput.
+    // do not execute if the program is in the execution of a command, the executing command will extract input from g_UnprocessedInput.
     if (g_bInCommandExecution)
     {
         return;

@@ -84,7 +84,7 @@ std::map<std::string, std::pair<Command*, int>>& getCommandsMap();
 //      or be parsed as next command (if pervious command do not need inputs, when pervious command finish).
 inline std::string g_UnprocessedInput;
 
-// if we are current in the execution of a command
+// whether the program is current in the execution of a command:
 // specifically:
 //  - a command is excuting and waiting for text/point/... input.
 //  - the command pops up a modal dialog, and is waiting to process/close.

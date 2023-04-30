@@ -1,11 +1,12 @@
 #include <MainMenuBar.h>
 #include <Global.h>
+#include <Command.h>
 
 MainMenuBar::MainMenuBar()
 {
     
-}
 
+}
 
 void MainMenuBar::draw()
 {
@@ -29,11 +30,11 @@ void MainMenuBar::drawMenuFile()
 {
     if (ImGui::MenuItem("New", "Ctrl+N"))
     {
-        // todo: new file
+        executeCommand("new");
     }
     if (ImGui::MenuItem("Open", "Ctrl+O"))
     {
-        // todo: open file
+        executeCommand("open");
     }
     if (ImGui::BeginMenu("Open Recent", !g_RecentFiles.empty()))
     {
@@ -42,7 +43,8 @@ void MainMenuBar::drawMenuFile()
         {
             if (ImGui::MenuItem(g_RecentFiles[index].c_str()))
             {
-                // todo: open corresponding file
+                // todo: execute open in command mode, not dialog mode
+                executeCommand("open " + g_RecentFiles[index]);
             }
         }
         if (index < g_RecentFiles.size())
@@ -53,7 +55,8 @@ void MainMenuBar::drawMenuFile()
                 {
                     if (ImGui::MenuItem(g_RecentFiles[index].c_str()))
                     {
-                        // todo: open corresponding file
+                        // todo: execute open in command mode, not dialog mode
+                        executeCommand("open " + g_RecentFiles[index]);
                     }
                 }
             }
@@ -61,17 +64,17 @@ void MainMenuBar::drawMenuFile()
         ImGui::Separator();
         if (ImGui::MenuItem("Clear Recent Files", nullptr, false, true))
         {
-            // todo: clear recent files
+            g_RecentFiles.clear();
         }
         ImGui::EndMenu();
     }
     if (ImGui::MenuItem("Save", "Ctrl+S"))
     {
-        // todo: save file
+        executeCommand("save");
     }
     if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S"))
     {
-        // todo: save file as
+        executeCommand("saveas");
     }
 }
 
@@ -79,23 +82,23 @@ void MainMenuBar::drawMenuEdit()
 {
     if (ImGui::MenuItem("Undo", "CTRL+Z"))
     {
-        // todo: undo
+        executeCommand("undo");
     }
-    if (ImGui::MenuItem("Redo", "CTRL+Y", false, false))  // Disabled item
+    if (ImGui::MenuItem("Redo", "CTRL+Y", false, false))  // Disabled item for now
     {
-        // todo: redo
+        executeCommand("redo");
     }
     ImGui::Separator();
     if (ImGui::MenuItem("Cut", "CTRL+X"))
     {
-        // todo: cut
+        executeCommand("cutclip");
     }
     if (ImGui::MenuItem("Copy", "CTRL+C"))
     {
-        // todo: copy
+        executeCommand("copyclip");
     }
     if (ImGui::MenuItem("Paste", "CTRL+V"))
     {
-        // todo: paste
+        executeCommand("pasteclip");
     }
 }
