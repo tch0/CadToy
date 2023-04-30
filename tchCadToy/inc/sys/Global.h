@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <unordered_map>
+#include <utility>
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -160,6 +162,17 @@ inline bool g_bMiddleMouesButtonHold {false};
 // scroll input: in OpenGL screen coordinate
 inline int g_ScrollXOffset;
 inline int g_ScrollYOffset;
+
+// keyboard shortcuts map: all keyboard shortcuts requires some control modes (Ctrl/Shift/Alt/Super, one or more) and one character (alpha/number/punctuation).
+//      eg. Ctrl+Shift+S is {true, true, false, false, ImGuiKey_S}
+inline std::map<std::tuple<bool, bool, bool, bool, ImGuiKey>, std::string> g_KeyboardShortcutsMap;
+
+// last keyboard time, if two keyboard shortcuts separated by 200ms are the same, then repeat to execute this command and update this time point.
+//      if not the same, update this time too, if same shortcuts within 200ms, keep this time point unchanged.
+inline double g_LastKeyboardShortcutTimePoint {0.0};
+
+// last keybaord shortcut: 
+inline std::tuple<bool, bool, bool, bool, int> g_LastKeyBoardShortcut {false, false, false, false, ImGuiKey_None};
 
 // =========================================================================================================
 // ------------------------------------- global variables: document related

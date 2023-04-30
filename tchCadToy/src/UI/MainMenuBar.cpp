@@ -76,6 +76,11 @@ void MainMenuBar::drawMenuFile()
     {
         executeCommand("saveas");
     }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Quit", "Ctrl+Q"))
+    {
+        executeCommand("quit");
+    }
 }
 
 void MainMenuBar::drawMenuEdit()

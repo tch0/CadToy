@@ -302,13 +302,14 @@ void Canvas::init()
     };
     glfwSetScrollCallback(g_pWindow, scrollCallback);
 
-    // todo: keyboard callback
+    // keyboards are processed with imgui
+    // todo: maybe process mouse with imgui too?
 }
 
 // update cursor hover point / grid / matrices, etc
 void Canvas::update()
 {
-    // calculate delta Cursor X/Y for like selection: todo
+    // todo: calculate delta Cursor X/Y for like selection
 
     // update cursor datas if cursor position changes
     if (g_LastCursorPosX != g_CursorPosX || g_LastCursorPosY != g_CursorPosY)
