@@ -163,9 +163,16 @@ inline bool g_bMiddleMouesButtonHold {false};
 inline int g_ScrollXOffset;
 inline int g_ScrollYOffset;
 
-// keyboard shortcuts map: all keyboard shortcuts requires some control modes (Ctrl/Shift/Alt/Super, one or more) and one character (alpha/number/punctuation).
-//      eg. Ctrl+Shift+S is {true, true, false, false, ImGuiKey_S}
-inline std::map<std::tuple<bool, bool, bool, bool, ImGuiKey>, std::string> g_KeyboardShortcutsMap;
+// combination keyboard shortcuts map:
+// - these keyboard shortcuts requires some control modes (Ctrl/Shift/Alt/Super, one or more) and one any key.
+// - eg. Ctrl+Shift+S is {true, true, false, false, ImGuiKey_S}
+inline std::map<std::tuple<bool, bool, bool, bool, ImGuiKey>, std::string> g_CombinationKeyboardShortcutsMap;
+
+// independent keyboard shortcuts map:
+// - only one key, usually used on Insert/Delete/Home/..., should not conflict with combination keyboard shortcuts.
+// - if conflict occurs, independent keys always precede combination keys.
+// - eg. if Ctrl+Delete and Delete are all registered, then Ctrl+Delete will never be triggered, Ctrl+Delete/Delete/Shift+Delete/xxx+Delete will all trigger the Delete shortcut.
+inline std::map<ImGuiKey, std::string> g_IndependentKeyboardShortcutsMap;
 
 // last keyboard time, if two keyboard shortcuts separated by 200ms are the same, then repeat to execute this command and update this time point.
 //      if not the same, update this time too, if same shortcuts within 200ms, keep this time point unchanged.

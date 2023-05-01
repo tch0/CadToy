@@ -106,4 +106,12 @@ void MainMenuBar::drawMenuEdit()
     {
         executeCommand("pasteclip");
     }
+    if (ImGui::MenuItem("Select All", "Ctrl+A"))
+    {
+        executeCommand("selectall");
+    }
+    if (ImGui::MenuItem("Erase", "Del"))
+    {
+        executeCommand("erase");
+    }
 }
