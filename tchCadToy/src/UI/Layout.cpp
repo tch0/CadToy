@@ -42,7 +42,7 @@ void calculateLayout()
     g_CanvasLeftBottomX = 0;
     g_CanvasLeftBottomY = int(g_StatusBarHeight + g_CommandLineWindowHeight);
     g_CanvasWidth = int(g_CommandLineWindowSize.x);
-    g_CanvasHeight = height - g_CanvasLeftBottomY - g_MainMenuBarHeight;
+    g_CanvasHeight = height - g_CanvasLeftBottomY - int(g_MainMenuBarHeight);
 
     // fix g_CanvasWidth/g_CanvasHeight being negative when minization.
     if (g_CanvasWidth < 0)

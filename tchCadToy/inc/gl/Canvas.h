@@ -68,8 +68,8 @@ private:
     Grid m_Grid;
     GLuint m_MainGridVao {0};
     GLuint m_MainGridVbo {0};
-    GLuint m_SubGridVao{ 0 };
-    GLuint m_SubGridVbo{ 0 };
+    GLuint m_SubGridVao {0};
+    GLuint m_SubGridVbo {0};
     bool m_bGridUpdatedFirstTime {false};
     // axises
     Axises m_Axises;

@@ -8,6 +8,7 @@
 #include <Canvas.h>
 #include <GLFuncs.h>
 #include <Global.h>
+#include <Logger.h>
 
 // basic shader
 static const std::string basicPureColorVertexShader = R"glsl(
@@ -149,7 +150,7 @@ void Canvas::Grid::updateVertices()
     {
         m_MainGridVertices.emplace_back(x, gridBottom, 0.0f);
         m_MainGridVertices.emplace_back(x, gridTop, 0.0f);
-        for (int i = 1; i <= 4; i++)
+        for (int i = 1; i <= 4 && x < gridRight; i++)
         {
             m_SubGridVertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridBottom, 0.0f);
             m_SubGridVertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridTop, 0.0f);
@@ -159,7 +160,7 @@ void Canvas::Grid::updateVertices()
     {
         m_MainGridVertices.emplace_back(gridLeft, y, 0.0f);
         m_MainGridVertices.emplace_back(gridRight, y, 0.0f);
-        for (int i = 1; i <= 4; i++)
+        for (int i = 1; i <= 4 && y < gridTop; i++)
         {
             m_SubGridVertices.emplace_back(gridLeft, y + i / 5.0f * g_GridScaleFactor, 0.0f);
             m_SubGridVertices.emplace_back(gridRight, y + i / 5.0f * g_GridScaleFactor, 0.0f);
@@ -242,68 +243,6 @@ void Canvas::init()
     m_Axises.updateVertices();
     generateVaoVbo(m_XAxisVao, m_XAxisVbo, m_Axises.xVertices());
     generateVaoVbo(m_YAxisVao, m_YAxisVbo, m_Axises.yVertices());
-
-    // set callbacks
-    auto cursorPosCallback = [](GLFWwindow* pWindow, double xpos, double ypos) -> void {
-        ImGuiIO& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse)
-        {
-            // xpos and ypos are in screen coordinate which treats left-top as origin, convert to OpenGL screen(viewport) coordinate (left-bottom as origin)
-            g_CursorPosX = int(xpos);
-            g_CursorPosY = g_WindowHeight - int(ypos);
-            g_bHideCursor = true;
-        }
-        else
-        {
-            g_bHideCursor = false;
-        }
-    };
-    glfwSetCursorPosCallback(g_pWindow, cursorPosCallback);
-
-    auto mouseButtonCallback = [](GLFWwindow* pWindow, int button, int action, int mods) -> void {
-        ImGuiIO& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse)
-        {
-            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-            {
-                g_bLeftMouseButtonHold = true;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-            {
-                g_bLeftMouseButtonHold = false;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-            {
-                g_bRightMouseButtonHold = true;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
-            {
-                g_bRightMouseButtonHold = false;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
-            {
-                g_bMiddleMouesButtonHold = true;
-            }
-            else if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
-            {
-                g_bMiddleMouesButtonHold = false;
-            }
-        }
-    };
-    glfwSetMouseButtonCallback(g_pWindow, mouseButtonCallback);
-
-    auto scrollCallback = [](GLFWwindow* pWindow, double xoffset, double yoffset) -> void {
-        ImGuiIO& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse)
-        {
-            g_ScrollXOffset = int(xoffset);
-            g_ScrollYOffset = int(yoffset);
-        }
-    };
-    glfwSetScrollCallback(g_pWindow, scrollCallback);
-
-    // keyboards are processed with imgui
-    // todo: maybe process mouse with imgui too?
 }
 
 // update cursor hover point / grid / matrices, etc
@@ -311,6 +250,14 @@ void Canvas::update()
 {
     // todo: calculate delta Cursor X/Y for like selection
 
+    // get cursor pos
+    ImGuiIO& io = ImGui::GetIO();
+    if (!io.WantCaptureMouse)
+    {
+        g_CursorPosX = int(io.MousePos.x);
+        g_CursorPosY = g_WindowHeight - int(io.MousePos.y);
+    }
+    
     // update cursor datas if cursor position changes
     if (g_LastCursorPosX != g_CursorPosX || g_LastCursorPosY != g_CursorPosY)
     {
@@ -319,15 +266,21 @@ void Canvas::update()
     }
 
     // hide cursor and draw custom cursor if cursor is inside the canvas (and it's not captured by any floating window).
-    if (g_bHideCursor)
+    if (!io.WantCaptureMouse)
     {
-        glfwSetInputMode(g_pWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None); // prevent imgui draw the cursor unproperly in ImGui_ImplGlfw_NewFrame
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
     }
 
     // update last cursor position
     g_LastCursorPosX = g_CursorPosX;
     g_LastCursorPosY = g_CursorPosY;
+
+    // get mouse wheel data
+    if (!io.WantCaptureMouse)
+    {
+        g_ScrollXOffset = int(io.MouseWheel);
+        g_ScrollYOffset = int(io.MouseWheelH);
+    }
 
     bool bShouldUpdateGrid = false;
     // update canvas OpenGL 3D coordinates by update scale factor (changed through mouse wheel), and update center point at the same time.
@@ -382,6 +335,20 @@ void Canvas::update()
         g_ScrollXOffset = 0;
     }
 
+    // deal with panning with middle mouse
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle, 0.0f))
+    {
+        ImVec2 delta = io.MouseDelta;
+        float deltaX = delta.x;
+        float deltaY = -delta.y;
+        if (std::abs(deltaX) > 0.0f || std::abs(deltaY) > 0.0f)
+        {
+            g_CanvasCenterX -= deltaX * g_CanvasScaleFactor;
+            g_CanvasCenterY -= deltaY * g_CanvasScaleFactor;
+        }
+        bShouldUpdateGrid = true;
+    }
+
     // calculate canvas OpenGL 3D coordinates
     g_CanvasTop = g_CanvasCenterY + g_CanvasScaleFactor * 0.5f * g_CanvasHeight;
     g_CanvasBottom = g_CanvasCenterY - g_CanvasScaleFactor * 0.5f * g_CanvasHeight;
@@ -397,7 +364,7 @@ void Canvas::update()
         updateVertexArrayBufferData(m_SubGridVao, m_SubGridVbo, m_Grid.subGridVertices());
     }
 
-    // update axises
+    // update axises data when necessary
     m_Axises.updateVertices();
     updateVertexArrayBufferData(m_XAxisVao, m_XAxisVbo, m_Axises.xVertices());
     updateVertexArrayBufferData(m_YAxisVao, m_YAxisVbo, m_Axises.yVertices());
@@ -429,7 +396,7 @@ void Canvas::draw()
     m_BasicPureColorShader.setMat4("mvMatrix", m_ModelMatrix * m_ViewMatrix);
     m_BasicPureColorShader.setMat4("projMatrix", m_ProjMatrix);
     m_BasicPureColorShader.setVec4("inputColor", 1.0f, 1.0f, 1.0f, 1.0f);
-    
+
     // draw grid
     m_BasicPureColorShader.setVec4("inputColor", g_MainGridColor);
     glBindVertexArray(m_MainGridVao);
