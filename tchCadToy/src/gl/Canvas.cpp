@@ -12,7 +12,7 @@
 
 // basic shader
 static const std::string basicPureColorVertexShader = R"glsl(
-#version 430
+#version 410
 layout (location = 0) in vec3 position; // vertex array buffer
 uniform mat4 mvMatrix;
 uniform mat4 projMatrix;
@@ -24,7 +24,7 @@ void main(void)
 )glsl";
 
 static const std::string basicPureColorFragmentShader = R"glsl(
-#version 430
+#version 410
 layout (location = 0) in vec3 position; // vertex array buffer
 uniform mat4 mvMatrix;
 uniform mat4 projMatrix;
