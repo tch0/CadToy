@@ -56,3 +56,68 @@ void cancelCurrentCommand()
         // todo
     }
 }
+
+// manage all modal dialogs informations, to know whether a modal shows or not now.
+void registerModal(const std::string& name, bool* pShow, const std::source_location& loc)
+{
+    auto iter = g_ModalsMap.find(name);
+    if (iter != g_ModalsMap.end())
+    {
+        globalLogger().warning(std::format("Modal {} existed, register failed!", name), loc);
+    }
+    else if (pShow == nullptr)
+    {
+        globalLogger().warning(std::format("Register modal {} failed, pShow is nullptr!", name), loc);
+    }
+    else
+    {
+        g_ModalsMap.emplace(name, pShow);
+    }
+}
+void unregisterModal(const std::string& name, const std::source_location& loc)
+{
+    if (g_ModalsMap.find(name) == g_ModalsMap.end())
+    {
+        globalLogger().warning(std::format("Modal {} does not exist or already unregistered, unregister failed!", name), loc);
+    }
+    else
+    {
+        g_ModalsMap.erase(name);
+    }
+}
+
+// maintain the state of g_bInCommandExecution, basically for modal dialogs
+// - if a modal dialog shows, it's definitely in a command execution now, save old g_bInCommandExecution value and set it to true.
+// - if a modal dialog closes, restore g_bInCommandExecution to the state before the modal dialog shows.
+void maintainCommandExecutionState()
+{
+    static bool s_bLastAnyModal = false;
+    bool bAnyModal = false;
+    for (auto iter = g_ModalsMap.begin(); iter != g_ModalsMap.end(); ++iter)
+    {
+        if (iter->second && *iter->second)
+        {
+            bAnyModal = true;
+            break;
+        }
+    }
+    static bool s_bOldCommandExecution = false;
+    
+    // the modal closed last frame, resoter the command execution state
+    if (s_bLastAnyModal && !bAnyModal)
+    {
+        g_bInCommandExecution = s_bOldCommandExecution;
+    }
+
+    // save old command execution state
+    if (bAnyModal)
+    {
+        g_bInCommandExecution = true;
+    }
+    else
+    {
+        s_bOldCommandExecution = g_bInCommandExecution;
+    }
+    
+    s_bLastAnyModal = bAnyModal;
+}

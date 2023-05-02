@@ -75,7 +75,13 @@ inline CommandLineWindow g_CmdWindow;
 // menu bar
 inline MainMenuBar g_MainMenuBar;
 
-// other modals/dialogs
+
+// =========================================================================================================
+// ----------------------------------- global variables: modals/dialogs
+// =========================================================================================================
+// modals management, save the bool pointer of all variables that indicate whether a modal shows or not, name is dialog name.
+inline std::map<std::string, bool*> g_ModalsMap;
+
 // options modal
 inline bool g_OptionsModalOpen {false};
 inline OptionsModal g_OptionsModal;

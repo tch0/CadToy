@@ -27,3 +27,12 @@ void executeCommand(const std::string& command);
 // Cancel current executing command:
 //      equivalent to pressing multiple Esc until to the state of waiting for command.
 void cancelCurrentCommand();
+
+// manage all modal dialogs informations, to know whether a modal shows or not now.
+void registerModal(const std::string& name, bool* pShow, const std::source_location& loc = std::source_location::current());
+void unregisterModal(const std::string& name, const std::source_location& loc = std::source_location::current());
+
+// maintain the state of g_bInCommandExecution, basically for modal dialogs
+// - if a modal dialog shows, it's definitely in a command execution now, save old g_bInCommandExecution value and set it to true.
+// - if a modal dialog closes, restore g_bInCommandExecution to the state before the modal dialog shows.
+void maintainCommandExecutionState();

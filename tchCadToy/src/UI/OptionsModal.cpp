@@ -1,5 +1,16 @@
 #include <OptionsModal.h>
 #include <Global.h>
+#include <Command.h>
+
+OptionsModal::OptionsModal()
+{
+    registerModal("options", &g_OptionsModalOpen);
+}
+
+OptionsModal::~OptionsModal()
+{
+    unregisterModal("options");
+}
 
 void OptionsModal::draw()
 {

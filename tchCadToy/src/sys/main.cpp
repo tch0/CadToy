@@ -140,9 +140,10 @@ int main(int argc, char const *argv[])
         // show demo window as an example
         ImGui::ShowDemoWindow();
 
-        // other modal/dialogs
+        // other modals/dialogs
         {
             g_OptionsModal.draw();
+            maintainCommandExecutionState();
         }
 
         // first draw canvas
