@@ -16,6 +16,7 @@
 #include <MainMenuBar.h>
 #include <Command.h>
 #include <Canvas.h>
+#include <OptionsModal.h>
 
 
 // =========================================================================================================
@@ -73,6 +74,11 @@ inline bool g_bPropertiesSideBarOpen = true;
 inline CommandLineWindow g_CmdWindow;
 // menu bar
 inline MainMenuBar g_MainMenuBar;
+
+// other modals/dialogs
+// options modal
+inline bool g_OptionsModalOpen {false};
+inline OptionsModal g_OptionsModal;
 
 
 // =========================================================================================================

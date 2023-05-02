@@ -15,7 +15,7 @@ private:
     // todo: maybe draw it in the form of pixels directly to frame buffer instead of a OpenGL 3D object.
     class CustomCursor
     {
-    private:
+    public:
         std::vector<glm::vec3> m_Vertices;
         // sizes are in pixels
         int m_PickBoxSize {20};
@@ -85,6 +85,11 @@ public:
     void update();
     // draw entities
     void draw();
+    // cursor size and pick box size
+    int getCursorSize();
+    void setCursorSize(int size);
+    int getPickBoxSize();
+    void setPickBoxSize(int size);
 private:
     // generate vao, generate vbo, and bind data to vertex buffer
     void generateVaoVbo(GLuint& vao, GLuint& vbo, const std::vector<glm::vec3>& data);

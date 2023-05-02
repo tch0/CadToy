@@ -22,6 +22,11 @@ void MainMenuBar::draw()
             drawMenuEdit();
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Tools"))
+        {
+            drawMenuTools();
+            ImGui::EndMenu();
+        }
         ImGui::EndMainMenuBar();
     }
 }
@@ -106,6 +111,7 @@ void MainMenuBar::drawMenuEdit()
     {
         executeCommand("pasteclip");
     }
+    ImGui::Separator();
     if (ImGui::MenuItem("Select All", "Ctrl+A"))
     {
         executeCommand("selectall");
@@ -113,5 +119,13 @@ void MainMenuBar::drawMenuEdit()
     if (ImGui::MenuItem("Erase", "Del"))
     {
         executeCommand("erase");
+    }
+}
+
+void MainMenuBar::drawMenuTools()
+{
+    if (ImGui::MenuItem("Options"))
+    {
+        executeCommand("options");
     }
 }

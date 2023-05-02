@@ -6,7 +6,7 @@
 #include <Logger.h>
 
 // register one command
-void registerCommand(const std::string& commandName, Command* pCommand, int category)
+void registerCommand(const std::string& commandName, Command* pCommand, int category, const std::source_location& loc)
 {
     // case unsensitive, so save lower case command only.
     std::string command = commandName;
@@ -14,7 +14,7 @@ void registerCommand(const std::string& commandName, Command* pCommand, int cate
 
     if (getCommandsMap().find(command) != getCommandsMap().end())
     {
-        globalLogger().warning(std::format("Command {} existed, register failed!", command));
+        globalLogger().warning(std::format("Command {} existed, register failed!", command), loc);
     }
     else
     {
@@ -23,11 +23,11 @@ void registerCommand(const std::string& commandName, Command* pCommand, int cate
 }
 
 // unregister one command
-void unregisterCommand(const std::string& commandName)
+void unregisterCommand(const std::string& commandName, const std::source_location& loc)
 {
     if (getCommandsMap().find(commandName) == getCommandsMap().end())
     {
-        globalLogger().warning(std::format("Command {} has been already unregistered or did not even registerd!", commandName));
+        globalLogger().warning(std::format("Command {} has been already unregistered or did not even registerd!", commandName), loc);
     }
     else
     {

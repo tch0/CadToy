@@ -14,7 +14,7 @@ void registerAllKeyboardShortcuts()
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_O, "open");         // Ctrl+O
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_S, "save");         // Ctrl+O
     registerCombinationKeyboardShortcut(true,  true, false, false, ImGuiKey_S, "saveas");       // Ctrl+Shift+S
-    registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Q, "quit");         // Ctrl+Shift+S
+    registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Q, "quit");         // Ctrl+Q
     // Edit
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Z, "undo");         // Ctrl+Z
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Y, "redo");         // Ctrl+Y

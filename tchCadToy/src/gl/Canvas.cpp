@@ -47,7 +47,7 @@ Canvas::CustomCursor::CustomCursor()
 // range: 0 ~ 50
 void Canvas::CustomCursor::setPickBoxSize(int size)
 {
-    if (size <= 0)
+    if (size < 0)
     {
         size = 0;
     }
@@ -55,14 +55,17 @@ void Canvas::CustomCursor::setPickBoxSize(int size)
     {
         size = 50;
     }
-    m_PickBoxSize = size;
-    updateVertices();
+    if (size != m_PickBoxSize)
+    {
+        m_PickBoxSize = size;
+        updateVertices();
+    }
 }
 
 // range: 10 ~ 200
 void Canvas::CustomCursor::setCursorSize(int size)
 {
-    if (size <= 10)
+    if (size < 10)
     {
         size = 10;
     }
@@ -70,8 +73,11 @@ void Canvas::CustomCursor::setCursorSize(int size)
     {
         size = 200;
     }
-    m_CursorSize = size;
-    updateVertices();
+    if (size != m_CursorSize)
+    {
+        m_CursorSize = size;
+        updateVertices();
+    }
 }
 
 // update cursor datas
@@ -418,6 +424,26 @@ void Canvas::draw()
 
     glBindVertexArray(0);
     checkOpenGLError();
+}
+
+int Canvas::getCursorSize()
+{
+    return m_Cursor.m_CursorSize;
+}
+
+void Canvas::setCursorSize(int size)
+{
+    m_Cursor.setCursorSize(size);
+}
+
+int Canvas::getPickBoxSize()
+{
+    return m_Cursor.m_PickBoxSize;
+}
+
+void Canvas::setPickBoxSize(int size)
+{
+    m_Cursor.setPickBoxSize(size);
 }
 
 // generate vao, generate vbo, and bind data to vertex buffer

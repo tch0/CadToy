@@ -10,4 +10,5 @@ public:
     void draw();
     void drawMenuFile();
     void drawMenuEdit();
+    void drawMenuTools();
 };

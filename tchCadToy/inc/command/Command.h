@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-
+#include <source_location>
 
 // Legal characters for command name:
 //  1. a-zA-Z0-9, and leading -+_
@@ -15,9 +15,9 @@ public:
 };
 
 // register one command
-void registerCommand(const std::string& commandName, Command* pCommand, int category);
+void registerCommand(const std::string& commandName, Command* pCommand, int category, const std::source_location& loc = std::source_location::current());
 // unregister one command
-void unregisterCommand(const std::string& commandName);
+void unregisterCommand(const std::string& commandName, const std::source_location& loc = std::source_location::current());
 
 // Execute a specific command:
 //      What actually doing is pushing new command to unprocessed input, the command execution mechanism will extract command from it and execute the command if the program is on a proper context to execute command.
