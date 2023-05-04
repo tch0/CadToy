@@ -37,7 +37,7 @@ int main(int argc, char const *argv[])
     //------------------------------------------------------------------------------------//
     openglInit();
 
-    // canvas init: compile shader, set call backs
+    // canvas init: compile shader
     g_Canvas.init();
 
     //====================================================================================//

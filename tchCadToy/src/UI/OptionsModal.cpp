@@ -35,6 +35,15 @@ void OptionsModal::draw()
                 ImGui::SliderInt("Cursor Size", &cursorSize, 10, 200);
                 g_Canvas.setCursorSize(cursorSize);
             }
+            // cursor color
+            {
+                glm::vec4 cursorColor = g_CursorColor;
+                ImGui::ColorEdit4("Cursor Color", (float*)& cursorColor);
+                if (cursorColor != g_CursorColor)
+                {
+                    g_CursorColor = cursorColor;
+                }
+            }
 
             ImGui::EndPopup();
         }

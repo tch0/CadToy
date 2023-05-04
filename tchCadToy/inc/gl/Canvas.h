@@ -17,18 +17,16 @@ private:
     {
     public:
         std::vector<glm::vec3> m_Vertices;
+        std::vector<glm::vec4> m_Colors;
         // sizes are in pixels
         int m_PickBoxSize {20};
         int m_CursorSize {80};
     public:
         CustomCursor();
-        // range: 0 ~ 50
-        void setPickBoxSize(int size);
-        // range: 10 ~ 200
-        void setCursorSize(int size);
-        // get vertices array
+        void setPickBoxSize(int size);  // range: 0 ~ 50
+        void setCursorSize(int size);   // range: 10 ~ 200
         const std::vector<glm::vec3>& vertices();
-        // update cursor datas
+        const std::vector<glm::vec4>& colors();
         void updateVertices();
     };
     class Grid
@@ -36,24 +34,29 @@ private:
     private:
         std::vector<glm::vec3> m_MainGridVertices;
         std::vector<glm::vec3> m_SubGridVertices;
+
+        std::vector<glm::vec3> m_Vertices; // include main grid and subgrid
+        std::vector<glm::vec4> m_Colors;
     public:
         Grid();
         void updateVertices();
-        const std::vector<glm::vec3>& mainGridVertices();
-        const std::vector<glm::vec3>& subGridVertices();
+        const std::vector<glm::vec3>& vertices();
+        const std::vector<glm::vec4>& colors();
     };
     class Axises
     {
     private:
         std::vector<glm::vec3> m_XAxisVertices;
         std::vector<glm::vec3> m_YAxisVertices;
+        std::vector<glm::vec3> m_Vertices;
+        std::vector<glm::vec4> m_Colors;
         float m_Width {0.0f};
         float m_Height {0.0f};
     public:
         Axises();
         void updateVertices();
-        const std::vector<glm::vec3>& xVertices();
-        const std::vector<glm::vec3>& yVertices();
+        const std::vector<glm::vec3>& vertices();
+        const std::vector<glm::vec4>& colors();
     };
 private:
     Shader m_BasicPureColorShader;
@@ -63,20 +66,19 @@ private:
     // cursor
     CustomCursor m_Cursor;
     GLuint m_CursorVao {0};
-    GLuint m_CursorVbo {0};
+    GLuint m_CursorPosVbo {0};
+    GLuint m_CursorColorVbo {0};
     // grid
     Grid m_Grid;
-    GLuint m_MainGridVao {0};
-    GLuint m_MainGridVbo {0};
-    GLuint m_SubGridVao {0};
-    GLuint m_SubGridVbo {0};
+    GLuint m_GridVao {0};
+    GLuint m_GridPosVbo {0};
+    GLuint m_GridColorVbo {0};
     bool m_bGridUpdatedFirstTime {false};
     // axises
     Axises m_Axises;
-    GLuint m_XAxisVao {0};
-    GLuint m_XAxisVbo {0};
-    GLuint m_YAxisVao {0};
-    GLuint m_YAxisVbo {0};
+    GLuint m_AxisesVao {0};
+    GLuint m_AxisesPosVbo {0};
+    GLuint m_AxisesColorVbo {0};
 public:
     Canvas();
     // compile opengl shader, register callbacks
@@ -92,7 +94,7 @@ public:
     void setPickBoxSize(int size);
 private:
     // generate vao, generate vbo, and bind data to vertex buffer
-    void generateVaoVbo(GLuint& vao, GLuint& vbo, const std::vector<glm::vec3>& data);
+    void generateVaoVbo(GLuint& vao, GLuint& posVbo, GLuint& colorVbo, const std::vector<glm::vec3>& vertices, const std::vector<glm::vec4>& colors);
     // bind new data to existing vertex buffer
-    void updateVertexArrayBufferData(GLuint& vao, GLuint& vbo, const std::vector<glm::vec3>& data);
+    void updateVertexArrayBufferData(GLuint& vao, GLuint& posVbo, GLuint& colorVbo, const std::vector<glm::vec3>& vertices, const std::vector<glm::vec4>& colors);
 };

@@ -143,6 +143,9 @@ inline float g_CanvasRight  {0.0f};
 inline float g_CanvasTop    {0.0f};
 inline float g_CanvasBottom {0.0f};
 
+// cursor color
+inline glm::vec4 g_CursorColor {1.0f, 1.0f, 1.0f, 1.0f}; // pure white
+
 // grid color
 inline glm::vec4 g_MainGridColor {0.211f, 0.238f, 0.305f, 1.0f}; // RGB: 54,61,78
 inline glm::vec4 g_SubGridColor {0.148f, 0.176f, 0.215f, 1.0f}; // RGB: 38,45,55
@@ -196,7 +199,7 @@ inline std::tuple<bool, bool, bool, bool, int> g_LastKeyBoardShortcut {false, fa
 // =========================================================================================================
 // ------------------------------------- global variables: document related
 // =========================================================================================================
-std::vector<std::string> g_RecentFiles;
+inline std::vector<std::string> g_RecentFiles;
 
 
 // =========================================================================================================
