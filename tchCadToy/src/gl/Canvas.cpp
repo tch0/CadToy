@@ -10,6 +10,7 @@
 #include <GLFuncs.h>
 #include <Global.h>
 #include <Logger.h>
+#include <DocManager.h>
 
 // basic shader
 static const std::string basicPureColorVertexShader = R"glsl(
@@ -86,10 +87,12 @@ void Canvas::CustomCursor::setCursorSize(int size)
 // update cursor datas
 void Canvas::CustomCursor::updateVertices()
 {
+    DocManager::DocumentCanvasAttribute& attr = g_DocManager.currentDocCanvasAttributes();
+
     m_Vertices.resize(0);
     m_Colors.resize(0);
-    float pickBoxHalfWidth = m_PickBoxSize * g_CanvasScaleFactor * 0.5f;
-    float cursorHalfWidth = m_CursorSize * g_CanvasScaleFactor * 0.5f;
+    float pickBoxHalfWidth = m_PickBoxSize * attr.canvasScaleFactor * 0.5f;
+    float cursorHalfWidth = m_CursorSize * attr.canvasScaleFactor * 0.5f;
     glm::vec3 left = g_CurrentHoverPoint - glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
     glm::vec3 right = g_CurrentHoverPoint + glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
     glm::vec3 top = g_CurrentHoverPoint + glm::vec3(0.0f, cursorHalfWidth, 0.0f);
@@ -160,14 +163,16 @@ Canvas::Grid::Grid()
 
 void Canvas::Grid::updateVertices()
 {
+    DocManager::DocumentCanvasAttribute& attr = g_DocManager.currentDocCanvasAttributes();
+
     m_Vertices.resize(0);
     m_Colors.resize(0);
-    float gridLeft = std::floor(g_CanvasLeft / g_GridScaleFactor) * g_GridScaleFactor;
-    float gridRight = std::ceil(g_CanvasRight / g_GridScaleFactor) * g_GridScaleFactor;
-    float gridBottom = std::floor(g_CanvasBottom / g_GridScaleFactor) * g_GridScaleFactor;
-    float gridTop = std::ceil(g_CanvasTop / g_GridScaleFactor) * g_GridScaleFactor;
+    float gridLeft = std::floor(attr.canvasLeft / attr.gridScaleFactor) * attr.gridScaleFactor;
+    float gridRight = std::ceil(attr.canvasRight / attr.gridScaleFactor) * attr.gridScaleFactor;
+    float gridBottom = std::floor(attr.canvasBottom / attr.gridScaleFactor) * attr.gridScaleFactor;
+    float gridTop = std::ceil(attr.canvasTop / attr.gridScaleFactor) * attr.gridScaleFactor;
     // vertical
-    for (float x = gridLeft; x <= gridRight; x += g_GridScaleFactor)
+    for (float x = gridLeft; x <= gridRight; x += attr.gridScaleFactor)
     {
         m_Vertices.emplace_back(x, gridBottom, 0.0f);
         m_Vertices.emplace_back(x, gridTop, 0.0f);
@@ -175,14 +180,14 @@ void Canvas::Grid::updateVertices()
         m_Colors.push_back(g_MainGridColor);
         for (int i = 1; i <= 4 && x < gridRight; i++)
         {
-            m_Vertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridBottom, 0.0f);
-            m_Vertices.emplace_back(x + i / 5.0f * g_GridScaleFactor, gridTop, 0.0f);
+            m_Vertices.emplace_back(x + i / 5.0f * attr.gridScaleFactor, gridBottom, 0.0f);
+            m_Vertices.emplace_back(x + i / 5.0f * attr.gridScaleFactor, gridTop, 0.0f);
             m_Colors.push_back(g_SubGridColor);
             m_Colors.push_back(g_SubGridColor);
         }
     }
     // horizontal
-    for (float y = gridBottom; y <= gridTop; y += g_GridScaleFactor)
+    for (float y = gridBottom; y <= gridTop; y += attr.gridScaleFactor)
     {
         m_Vertices.emplace_back(gridLeft, y, 0.0f);
         m_Vertices.emplace_back(gridRight, y, 0.0f);
@@ -190,8 +195,8 @@ void Canvas::Grid::updateVertices()
         m_Colors.push_back(g_MainGridColor);
         for (int i = 1; i <= 4 && y < gridTop; i++)
         {
-            m_Vertices.emplace_back(gridLeft, y + i / 5.0f * g_GridScaleFactor, 0.0f);
-            m_Vertices.emplace_back(gridRight, y + i / 5.0f * g_GridScaleFactor, 0.0f);
+            m_Vertices.emplace_back(gridLeft, y + i / 5.0f * attr.gridScaleFactor, 0.0f);
+            m_Vertices.emplace_back(gridRight, y + i / 5.0f * attr.gridScaleFactor, 0.0f);
             m_Colors.push_back(g_SubGridColor);
             m_Colors.push_back(g_SubGridColor);
         }
@@ -221,8 +226,10 @@ Canvas::Axises::Axises()
 
 void Canvas::Axises::updateVertices()
 {
-    float width = g_CanvasRight - g_CanvasLeft;
-    float height = g_CanvasTop - g_CanvasBottom;
+    DocManager::DocumentCanvasAttribute& attr = g_DocManager.currentDocCanvasAttributes();
+
+    float width = attr.canvasRight - attr.canvasLeft;
+    float height = attr.canvasTop - attr.canvasBottom;
     // update only when necessary
     if (width > m_Width || height > m_Height)
     {
@@ -283,6 +290,9 @@ void Canvas::init()
 void Canvas::update()
 {
     // todo: calculate delta Cursor X/Y for like selection
+    
+    // current document canvas attributes
+    DocManager::DocumentCanvasAttribute& attr = g_DocManager.currentDocCanvasAttributes();
 
     // get cursor pos
     ImGuiIO& io = ImGui::GetIO();
@@ -326,39 +336,39 @@ void Canvas::update()
     g_ScrollYOffset = 0;
     if (g_ScrollXOffset != 0)
     {
-        glm::vec3 leftBottomToHoverVec = glm::vec3(g_CanvasLeft, g_CanvasBottom, 0.0f) - g_CurrentHoverPoint;
-        glm::vec3 rightTopToHoverVec = glm::vec3(g_CanvasRight, g_CanvasTop, 0.0f) - g_CurrentHoverPoint;
+        glm::vec3 leftBottomToHoverVec = glm::vec3(attr.canvasLeft, attr.canvasBottom, 0.0f) - g_CurrentHoverPoint;
+        glm::vec3 rightTopToHoverVec = glm::vec3(attr.canvasRight, attr.canvasTop, 0.0f) - g_CurrentHoverPoint;
 
         while (g_ScrollXOffset >= 1)
         {
-            g_CanvasScaleFactor *= 0.8f;
+            attr.canvasScaleFactor *= 0.8f;
             g_ScrollXOffset -= 1;
             leftBottomToHoverVec *= 0.8f;
             rightTopToHoverVec *= 0.8f;
-            g_GridAutoAjustFactor *= 0.8f;
+            attr.gridAutoAjustFactor *= 0.8f;
         }
         while (g_ScrollXOffset <= -1)
         {
-            g_CanvasScaleFactor *= 1.25f;
+            attr.canvasScaleFactor *= 1.25f;
             g_ScrollXOffset += 1;
             leftBottomToHoverVec *= 1.25f;
             rightTopToHoverVec *= 1.25f;
-            g_GridAutoAjustFactor *= 1.25f;
+            attr.gridAutoAjustFactor *= 1.25f;
         }
         // adjust grid scale factor
-        if (g_GridAutoAjustFactor >= 5.0f)
+        if (attr.gridAutoAjustFactor >= 5.0f)
         {
-            g_GridAutoAjustFactor /= 5.0f;
-            g_GridScaleFactor *= 5.0f;
+            attr.gridAutoAjustFactor /= 5.0f;
+            attr.gridScaleFactor *= 5.0f;
         }
-        else if (g_GridAutoAjustFactor <= 1.0f)
+        else if (attr.gridAutoAjustFactor <= 1.0f)
         {
-            g_GridAutoAjustFactor *= 5.0f;
-            g_GridScaleFactor /= 5.0f;
+            attr.gridAutoAjustFactor *= 5.0f;
+            attr.gridScaleFactor /= 5.0f;
         }
         // calculate new center point
-        g_CanvasCenterX = (rightTopToHoverVec.x + g_CurrentHoverPoint.x + leftBottomToHoverVec.x + g_CurrentHoverPoint.x) / 2.0f;
-        g_CanvasCenterY = (rightTopToHoverVec.y + g_CurrentHoverPoint.y + leftBottomToHoverVec.y + g_CurrentHoverPoint.y) / 2.0f;
+        attr.canvasCenterX = (rightTopToHoverVec.x + g_CurrentHoverPoint.x + leftBottomToHoverVec.x + g_CurrentHoverPoint.x) / 2.0f;
+        attr.canvasCenterY = (rightTopToHoverVec.y + g_CurrentHoverPoint.y + leftBottomToHoverVec.y + g_CurrentHoverPoint.y) / 2.0f;
         // update cursor data
         m_Cursor.updateVertices();
         updateVertexArrayBufferData(m_CursorVao, m_CursorPosVbo, m_CursorColorVbo, m_Cursor.vertices(), m_Cursor.colors());
@@ -377,17 +387,17 @@ void Canvas::update()
         float deltaY = -delta.y;
         if (std::abs(deltaX) > 0.0f || std::abs(deltaY) > 0.0f)
         {
-            g_CanvasCenterX -= deltaX * g_CanvasScaleFactor;
-            g_CanvasCenterY -= deltaY * g_CanvasScaleFactor;
+            attr.canvasCenterX -= deltaX * attr.canvasScaleFactor;
+            attr.canvasCenterY -= deltaY * attr.canvasScaleFactor;
         }
         bShouldUpdateGrid = true;
     }
 
     // calculate canvas OpenGL 3D coordinates
-    g_CanvasTop = g_CanvasCenterY + g_CanvasScaleFactor * 0.5f * g_CanvasHeight;
-    g_CanvasBottom = g_CanvasCenterY - g_CanvasScaleFactor * 0.5f * g_CanvasHeight;
-    g_CanvasLeft = g_CanvasCenterX - g_CanvasScaleFactor * 0.5f * g_CanvasWidth;
-    g_CanvasRight = g_CanvasCenterX + g_CanvasScaleFactor * 0.5f * g_CanvasWidth;
+    attr.canvasTop = attr.canvasCenterY + attr.canvasScaleFactor * 0.5f * g_CanvasHeight;
+    attr.canvasBottom = attr.canvasCenterY - attr.canvasScaleFactor * 0.5f * g_CanvasHeight;
+    attr.canvasLeft = attr.canvasCenterX - attr.canvasScaleFactor * 0.5f * g_CanvasWidth;
+    attr.canvasRight = attr.canvasCenterX + attr.canvasScaleFactor * 0.5f * g_CanvasWidth;
 
     // update grid
     if (bShouldUpdateGrid || !m_bGridUpdatedFirstTime)
@@ -405,15 +415,15 @@ void Canvas::update()
     if (g_CursorPosX > 0 && g_CursorPosX < g_CanvasLeftBottomX + g_CanvasWidth &&
         g_CursorPosY > 0 && g_CursorPosY < g_CanvasLeftBottomY + g_CanvasHeight)
     {
-        g_CurrentHoverPoint.x = g_CanvasLeft + g_CanvasScaleFactor * (g_CursorPosX - g_CanvasLeftBottomX);
-        g_CurrentHoverPoint.y = g_CanvasBottom + g_CanvasScaleFactor * (g_CursorPosY - g_CanvasLeftBottomY);
+        g_CurrentHoverPoint.x = attr.canvasLeft + attr.canvasScaleFactor * (g_CursorPosX - g_CanvasLeftBottomX);
+        g_CurrentHoverPoint.y = attr.canvasBottom + attr.canvasScaleFactor * (g_CursorPosY - g_CanvasLeftBottomY);
         g_CurrentHoverPoint.z = 0.0f;
     }
 
     // calculate matrices
     m_ModelMatrix = glm::mat4(1.0f);
     m_ViewMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    m_ProjMatrix = glm::ortho(g_CanvasLeft, g_CanvasRight, g_CanvasBottom, g_CanvasTop, 0.1f, 1000.0f); // orthogonal projection
+    m_ProjMatrix = glm::ortho(attr.canvasLeft, attr.canvasRight, attr.canvasBottom, attr.canvasTop, 0.1f, 1000.0f); // orthogonal projection
 }
 
 // draw entities: cursor, grid, 

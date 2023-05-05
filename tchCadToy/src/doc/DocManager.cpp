@@ -9,6 +9,7 @@ DocManager::~DocManager()
 {
 }
 
+// cureent document
 Document& DocManager::currentDoc()
 {
     if (m_Documents.empty())
@@ -20,6 +21,31 @@ Document& DocManager::currentDoc()
     return *m_Documents[m_CurrentDocIndex];
 }
 
+// current document canvas attributes
+DocManager::DocumentCanvasAttribute& DocManager::currentDocCanvasAttributes()
+{
+    if (m_Documents.empty())
+    {
+        newUnnamedDocument();
+    }
+    tchAssert(m_CurrentDocIndex < m_Documents.size());
+    tchAssert(m_Documents[m_CurrentDocIndex] != nullptr, "current document is nullptr");
+    return m_DocCanvasAttrs[m_CurrentDocIndex];
+}
+
+// current document's command line window attrbutes
+DocManager::DocumentCmdLineAttribute& DocManager::currentDocCmdLineAttributes()
+{
+    if (m_Documents.empty())
+    {
+        newUnnamedDocument();
+    }
+    tchAssert(m_CurrentDocIndex < m_Documents.size());
+    tchAssert(m_Documents[m_CurrentDocIndex] != nullptr, "current document is nullptr");
+    return m_DocCmdLineAttrs[m_CurrentDocIndex];
+}
+
+// set current document index
 void DocManager::setCurrentDocumentIndex(std::size_t index)
 {
     if (index > m_Documents.size())
@@ -38,6 +64,8 @@ bool DocManager::newNamedDocument(const std::filesystem::path& filePath)
     if (res)
     {
         m_Documents.push_back(std::move(up));
+        m_DocCanvasAttrs.push_back(DocumentCanvasAttribute{});
+        m_DocCmdLineAttrs.push_back(DocumentCmdLineAttribute{});
         m_CurrentDocIndex = m_Documents.size() - 1;
     }
     return res;
@@ -51,6 +79,8 @@ bool DocManager::newUnnamedDocument()
     if (res)
     {
         m_Documents.push_back(std::move(up));
+        m_DocCanvasAttrs.push_back(DocumentCanvasAttribute{});
+        m_DocCmdLineAttrs.push_back(DocumentCmdLineAttribute{});
         m_CurrentDocIndex = m_Documents.size() - 1;
     }
     return res;

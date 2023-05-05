@@ -6,15 +6,12 @@
 
 #include <imgui.h>
 
+#include <DocManager.h>
+
 
 class CommandLineWindow
 {
 private:
-    std::string m_InputBuffer;
-    std::vector<std::string> m_Items;
-    std::vector<std::string> m_Commands;
-    std::vector<std::string> m_History;
-    int m_HistoryPos; // -1: new line, 0 to m_History.size-1 browsing history
     ImGuiTextFilter m_Filter;
     bool m_bAutoScroll;
     bool m_bScrollToBottom;

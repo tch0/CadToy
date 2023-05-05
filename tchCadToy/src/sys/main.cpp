@@ -51,8 +51,8 @@ int main(int argc, char const *argv[])
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     
     // ini file
-    g_WindowConfigFile = g_PathCwd / "imgui.ini";
-    g_ImguiConfigFileStr = g_WindowConfigFile.string();
+    g_ImguiConfigFile = g_PathCwd / "imgui.ini";
+    g_ImguiConfigFileStr = g_ImguiConfigFile.string();
     io.IniFilename = g_ImguiConfigFileStr.c_str();
     globalLogger().info(std::format("Imgui config file: {}", g_ImguiConfigFileStr));
 

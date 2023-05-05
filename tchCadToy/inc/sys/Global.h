@@ -30,7 +30,7 @@ inline std::filesystem::path g_PathCwd;
 inline bool g_BigEndian {true};
 
 // imgui window config file path
-inline std::filesystem::path g_WindowConfigFile;
+inline std::filesystem::path g_ImguiConfigFile;
 inline std::string g_ImguiConfigFileStr;
 // imgui log file path
 inline std::filesystem::path g_ImguiLogFile;
@@ -129,34 +129,12 @@ inline Canvas g_Canvas;
 // current cursor hover point in canvas, calculated from current screen cursor position
 inline glm::vec3 g_CurrentHoverPoint;
 
-// draw cursor by myself and hide glfw cursor at the same time (when hover drawing area) or show glfw cursor (hover in some window)
-inline bool g_bHideCursor {false};
-
-// the canvas center point, in OpenGL 3D coordinate, but only X-Y coordinate, z is fixed (always 0) for now (aka the elevation).
-inline float g_CanvasCenterX {0.0f};
-inline float g_CanvasCenterY {0.0f};
-
-// the canvas scale factor, changed through mouse wheel, determines canvas OpenGL 3d Coordinates together with the canvas center point and screen width/height of canvas.
-// specifically, this factor is equal to the length of one pixel in 3D OpenGL coordinate.
-inline float g_CanvasScaleFactor {0.1f};
-
-// OpenGL 3D coordinate of canvas, calculated by canvas center point & canvas scale factor & canvas screen coordinates
-inline float g_CanvasLeft   {0.0f};
-inline float g_CanvasRight  {0.0f};
-inline float g_CanvasTop    {0.0f};
-inline float g_CanvasBottom {0.0f};
-
 // cursor color
 inline glm::vec4 g_CursorColor {1.0f, 1.0f, 1.0f, 1.0f}; // pure white
 
 // grid color
 inline glm::vec4 g_MainGridColor {0.211f, 0.238f, 0.305f, 1.0f}; // RGB: 54,61,78
 inline glm::vec4 g_SubGridColor {0.148f, 0.176f, 0.215f, 1.0f}; // RGB: 38,45,55
-
-// grid scale factor, the width of the main grid, should always be pow(5, n), n is integer
-inline float g_GridScaleFactor {5.0f};
-// A fixed parameter for grid auto-ajusting, change along with g_CanvasScaleFactor and g_GridScaleFactor.
-inline float g_GridAutoAjustFactor {4.98f};
 
 // axises color
 inline glm::vec4 g_XAxisColor { 97.0f / 256.0f, 37.0f / 256.0f, 39.0f / 256.0f, 1.0f}; // RGB: 97,37,39
@@ -202,6 +180,7 @@ inline std::tuple<bool, bool, bool, bool, int> g_LastKeyBoardShortcut {false, fa
 // =========================================================================================================
 // ------------------------------------- global variables: document related
 // =========================================================================================================
+// recent opened files
 inline std::vector<std::string> g_RecentFiles;
 
 // document manager

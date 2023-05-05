@@ -4,6 +4,7 @@
 #include <Global.h>
 #include <CommandProperties.h>
 #include <Logger.h>
+#include <DocManager.h>
 
 // register one command
 void registerCommand(const std::string& commandName, Command* pCommand, int category, const std::source_location& loc)
@@ -40,18 +41,20 @@ void unregisterCommand(const std::string& commandName, const std::source_locatio
 //      If the program is currently not on a proper context (eg. in the execution process of another command and waiting for input), current executing command will be canceled and then execute new command.
 void executeCommand(const std::string& command)
 {
-    if (g_bInCommandExecution)
+    DocManager::DocumentCmdLineAttribute& attr = g_DocManager.currentDocCmdLineAttributes();
+    if (attr.bInCommandExecution)
     {
         cancelCurrentCommand();
     }
-    g_UnprocessedInput.append(" " + command);
+    attr.unprocessedInput.append(" " + command);
 }
 
 // Cancel current executing command:
 //      equivalent to pressing multiple Esc until to the state of waiting for command.
 void cancelCurrentCommand()
 {
-    while (g_bInCommandExecution)
+    DocManager::DocumentCmdLineAttribute& attr = g_DocManager.currentDocCmdLineAttributes();
+    while (attr.bInCommandExecution)
     {
         // todo
     }
@@ -86,11 +89,13 @@ void unregisterModal(const std::string& name, const std::source_location& loc)
     }
 }
 
-// maintain the state of g_bInCommandExecution, basically for modal dialogs
-// - if a modal dialog shows, it's definitely in a command execution now, save old g_bInCommandExecution value and set it to true.
-// - if a modal dialog closes, restore g_bInCommandExecution to the state before the modal dialog shows.
+// maintain the state of attr.bInCommandExecution, basically for modal dialogs
+// - if a modal dialog shows, it's definitely in a command execution now, save old attr.bInCommandExecution value and set it to true.
+// - if a modal dialog closes, restore attr.bInCommandExecution to the state before the modal dialog shows.
 void maintainCommandExecutionState()
 {
+    DocManager::DocumentCmdLineAttribute& attr = g_DocManager.currentDocCmdLineAttributes();
+
     static bool s_bLastAnyModal = false;
     bool bAnyModal = false;
     for (auto iter = g_ModalsMap.begin(); iter != g_ModalsMap.end(); ++iter)
@@ -106,17 +111,17 @@ void maintainCommandExecutionState()
     // the modal closed last frame, resoter the command execution state
     if (s_bLastAnyModal && !bAnyModal)
     {
-        g_bInCommandExecution = s_bOldCommandExecution;
+        attr.bInCommandExecution = s_bOldCommandExecution;
     }
 
     // save old command execution state
     if (bAnyModal)
     {
-        g_bInCommandExecution = true;
+        attr.bInCommandExecution = true;
     }
     else
     {
-        s_bOldCommandExecution = g_bInCommandExecution;
+        s_bOldCommandExecution = attr.bInCommandExecution;
     }
     
     s_bLastAnyModal = bAnyModal;
