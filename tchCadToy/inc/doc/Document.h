@@ -17,8 +17,8 @@ public:
     virtual ~Document();
     DocumentState documentState();
     void setDocumentState(DocumentState state);
-    std::string fileName();
-    std::string filePathString();
+    const std::string& fileName();
+    const std::string& filePathString();
     void save();
     virtual void saveContent() = 0; // for inherited class to override
 protected:
@@ -32,5 +32,7 @@ public:
     static bool openFile(const std::filesystem::path& filePath, std::unique_ptr<Document>& upRes);
     // create a unnamed new document, return true if success, save result to upRes
     static bool createUnnamedFile(std::unique_ptr<Document>& upRes);
+
+    inline static int s_UnnamedFileCount {0};
 };
 

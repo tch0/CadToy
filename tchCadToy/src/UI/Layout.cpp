@@ -21,7 +21,7 @@ void calculateLayout()
     g_MainMenuBarHeight = ImGui::GetFrameHeight();
 
     // command line window
-    g_CommandLineWindowSize.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
+    g_CommandLineWindowSize.x = width - propertiesWidth;
     g_CommandLineWindowSize.y = g_CommandLineWindowHeight;
     g_CommandLineWindowPos.x = 0.0f;
     g_CommandLineWindowPos.y = height - g_StatusBarHeight - g_CommandLineWindowHeight;
@@ -34,15 +34,15 @@ void calculateLayout()
 
     // properties side bar
     g_PropertiesSideBarSize.x = propertiesWidth;
-    g_PropertiesSideBarSize.y = height - g_StatusBarHeight - g_MainMenuBarHeight;
-    g_PropertiesSideBarPos.x = width - propertiesWidth; // + 10.0f; // move right some pixels to avoid right side resizing
-    g_PropertiesSideBarPos.y = g_MainMenuBarHeight;
+    g_PropertiesSideBarSize.y = height - g_StatusBarHeight - g_MainMenuBarHeight - g_FileTabBarHeight;
+    g_PropertiesSideBarPos.x = width - propertiesWidth;
+    g_PropertiesSideBarPos.y = g_MainMenuBarHeight + g_FileTabBarHeight;
 
     // canvas is in OpenGL screen coordinate (left bottom as origin, int type)
     g_CanvasLeftBottomX = 0;
     g_CanvasLeftBottomY = int(g_StatusBarHeight + g_CommandLineWindowHeight);
     g_CanvasWidth = int(g_CommandLineWindowSize.x);
-    g_CanvasHeight = height - g_CanvasLeftBottomY - int(g_MainMenuBarHeight);
+    g_CanvasHeight = height - g_CanvasLeftBottomY - int(g_MainMenuBarHeight + g_FileTabBarHeight);
 
     // fix g_CanvasWidth/g_CanvasHeight being negative when minization.
     if (g_CanvasWidth < 0)
@@ -67,4 +67,6 @@ void setWindowLayout()
         ImGui::SetWindowSize(g_PropertiesSideBarTitle, g_PropertiesSideBarSize);
         ImGui::SetWindowPos(g_PropertiesSideBarTitle, g_PropertiesSideBarPos);
     }
+    ImGui::SetWindowPos(g_FileTabBarTitle, ImVec2(0.0f, g_MainMenuBarHeight));
+    ImGui::SetWindowSize(g_FileTabBarTitle, ImVec2(float(g_WindowWidth), g_FileTabBarHeight));
 }

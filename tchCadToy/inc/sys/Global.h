@@ -18,6 +18,7 @@
 #include <Canvas.h>
 #include <OptionsModal.h>
 #include <DocManager.h>
+#include <FileTabBar.h>
 
 // =========================================================================================================
 // ----------------------------------- global variables: windows/path
@@ -49,9 +50,10 @@ inline bool g_bFullScreen = false;
 inline GLFWwindow* g_pWindow = nullptr;
 
 // window ID of command line/status bar/properties side bar
-inline const char* g_CommandLineWindowTitle = "Command Line";
-inline const char* g_StatusBarTitle = "Status Bar";
+inline const char* g_CommandLineWindowTitle = "Command-Line-Window";
+inline const char* g_StatusBarTitle = "Status-Bar";
 inline const char* g_PropertiesSideBarTitle = "Properties";
+inline const char* g_FileTabBarTitle = "File-Tab-Bar";
 
 // window width and height
 inline int g_WindowWidth;
@@ -68,6 +70,7 @@ inline float g_CommandLineWindowHeight = 250;
 inline float g_StatusBarHeight = 35;
 inline float g_PropertiesSideBarWidth = 430;
 inline float g_MainMenuBarHeight = 26;
+inline float g_FileTabBarHeight = 26;
 
 // properties window open or close
 inline bool g_bPropertiesSideBarOpen = true;
@@ -77,6 +80,8 @@ inline bool g_bPropertiesSideBarOpen = true;
 inline CommandLineWindow g_CmdWindow;
 // menu bar
 inline MainMenuBar g_MainMenuBar;
+// file tabs
+inline FileTabBar g_FileTabBar;
 
 
 // =========================================================================================================
@@ -97,18 +102,6 @@ inline OptionsModal g_OptionsModal;
 // the global map that saves all commands
 std::map<std::string, std::pair<Command*, int>>& getCommandsMap();
 
-// the unprocessed input string that will be either pass to command (if the command is executing now) as inputs 
-//      or be parsed as next command (if pervious command do not need inputs, when pervious command finish).
-inline std::string g_UnprocessedInput;
-
-// whether the program is current in the execution of a command:
-// specifically:
-//  - a command is excuting and waiting for text/point/... input.
-//  - the command pops up a modal dialog, and is waiting to process/close.
-//  - ... (other kind, to be added here)
-// How to maintain this value?
-inline bool g_bInCommandExecution {false};
-
 
 // =========================================================================================================
 // ------------------------------------- global variables: canvas related
@@ -125,9 +118,6 @@ inline int g_CanvasHeight;
 
 // the global canvas
 inline Canvas g_Canvas;
-
-// current cursor hover point in canvas, calculated from current screen cursor position
-inline glm::vec3 g_CurrentHoverPoint;
 
 // cursor color
 inline glm::vec4 g_CursorColor {1.0f, 1.0f, 1.0f, 1.0f}; // pure white
@@ -185,6 +175,10 @@ inline std::vector<std::string> g_RecentFiles;
 
 // document manager
 inline DocManager g_DocManager;
+
+// is document changed last frame, for something need to be updated when document changes (eg. grid/axises/cursor)
+inline bool g_bIsDocumentChanged {false};
+
 
 // =========================================================================================================
 // ------------------------------------- global functions

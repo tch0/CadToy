@@ -23,6 +23,7 @@ int main(int argc, char const *argv[])
     //====================================================================================//
     //                 logger
     //------------------------------------------------------------------------------------//
+    std::cout.sync_with_stdio(false);
     globalLogger().setLowestOutputLevel(Logger::Trace); // the most detailed informations
 
     //====================================================================================//
@@ -110,9 +111,14 @@ int main(int argc, char const *argv[])
         {
             g_MainMenuBar.draw();
         }
+        // file tab bar
+        {
+            g_FileTabBar.draw();
+        }
         // status bar
         {
-            glm::vec3 hoverPoint = g_CurrentHoverPoint;
+            DocManager::DocumentCanvasAttribute& attr = g_DocManager.currentDocCanvasAttributes();
+            glm::vec3 hoverPoint = attr.currentHoverPoint;
             ImGui::Begin(g_StatusBarTitle, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Text("%.4f, %.4f, %.4f", hoverPoint.x, hoverPoint.y, hoverPoint.z);
             // todo: other icons

@@ -93,10 +93,10 @@ void Canvas::CustomCursor::updateVertices()
     m_Colors.resize(0);
     float pickBoxHalfWidth = m_PickBoxSize * attr.canvasScaleFactor * 0.5f;
     float cursorHalfWidth = m_CursorSize * attr.canvasScaleFactor * 0.5f;
-    glm::vec3 left = g_CurrentHoverPoint - glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
-    glm::vec3 right = g_CurrentHoverPoint + glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
-    glm::vec3 top = g_CurrentHoverPoint + glm::vec3(0.0f, cursorHalfWidth, 0.0f);
-    glm::vec3 bottom = g_CurrentHoverPoint + glm::vec3(0.0f, -cursorHalfWidth, 0.0f);
+    glm::vec3 left = attr.currentHoverPoint - glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
+    glm::vec3 right = attr.currentHoverPoint + glm::vec3(cursorHalfWidth, 0.0f, 0.0f);
+    glm::vec3 top = attr.currentHoverPoint + glm::vec3(0.0f, cursorHalfWidth, 0.0f);
+    glm::vec3 bottom = attr.currentHoverPoint + glm::vec3(0.0f, -cursorHalfWidth, 0.0f);
     if (m_PickBoxSize == 0)
     {
         m_Vertices.push_back(left);
@@ -107,14 +107,14 @@ void Canvas::CustomCursor::updateVertices()
     }
     else
     {
-        glm::vec3 pickBoxLeftTop = g_CurrentHoverPoint + glm::vec3(-pickBoxHalfWidth, pickBoxHalfWidth, 0.0f);
-        glm::vec3 pickBoxLeftBottom = g_CurrentHoverPoint + glm::vec3(-pickBoxHalfWidth, -pickBoxHalfWidth, 0.0f);
-        glm::vec3 pickBoxRightTop = g_CurrentHoverPoint + glm::vec3(pickBoxHalfWidth, pickBoxHalfWidth, 0.0f);
-        glm::vec3 pickBoxRightBottom = g_CurrentHoverPoint + glm::vec3(pickBoxHalfWidth, -pickBoxHalfWidth, 0.0f);
-        glm::vec3 leftMiddle = g_CurrentHoverPoint + glm::vec3(-pickBoxHalfWidth, 0.0f, 0.0f);
-        glm::vec3 rightMiddle = g_CurrentHoverPoint + glm::vec3(pickBoxHalfWidth, 0.0f, 0.0f);
-        glm::vec3 topMiddle = g_CurrentHoverPoint + glm::vec3(0.0f, pickBoxHalfWidth, 0.0f);
-        glm::vec3 bottomMiddle = g_CurrentHoverPoint + glm::vec3(0.0f, -pickBoxHalfWidth, 0.0f);
+        glm::vec3 pickBoxLeftTop = attr.currentHoverPoint + glm::vec3(-pickBoxHalfWidth, pickBoxHalfWidth, 0.0f);
+        glm::vec3 pickBoxLeftBottom = attr.currentHoverPoint + glm::vec3(-pickBoxHalfWidth, -pickBoxHalfWidth, 0.0f);
+        glm::vec3 pickBoxRightTop = attr.currentHoverPoint + glm::vec3(pickBoxHalfWidth, pickBoxHalfWidth, 0.0f);
+        glm::vec3 pickBoxRightBottom = attr.currentHoverPoint + glm::vec3(pickBoxHalfWidth, -pickBoxHalfWidth, 0.0f);
+        glm::vec3 leftMiddle = attr.currentHoverPoint + glm::vec3(-pickBoxHalfWidth, 0.0f, 0.0f);
+        glm::vec3 rightMiddle = attr.currentHoverPoint + glm::vec3(pickBoxHalfWidth, 0.0f, 0.0f);
+        glm::vec3 topMiddle = attr.currentHoverPoint + glm::vec3(0.0f, pickBoxHalfWidth, 0.0f);
+        glm::vec3 bottomMiddle = attr.currentHoverPoint + glm::vec3(0.0f, -pickBoxHalfWidth, 0.0f);
         if (m_PickBoxSize < m_CursorSize)
         {
             m_Vertices.push_back(left);
@@ -296,17 +296,17 @@ void Canvas::update()
 
     // get cursor pos
     ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantCaptureMouse)
     {
         g_CursorPosX = int(io.MousePos.x);
         g_CursorPosY = g_WindowHeight - int(io.MousePos.y);
     }
     
+    bool bShouldUpdateCursor = false;
+    bool bShouldUpdateGrid = false;
     // update cursor datas if cursor position changes
     if (g_LastCursorPosX != g_CursorPosX || g_LastCursorPosY != g_CursorPosY)
     {
-        m_Cursor.updateVertices();
-        updateVertexArrayBufferData(m_CursorVao, m_CursorPosVbo, m_CursorColorVbo, m_Cursor.vertices(), m_Cursor.colors());
+        bShouldUpdateCursor = true;
     }
 
     // hide cursor and draw custom cursor if cursor is inside the canvas (and it's not captured by any floating window).
@@ -326,7 +326,7 @@ void Canvas::update()
         g_ScrollYOffset = int(io.MouseWheelH);
     }
 
-    bool bShouldUpdateGrid = false;
+    
     // update canvas OpenGL 3D coordinates by update scale factor (changed through mouse wheel), and update center point at the same time.
     // yoffset is treated just like xoffset (when scrool the mouse wheel and press Shift at the same time)
     if (g_ScrollXOffset == 0)
@@ -336,8 +336,8 @@ void Canvas::update()
     g_ScrollYOffset = 0;
     if (g_ScrollXOffset != 0)
     {
-        glm::vec3 leftBottomToHoverVec = glm::vec3(attr.canvasLeft, attr.canvasBottom, 0.0f) - g_CurrentHoverPoint;
-        glm::vec3 rightTopToHoverVec = glm::vec3(attr.canvasRight, attr.canvasTop, 0.0f) - g_CurrentHoverPoint;
+        glm::vec3 leftBottomToHoverVec = glm::vec3(attr.canvasLeft, attr.canvasBottom, 0.0f) - attr.currentHoverPoint;
+        glm::vec3 rightTopToHoverVec = glm::vec3(attr.canvasRight, attr.canvasTop, 0.0f) - attr.currentHoverPoint;
 
         while (g_ScrollXOffset >= 1)
         {
@@ -367,11 +367,11 @@ void Canvas::update()
             attr.gridScaleFactor /= 5.0f;
         }
         // calculate new center point
-        attr.canvasCenterX = (rightTopToHoverVec.x + g_CurrentHoverPoint.x + leftBottomToHoverVec.x + g_CurrentHoverPoint.x) / 2.0f;
-        attr.canvasCenterY = (rightTopToHoverVec.y + g_CurrentHoverPoint.y + leftBottomToHoverVec.y + g_CurrentHoverPoint.y) / 2.0f;
-        // update cursor data
-        m_Cursor.updateVertices();
-        updateVertexArrayBufferData(m_CursorVao, m_CursorPosVbo, m_CursorColorVbo, m_Cursor.vertices(), m_Cursor.colors());
+        attr.canvasCenterX = (rightTopToHoverVec.x + attr.currentHoverPoint.x + leftBottomToHoverVec.x + attr.currentHoverPoint.x) / 2.0f;
+        attr.canvasCenterY = (rightTopToHoverVec.y + attr.currentHoverPoint.y + leftBottomToHoverVec.y + attr.currentHoverPoint.y) / 2.0f;
+
+        // update cursor after scale
+        bShouldUpdateCursor = true;
         // grid will be updated after canvas coorindates are updated
         bShouldUpdateGrid = true;
 
@@ -393,16 +393,35 @@ void Canvas::update()
         bShouldUpdateGrid = true;
     }
 
+    // update grid and cursor if document changed
+    if (g_bIsDocumentChanged)
+    {
+        g_bIsDocumentChanged = false;
+        bShouldUpdateGrid = true;
+        bShouldUpdateCursor = true;
+    }
+
     // calculate canvas OpenGL 3D coordinates
     attr.canvasTop = attr.canvasCenterY + attr.canvasScaleFactor * 0.5f * g_CanvasHeight;
     attr.canvasBottom = attr.canvasCenterY - attr.canvasScaleFactor * 0.5f * g_CanvasHeight;
     attr.canvasLeft = attr.canvasCenterX - attr.canvasScaleFactor * 0.5f * g_CanvasWidth;
     attr.canvasRight = attr.canvasCenterX + attr.canvasScaleFactor * 0.5f * g_CanvasWidth;
 
-    // update grid
-    if (bShouldUpdateGrid || !m_bGridUpdatedFirstTime)
+    // update cursor data
+    if (bShouldUpdateCursor)
+    {
+        m_Cursor.updateVertices();
+        updateVertexArrayBufferData(m_CursorVao, m_CursorPosVbo, m_CursorColorVbo, m_Cursor.vertices(), m_Cursor.colors());
+    }
+
+    // update grid data
+    if (!m_bGridUpdatedFirstTime)
     {
         m_bGridUpdatedFirstTime = true;
+        bShouldUpdateGrid = true;
+    }
+    if (bShouldUpdateGrid)
+    {
         m_Grid.updateVertices();
         updateVertexArrayBufferData(m_GridVao, m_GridPosVbo, m_GridColorVbo, m_Grid.vertices(), m_Grid.colors());
     }
@@ -411,13 +430,14 @@ void Canvas::update()
     m_Axises.updateVertices();
     updateVertexArrayBufferData(m_AxisesVao, m_AxisesPosVbo, m_AxisesColorVbo, m_Axises.vertices(), m_Axises.colors());
 
+
     // calculate hover point OpenGL 3D coordinates, update it only when it's inside canvas.
     if (g_CursorPosX > 0 && g_CursorPosX < g_CanvasLeftBottomX + g_CanvasWidth &&
         g_CursorPosY > 0 && g_CursorPosY < g_CanvasLeftBottomY + g_CanvasHeight)
     {
-        g_CurrentHoverPoint.x = attr.canvasLeft + attr.canvasScaleFactor * (g_CursorPosX - g_CanvasLeftBottomX);
-        g_CurrentHoverPoint.y = attr.canvasBottom + attr.canvasScaleFactor * (g_CursorPosY - g_CanvasLeftBottomY);
-        g_CurrentHoverPoint.z = 0.0f;
+        attr.currentHoverPoint.x = attr.canvasLeft + attr.canvasScaleFactor * (g_CursorPosX - g_CanvasLeftBottomX);
+        attr.currentHoverPoint.y = attr.canvasBottom + attr.canvasScaleFactor * (g_CursorPosY - g_CanvasLeftBottomY);
+        attr.currentHoverPoint.z = 0.0f;
     }
 
     // calculate matrices
@@ -446,8 +466,12 @@ void Canvas::draw()
     glBindVertexArray(m_AxisesVao);
     glDrawArrays(GL_LINES, 0, m_Axises.vertices().size() * 3);
     // draw custom cursor
-    glBindVertexArray(m_CursorVao);
-    glDrawArrays(GL_LINES, 0, m_Cursor.vertices().size() * 3);
+    if (!ImGui::GetIO().WantCaptureMouse)
+    {
+        glBindVertexArray(m_CursorVao);
+        glDrawArrays(GL_LINES, 0, m_Cursor.vertices().size() * 3);
+    }
+    
 
     glBindVertexArray(0);
     checkOpenGLError();

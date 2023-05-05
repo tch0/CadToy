@@ -22,12 +22,12 @@ void Document::setDocumentState(DocumentState state)
     m_DocState = state;
 }
 
-std::string Document::fileName()
+const std::string& Document::fileName()
 {
     return m_FileName;
 }
 
-std::string Document::filePathString()
+const std::string& Document::filePathString()
 {
     return m_FilePathString;
 }
@@ -64,6 +64,7 @@ bool Document::openFile(const std::filesystem::path& filePath, std::unique_ptr<D
 bool Document::createUnnamedFile(std::unique_ptr<Document>& upRes)
 {
     std::unique_ptr<Document> up(new BinaryDocument());
+    up->m_FileName = std::format("unnamed-{}", s_UnnamedFileCount++);
     upRes = std::move(up);
     return true;
 }

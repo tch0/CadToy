@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <string>
 
+#include <glm/glm.hpp>
+
 #include <Document.h>
 
 // will be a singleton
@@ -27,6 +29,8 @@ public:
         float gridScaleFactor {5.0f};
         // A fixed parameter for grid auto-ajusting, change along with g_CanvasScaleFactor and g_GridScaleFactor.
         float gridAutoAjustFactor{4.98f};
+        // current cursor hover point in canvas, calculated from current screen cursor position
+        glm::vec3 currentHoverPoint;
     };
     struct DocumentCmdLineAttribute
     {
@@ -76,4 +80,9 @@ public:
     bool newNamedDocument(const std::filesystem::path& filePath);
     // create a unnamed new document, convert to this document, return true if sucess, do nothing and return false when fail.
     bool newUnnamedDocument();
+
+    // for documents traversing
+    std::size_t currentDocIndex();
+    std::size_t documentsSize();
+    Document& documentAt(std::size_t index);
 };

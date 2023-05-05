@@ -86,3 +86,22 @@ bool DocManager::newUnnamedDocument()
     return res;
 }
 
+
+// for documents traversing
+std::size_t DocManager::currentDocIndex()
+{
+    return m_CurrentDocIndex;
+}
+std::size_t DocManager::documentsSize()
+{
+    if (m_Documents.empty())
+    {
+        newUnnamedDocument();
+    }
+    return m_Documents.size();
+}
+Document& DocManager::documentAt(std::size_t index)
+{
+    tchAssert(index <= m_Documents.size());
+    return *m_Documents[index];
+}
