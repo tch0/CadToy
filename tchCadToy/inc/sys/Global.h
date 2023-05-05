@@ -17,7 +17,7 @@
 #include <Command.h>
 #include <Canvas.h>
 #include <OptionsModal.h>
-
+#include <DocManager.h>
 
 // =========================================================================================================
 // ----------------------------------- global variables: windows/path
@@ -26,9 +26,12 @@
 // cwd: current working directory
 inline std::filesystem::path g_PathCwd;
 
+// system endian, true for big endian (like arm), false for little endian (like x86)
+inline bool g_BigEndian {true};
+
 // imgui window config file path
 inline std::filesystem::path g_WindowConfigFile;
-inline std::string g_WindowConfigFileStr;
+inline std::string g_ImguiConfigFileStr;
 // imgui log file path
 inline std::filesystem::path g_ImguiLogFile;
 inline std::string g_ImguiLogFileStr;
@@ -201,6 +204,8 @@ inline std::tuple<bool, bool, bool, bool, int> g_LastKeyBoardShortcut {false, fa
 // =========================================================================================================
 inline std::vector<std::string> g_RecentFiles;
 
+// document manager
+inline DocManager g_DocManager;
 
 // =========================================================================================================
 // ------------------------------------- global functions
@@ -208,6 +213,9 @@ inline std::vector<std::string> g_RecentFiles;
 
 // check which OS current is
 void checkOS();
+
+// check the endian of the system
+void checkSystemEndian();
 
 // build current working directory from exe path
 void buildCwd(const char* exePath);

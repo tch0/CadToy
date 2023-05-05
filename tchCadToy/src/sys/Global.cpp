@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include <SysConfig.h>
 #include <Logger.h>
 #include <Global.h>
@@ -21,7 +23,23 @@ std::map<std::string, std::pair<Command*, int>>& getCommandsMap()
 // check which OS current is
 void checkOS()
 {
-    globalLogger().info(std::format("system: {}", SYSTEM_NAME));
+    globalLogger().info(std::format("System: {}", SYSTEM_NAME));
+}
+
+// check the endian of the system
+void checkSystemEndian()
+{
+    uint32_t x = 0x11223344;
+    char* p = reinterpret_cast<char*>(&x);
+    if (*p == 0x11)
+    {
+        g_BigEndian = true;
+    }
+    else
+    {
+        g_BigEndian = false;
+    }
+    globalLogger().info(std::format("The endian of system: {}", g_BigEndian ? "big endian" : "little endian"));
 }
 
 // build current working directory from exe path
@@ -29,7 +47,7 @@ void buildCwd(const char* exePath)
 {
     g_PathCwd = fs::absolute(fs::path(exePath));
     g_PathCwd.remove_filename();
-    globalLogger().info(std::format("cwd: {}", g_PathCwd.string()));
+    globalLogger().info(std::format("Cwd: {}", g_PathCwd.string()));
 }
 
 // create a directory p if it does not exist

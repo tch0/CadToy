@@ -29,6 +29,7 @@ int main(int argc, char const *argv[])
     //                 prepare
     //------------------------------------------------------------------------------------//
     checkOS();
+    checkSystemEndian();
     buildCwd(argv[0]);
     checkAndCreateImportantDirs();
 
@@ -51,9 +52,9 @@ int main(int argc, char const *argv[])
     
     // ini file
     g_WindowConfigFile = g_PathCwd / "imgui.ini";
-    g_WindowConfigFileStr = g_WindowConfigFile.string();
-    io.IniFilename = g_WindowConfigFileStr.c_str();
-    globalLogger().info(std::format("Window config file: {}", g_WindowConfigFileStr));
+    g_ImguiConfigFileStr = g_WindowConfigFile.string();
+    io.IniFilename = g_ImguiConfigFileStr.c_str();
+    globalLogger().info(std::format("Imgui config file: {}", g_ImguiConfigFileStr));
 
     // default log file
     g_ImguiLogFile = g_PathCwd / "imgui_log.txt";
@@ -62,7 +63,7 @@ int main(int argc, char const *argv[])
     globalLogger().info(std::format("Imgui log file: {}", g_ImguiLogFileStr));
 
     // load font
-    g_ConsolasFontPath = g_PathCwd / "fonts/consolas.ttf";
+    g_ConsolasFontPath = g_PathCwd / "fonts" / "consolas.ttf";
     g_ConsolasFontPathStr = g_ConsolasFontPath.string();
     if (std::filesystem::exists(g_ConsolasFontPath))
     {
@@ -71,6 +72,7 @@ int main(int argc, char const *argv[])
         ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(g_ConsolasFontPathStr.c_str(), g_ConsolasFontSize);
         io.FontDefault = consolasFont;
         consolasFont->Scale = 1.0;
+        globalLogger().info(std::format("Font file loaded: {}", g_ConsolasFontPathStr));
     }
     else
     {

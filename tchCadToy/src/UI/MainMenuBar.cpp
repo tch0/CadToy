@@ -1,11 +1,11 @@
+#include <functional>
+
 #include <MainMenuBar.h>
 #include <Global.h>
 #include <Command.h>
 
 MainMenuBar::MainMenuBar()
 {
-    
-
 }
 
 void MainMenuBar::draw()
@@ -43,29 +43,28 @@ void MainMenuBar::drawMenuFile()
     }
     if (ImGui::BeginMenu("Open Recent", !g_RecentFiles.empty()))
     {
-        std::size_t index = 0;
-        for (index = 0; index < g_RecentFiles.size() && index < 10; index++)
+        std::function<void(std::size_t)> showFilesFrom = [&showFilesFrom](std::size_t start) -> void
         {
-            if (ImGui::MenuItem(g_RecentFiles[index].c_str()))
+            std::size_t i = start;
+            for (; i < g_RecentFiles.size() && i < start + 30; i++)
             {
-                // todo: execute open in command mode, not dialog mode
-                executeCommand("open " + g_RecentFiles[index]);
-            }
-        }
-        if (index < g_RecentFiles.size())
-        {
-            if (ImGui::MenuItem("More..."))
-            {
-                for (;index < g_RecentFiles.size(); index++)
+                if (ImGui::MenuItem(g_RecentFiles[i].c_str()))
                 {
-                    if (ImGui::MenuItem(g_RecentFiles[index].c_str()))
-                    {
-                        // todo: execute open in command mode, not dialog mode
-                        executeCommand("open " + g_RecentFiles[index]);
-                    }
+                    // todo: execute open in command mode, not dialog mode
+                    executeCommand("open " + g_RecentFiles[i]);
                 }
             }
-        }
+            if (i < g_RecentFiles.size())
+            {
+                if (ImGui::BeginMenu("More..."))
+                {
+                    showFilesFrom(i);
+                    ImGui::EndMenu();
+                }
+            }
+        };
+        // show recent file recursively
+        showFilesFrom(0);
         ImGui::Separator();
         if (ImGui::MenuItem("Clear Recent Files", nullptr, false, true))
         {
