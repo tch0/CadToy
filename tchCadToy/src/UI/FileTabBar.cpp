@@ -57,13 +57,14 @@ void FileTabBar::draw()
                     }
                     else
                     {
-                        ImGui::SetTooltip(doc.fileName().c_str());
+                        std::string fullFileName = doc.fileName() + doc.fileExtension();
+                        ImGui::SetTooltip(fullFileName.c_str());
                     }
                 }
                 // the tab closed
                 if (!open)
                 {
-                    executeCommand("close");
+                    g_DocManager.closeDocument(i);
                 }
             }
             ImGui::EndTabBar();

@@ -8,4 +8,6 @@ public:
     BinaryDocument();
     // implementation of saving content to file on disk
     virtual void saveContent() override;
+    // binary document extension
+    virtual std::string fileExtension() override;
 };

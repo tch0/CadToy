@@ -10,10 +10,11 @@ void registerAllKeyboardShortcuts()
 {
     // main menu bar item shortcuts:
     // File
-    registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_N, "save");         // Ctrl+N
+    registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_N, "new");          // Ctrl+N
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_O, "open");         // Ctrl+O
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_S, "save");         // Ctrl+O
     registerCombinationKeyboardShortcut(true,  true, false, false, ImGuiKey_S, "saveas");       // Ctrl+Shift+S
+    registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_W, "close");        // Ctrl+W
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Q, "quit");         // Ctrl+Q
     // Edit
     registerCombinationKeyboardShortcut(true, false, false, false, ImGuiKey_Z, "undo");         // Ctrl+Z

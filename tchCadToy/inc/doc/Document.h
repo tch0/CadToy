@@ -20,7 +20,8 @@ public:
     const std::string& fileName();
     const std::string& filePathString();
     void save();
-    virtual void saveContent() = 0; // for inherited class to override
+    virtual void saveContent() = 0;             // for inherited class to override
+    virtual std::string fileExtension() = 0;    // file extension varied from file format
 protected:
     DocumentState m_DocState {UnnamedNewFile};
     std::string m_FileName;

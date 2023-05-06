@@ -80,6 +80,10 @@ void MainMenuBar::drawMenuFile()
     {
         executeCommand("saveas");
     }
+    if (ImGui::MenuItem("Close", "Ctrl+W"))
+    {
+        executeCommand("close");
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("Quit", "Ctrl+Q"))
     {

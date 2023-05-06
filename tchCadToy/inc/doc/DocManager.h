@@ -77,7 +77,7 @@ public:
     DocumentCmdLineAttribute& currentDocCmdLineAttributes();
     // set current document index
     void setCurrentDocumentIndex(std::size_t index);
-    // open a existing file, do some necessary initialization for this document, convert to this document, return true if sucess, do nothing and return false when fail.
+    // open an existing file, do some necessary initialization for this document, convert to this document, return true if sucess, do nothing and return false when fail.
     bool newNamedDocument(const std::filesystem::path& filePath);
     // create a unnamed new document, convert to this document, return true if sucess, do nothing and return false when fail.
     bool newUnnamedDocument();
@@ -86,6 +86,14 @@ public:
     std::size_t currentDocIndex();
     std::size_t documentsSize();
     Document& documentAt(std::size_t index);
+
+    // close document, exactly the close command do:
+    // - if current document is unchanged (named or unnamed), do nothing
+    // - if current document is changed and named, ask for saving or not.
+    // - if current document is changed and unnamed, ask for saving or not, if saving, ask for file name next.
+    void closeDocument(std::size_t index);
+    // remove specific document
+    void removeDocument(std::size_t index);
 
     // message printing, for user interaction
     void cmdLinePrint(const std::string& message);

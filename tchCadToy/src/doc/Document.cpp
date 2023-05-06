@@ -10,6 +10,10 @@ Document::Document()
 
 Document::~Document()
 {
+    if (m_FileStream.is_open())
+    {
+        m_FileStream.close();
+    }
 }
 
 Document::DocumentState Document::documentState()
@@ -47,7 +51,7 @@ bool Document::openFile(const std::filesystem::path& filePath, std::unique_ptr<D
     {
         upRes = std::unique_ptr<Document>(new BinaryDocument());
         upRes->m_DocState = SavedUnchangedFile;
-        upRes->m_FileName = filePath.filename().string();
+        upRes->m_FileName = filePath.stem().string();
         upRes->m_FilePathString = filePath.string();
         upRes->m_FilePath = filePath;
         upRes->m_FileStream = std::move(fileStream);

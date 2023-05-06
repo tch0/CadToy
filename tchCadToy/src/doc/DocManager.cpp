@@ -1,5 +1,8 @@
+#include <algorithm>
+
 #include <DocManager.h>
 #include <Logger.h>
+#include <Global.h>
 
 DocManager::DocManager()
 {
@@ -118,6 +121,50 @@ Document& DocManager::documentAt(std::size_t index)
 {
     tchAssert(index <= m_Documents.size());
     return *m_Documents[index];
+}
+
+// close document
+void DocManager::closeDocument(std::size_t index)
+{
+    tchAssert(index < m_Documents.size());
+    tchAssert(!m_Documents.empty());
+    // make the document to be closed be current document.
+    m_CurrentDocIndex = index;
+
+    Document& doc = currentDoc();
+    auto state = doc.documentState();
+    if (state == Document::UnnamedNewFile || state == Document::SavedUnchangedFile)
+    {
+        removeDocument(index);
+    }
+    else // UnnamedChangedFile or SavedChangedFile
+    {
+        g_CloseModalOpen = true;
+    }
+}
+
+// remove specific document
+void DocManager::removeDocument(std::size_t index)
+{
+    tchAssert(index < m_Documents.size());
+    tchAssert(!m_Documents.empty());
+    m_Documents.erase(m_Documents.begin() + index);
+    m_DocCanvasAttrs.erase(m_DocCanvasAttrs.begin() + index);
+    m_DocCmdLineAttrs.erase(m_DocCmdLineAttrs.begin() + index);
+    // set current index to last one, if current is first, set to next one
+    if (index != 0)
+    {
+        m_CurrentDocIndex = index - 1;
+    }
+    else
+    {
+        m_CurrentDocIndex = 0;
+    }
+    if (m_Documents.empty())
+    {
+        newUnnamedDocument();
+    }
+    g_bIsDocumentChanged = true;
 }
 
 // message printing, for user interaction

@@ -19,6 +19,7 @@
 #include <OptionsModal.h>
 #include <DocManager.h>
 #include <FileTabBar.h>
+#include <CloseModal.h>
 
 // =========================================================================================================
 // ----------------------------------- global variables: windows/path
@@ -93,6 +94,10 @@ inline std::map<std::string, bool*> g_ModalsMap;
 // options modal
 inline bool g_OptionsModalOpen {false};
 inline OptionsModal g_OptionsModal;
+
+// close modal
+inline bool g_CloseModalOpen {false};
+inline CloseModal g_CloseModal;
 
 
 // =========================================================================================================

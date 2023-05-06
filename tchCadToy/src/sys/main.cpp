@@ -151,6 +151,7 @@ int main(int argc, char const *argv[])
         // other modals/dialogs
         {
             g_OptionsModal.draw();
+            g_CloseModal.draw();
             maintainCommandExecutionState();
         }
 

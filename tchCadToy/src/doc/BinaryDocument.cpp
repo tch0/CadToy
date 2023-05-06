@@ -12,3 +12,10 @@ void BinaryDocument::saveContent()
     // todo yet: print a log for now
     globalLogger().info(std::format("File {} saved!", fileName()));
 }
+
+
+// binary document extension
+std::string BinaryDocument::fileExtension()
+{
+    return ".dwg";
+}
