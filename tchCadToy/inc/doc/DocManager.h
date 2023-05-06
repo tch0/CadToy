@@ -65,6 +65,7 @@ private:
     std::vector<DocumentCanvasAttribute> m_DocCanvasAttrs;
     std::vector<DocumentCmdLineAttribute> m_DocCmdLineAttrs;
     std::size_t m_CurrentDocIndex {0};
+    inline static const std::size_t MAX_DOCUMENT_COUNT {256};
 public:
     DocManager();
     ~DocManager();
@@ -85,4 +86,7 @@ public:
     std::size_t currentDocIndex();
     std::size_t documentsSize();
     Document& documentAt(std::size_t index);
+
+    // message printing, for user interaction
+    void cmdLinePrint(const std::string& message);
 };

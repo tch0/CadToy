@@ -3,6 +3,10 @@
 
 DocManager::DocManager()
 {
+    // limit the max document count, reserve enough space for all documents/document attributes to prevent reference invalidation when capacity growth (command new)
+    m_Documents.reserve(MAX_DOCUMENT_COUNT);
+    m_DocCanvasAttrs.reserve(MAX_DOCUMENT_COUNT);
+    m_DocCmdLineAttrs.reserve(MAX_DOCUMENT_COUNT);
 }
 
 DocManager::~DocManager()
@@ -59,6 +63,11 @@ void DocManager::setCurrentDocumentIndex(std::size_t index)
 // open a existing file, do some necessary initialization for this document, convert to this document, return true if sucess, do nothing and return false when fail.
 bool DocManager::newNamedDocument(const std::filesystem::path& filePath)
 {
+    if (m_Documents.size() == MAX_DOCUMENT_COUNT)
+    {
+        cmdLinePrint(std::format("The amount of documents exceed the document number limit {}, can not create new document, maybe close some to create new!", MAX_DOCUMENT_COUNT));
+        return false;
+    }
     std::unique_ptr<Document> up;
     bool res = Document::openFile(filePath, up);
     if (res)
@@ -74,6 +83,11 @@ bool DocManager::newNamedDocument(const std::filesystem::path& filePath)
 // create a unnamed new document, convert to this document, return true if sucess, do nothing and return false when fail.
 bool DocManager::newUnnamedDocument()
 {
+    if (m_Documents.size() == MAX_DOCUMENT_COUNT)
+    {
+        cmdLinePrint(std::format("The amount of documents exceed the document number limit {}, can not create new document, maybe close some to create new!", MAX_DOCUMENT_COUNT));
+        return false;
+    }
     std::unique_ptr<Document> up;
     bool res = Document::createUnnamedFile(up);
     if (res)
@@ -104,4 +118,11 @@ Document& DocManager::documentAt(std::size_t index)
 {
     tchAssert(index <= m_Documents.size());
     return *m_Documents[index];
+}
+
+// message printing, for user interaction
+void DocManager::cmdLinePrint(const std::string& message)
+{
+    DocumentCmdLineAttribute& cmdLineAttr = currentDocCmdLineAttributes();
+    cmdLineAttr.commandLogs.push_back(message);
 }
