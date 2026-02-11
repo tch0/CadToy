@@ -153,6 +153,8 @@ target_compile_options(general_cxx_compiler_flags
         # msvc/clang-cl
         $<$<BOOL:${CXX_COMPILER_IS_MSVC_LIKE}>:$<BUILD_INTERFACE:
             /W3
+            /source-charset:utf-8               #support UTF-8 source file, like Chinese comment
+            /execution-charset:utf-8            #strange errors may occur if you write Chinese comment but lack of these 2 flags
         >>
 )
 
