@@ -31,6 +31,11 @@ void InputHandler::initialize(GLFWwindow* window) {
     glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) {
         InputHandler::handleMouseScroll(xoffset, yoffset);
     });
+    
+    // 注册鼠标进入/离开窗口回调
+    glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) {
+        InputHandler::handleMouseEnter(entered);
+    });
 }
 
 // 处理键盘输入
@@ -104,6 +109,17 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
     }
 }
 
+// 处理鼠标进入/离开窗口
+void InputHandler::handleMouseEnter(int entered) {
+    if (entered) {
+        // 鼠标进入窗口，隐藏系统光标
+        setMouseCursorVisible(false);
+    } else {
+        // 鼠标离开窗口，显示系统光标
+        setMouseCursorVisible(true);
+    }
+}
+
 // 获取鼠标位置
 glm::vec2 InputHandler::getMousePosition() {
     return s_mousePosition;
@@ -151,7 +167,7 @@ void InputHandler::setMouseCursorVisible(bool visible) {
         if (visible) {
             glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         } else {
-            glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         }
     }
 }

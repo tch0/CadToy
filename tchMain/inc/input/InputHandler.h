@@ -36,6 +36,9 @@ public:
     // 处理鼠标滚轮
     static void handleMouseScroll(double xoffset, double yoffset);
     
+    // 处理鼠标进入/离开窗口
+    static void handleMouseEnter(int entered);
+    
     // 获取鼠标位置
     static glm::vec2 getMousePosition();
     
