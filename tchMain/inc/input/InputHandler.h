@@ -56,14 +56,19 @@ public:
     
     // 取消注册事件回调
     static void unregisterCallback(InputEventType eventType);
+    
+    // 设置鼠标指针可见性
+    static void setMouseCursorVisible(bool visible);
 
 private:
+    // 窗口指针
+    static GLFWwindow* s_window;
     // 静态成员变量
-    static glm::vec2 m_mousePosition;
-    static bool m_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
-    static bool m_keys[GLFW_KEY_LAST + 1];
-    static std::string m_commandInput;
-    static std::unordered_map<InputEventType, std::function<void()>> m_callbacks;
+    static glm::vec2 s_mousePosition;
+    static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
+    static bool s_keys[GLFW_KEY_LAST + 1];
+    static std::string s_commandInput;
+    static std::unordered_map<InputEventType, std::function<void()>> s_callbacks;
 };
 
 } // namespace tch

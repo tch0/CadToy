@@ -49,6 +49,8 @@ int main() {
     // 初始化输入处理器
     std::cout << "Initializing InputHandler..." << std::endl;
     InputHandler::initialize(window);
+    // 隐藏系统鼠标指针，使用自定义十字光标
+    InputHandler::setMouseCursorVisible(false);
     std::cout << "InputHandler initialized successfully!" << std::endl;
     
     // 初始化渲染器

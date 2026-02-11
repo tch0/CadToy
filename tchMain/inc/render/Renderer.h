@@ -42,9 +42,9 @@ public:
 
 private:
     // 静态成员变量
-    static bool m_initialized;
-    static GLFWwindow* m_window;
-    static float m_cursorSize;
+    static bool s_initialized;
+    static GLFWwindow* s_window;
+    static float s_cursorSize;
 };
 
 } // namespace tch

@@ -4,14 +4,14 @@
 namespace tch {
 
 // 静态成员初始化
-bool Renderer::m_initialized = false;
-GLFWwindow* Renderer::m_window = nullptr;
-float Renderer::m_cursorSize = 30.0f;
+bool Renderer::s_initialized = false;
+GLFWwindow* Renderer::s_window = nullptr;
+float Renderer::s_cursorSize = 10.0f;
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
-    m_window = window;
-    m_initialized = true;
+    s_window = window;
+    s_initialized = true;
     
     // 设置默认背景颜色
     setBackgroundColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -28,13 +28,13 @@ void Renderer::initialize(GLFWwindow* window) {
 
 // 清理渲染器
 void Renderer::cleanup() {
-    m_initialized = false;
-    m_window = nullptr;
+    s_initialized = false;
+    s_window = nullptr;
 }
 
 // 开始渲染
 void Renderer::beginRender() {
-    if (!m_initialized || !m_window) {
+    if (!s_initialized || !s_window) {
         return;
     }
     
@@ -44,12 +44,12 @@ void Renderer::beginRender() {
 
 // 结束渲染
 void Renderer::endRender() {
-    if (!m_initialized || !m_window) {
+    if (!s_initialized || !s_window) {
         return;
     }
     
     // 交换缓冲区
-    glfwSwapBuffers(m_window);
+    glfwSwapBuffers(s_window);
 }
 
 // 设置背景颜色
@@ -64,7 +64,7 @@ void Renderer::setViewport(int width, int height) {
 
 // 绘制所有图形
 void Renderer::drawAll() {
-    if (!m_initialized || !m_window) {
+    if (!s_initialized || !s_window) {
         return;
     }
     
@@ -74,12 +74,12 @@ void Renderer::drawAll() {
 
 // 获取渲染器状态
 bool Renderer::isInitialized() {
-    return m_initialized;
+    return s_initialized;
 }
 
 // 绘制光标
 void Renderer::drawCursor(const glm::vec2& position) {
-    if (!m_initialized || !m_window) {
+    if (!s_initialized || !s_window) {
         return;
     }
     
@@ -90,7 +90,7 @@ void Renderer::drawCursor(const glm::vec2& position) {
     
     // 设置正交投影
     int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
+    glfwGetFramebufferSize(s_window, &width, &height);
     glOrtho(0, width, height, 0, -1, 1);
     
     // 切换到模型视图矩阵
@@ -106,16 +106,16 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
     
     // 水平线
-    glVertex2f(position.x - m_cursorSize, position.y);
-    glVertex2f(position.x + m_cursorSize, position.y);
+    glVertex2f(position.x - s_cursorSize, position.y);
+    glVertex2f(position.x + s_cursorSize, position.y);
     
     // 垂直线
-    glVertex2f(position.x, position.y - m_cursorSize);
-    glVertex2f(position.x, position.y + m_cursorSize);
+    glVertex2f(position.x, position.y - s_cursorSize);
+    glVertex2f(position.x, position.y + s_cursorSize);
     glEnd();
     
     // 绘制正方形
-    float halfSize = m_cursorSize * 0.5f;
+    float halfSize = s_cursorSize * 0.5f;
     glBegin(GL_LINE_LOOP);
     glVertex2f(position.x - halfSize, position.y - halfSize);
     glVertex2f(position.x + halfSize, position.y - halfSize);
@@ -135,12 +135,12 @@ void Renderer::drawCursor(const glm::vec2& position) {
 
 // 设置光标大小
 void Renderer::setCursorSize(float size) {
-    m_cursorSize = size;
+    s_cursorSize = size;
 }
 
 // 获取光标大小
 float Renderer::getCursorSize() {
-    return m_cursorSize;
+    return s_cursorSize;
 }
 
 } // namespace tch
