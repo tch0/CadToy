@@ -258,10 +258,8 @@ bool SaveLoad::exportToSVG(const std::string& filePath) {
         }
         
         // 写入SVG头部
-        file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-";
-        file << "<svg width=\"800\" height=\"600\" xmlns=\"http://www.w3.org/2000/svg\">
-";
+        file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+        file << "<svg width=\"800\" height=\"600\" xmlns=\"http://www.w3.org/2000/svg\">";
         
         // 写入图形
         auto& layerManager = LayerManager::getInstance();
@@ -282,31 +280,26 @@ bool SaveLoad::exportToSVG(const std::string& filePath) {
                 
                 if (auto point = std::dynamic_pointer_cast<Point>(shape)) {
                     auto pos = point->getPosition();
-                    file << "  <circle cx=\"" << pos.x << "\" cy=\"" << pos.y << "\" r=\"3\" fill=\"" << colorStr << "\" />
-";
+                    file << "  <circle cx=\"" << pos.x << "\" cy=\"" << pos.y << "\" r=\"3\" fill=\"" << colorStr << "\" />";
                 } else if (auto line = std::dynamic_pointer_cast<Line>(shape)) {
                     auto start = line->getStart();
                     auto end = line->getEnd();
-                    file << "  <line x1=\"" << start.x << "\" y1=\"" << start.y << "\" x2=\"" << end.x << "\" y2=\"" << end.y << "\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />
-";
+                    file << "  <line x1=\"" << start.x << "\" y1=\"" << start.y << "\" x2=\"" << end.x << "\" y2=\"" << end.y << "\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />";
                 } else if (auto circle = std::dynamic_pointer_cast<Circle>(shape)) {
                     auto center = circle->getCenter();
                     float radius = circle->getRadius();
-                    file << "  <circle cx=\"" << center.x << "\" cy=\"" << center.y << "\" r=\"" << radius << "\" fill=\"none\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />
-";
+                    file << "  <circle cx=\"" << center.x << "\" cy=\"" << center.y << "\" r=\"" << radius << "\" fill=\"none\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />";
                 } else if (auto rectangle = std::dynamic_pointer_cast<Rectangle>(shape)) {
                     auto pos = rectangle->getPosition();
                     float width = rectangle->getWidth();
                     float height = rectangle->getHeight();
-                    file << "  <rect x=\"" << pos.x << "\" y=\"" << pos.y << "\" width=\"" << width << "\" height=\"" << height << "\" fill=\"none\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />
-";
+                    file << "  <rect x=\"" << pos.x << "\" y=\"" << pos.y << "\" width=\"" << width << "\" height=\"" << height << "\" fill=\"none\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />";
                 }
             }
         }
         
         // 写入SVG尾部
-        file << "</svg>
-";
+        file << "</svg>";
         file.close();
         
         return true;
