@@ -1,4 +1,4 @@
-#include "InputHandler.h"
+#include "input/InputHandler.h"
 #include <iostream>
 
 namespace tch {

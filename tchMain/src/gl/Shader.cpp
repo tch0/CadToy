@@ -1,7 +1,7 @@
 #include <glm/ext.hpp>
 
-#include <Shader.h>
-#include <GLFuncs.h>
+#include "gl/Shader.h"
+#include "gl/GLFuncs.h"
 
 
 Shader::Shader() : m_Id(0)

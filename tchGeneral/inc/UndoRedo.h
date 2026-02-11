@@ -1,6 +1,10 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include <string>
+#include "Geometry.h"
+#include "Layer.h"
+#include <glm/glm.hpp>
 
 namespace tch {
 

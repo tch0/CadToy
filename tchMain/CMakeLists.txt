@@ -5,7 +5,7 @@ add_executable(tchMain ${tch_main_sources} ${tch_main_headers})
 
 target_include_directories(tchMain
     PUBLIC
-        ${tch_main_header_dirs}
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
         ${3rdparty_include_dir}
         ${sysconfig_dir}
 )

@@ -3,6 +3,8 @@
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
 
+using namespace tch;
+
 int main() {
     // 初始化GLFW
     if (!glfwInit()) {

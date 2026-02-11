@@ -42,11 +42,11 @@ void Transform::scale(const std::vector<std::shared_ptr<Shape>>& shapes, float f
 // 计算变换矩阵
 glm::mat3 Transform::calculateTransformMatrix(const glm::vec2& translation, float rotation, float scale) {
     // 先缩放，再旋转，最后平移
-    glm::mat3 transform = glm::mat3(1.0f);
-    transform = glm::translate(transform, translation);
-    transform = glm::rotate(transform, rotation);
-    transform = glm::scale(transform, glm::vec2(scale));
-    return transform;
+    glm::mat4 transform = glm::mat4(1.0f);
+    transform = glm::translate(transform, glm::vec3(translation, 0.0f));
+    transform = glm::rotate(transform, rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+    transform = glm::scale(transform, glm::vec3(scale, scale, 1.0f));
+    return glm::mat3(transform);
 }
 
 // 应用变换矩阵到点

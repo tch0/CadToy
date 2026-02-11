@@ -5,10 +5,10 @@
 #include <GLFW/glfw3.h>
 #include <soil2/SOIL2.h>
 
-#include <SysConfig.h>
-#include <GLFuncs.h>
-#include <Global.h>
-#include <Logger.h>
+#include "SysConfig.h"
+#include "gl/GLFuncs.h"
+#include "sys/Global.h"
+#include "debug/Logger.h"
 
 using namespace std::string_literals;
 
