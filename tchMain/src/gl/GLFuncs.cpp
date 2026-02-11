@@ -10,6 +10,7 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 
+using namespace tch;
 using namespace std::string_literals;
 
 void openglInit()

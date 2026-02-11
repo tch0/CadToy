@@ -2,6 +2,7 @@
 #include "debug/Logger.h"
 #include "sys/Global.h"
 
+using namespace tch;
 namespace fs = std::filesystem;
 
 // check which OS current is

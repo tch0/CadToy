@@ -4,70 +4,93 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
+#include "debug/Logger.h"
 #include <glm/glm.hpp>
 #include <iostream>
 
 using namespace tch;
 
 int main() {
-    std::cout << "Starting CadToy..." << std::endl;
+    // 测试Logger功能
+    LOG_INFO("Starting CadToy...");
+    
+    // 测试不同级别的日志
+    LOG_TRACE("This is a trace message");
+    LOG_DEBUG("This is a debug message");
+    LOG_INFO("This is an info message");
+    LOG_WARNING("This is a warning message");
+    LOG_ERROR("This is an error message");
+    LOG_FATAL("This is a fatal message");
+    
+    // 测试格式化日志
+    LOG_INFO("Testing formatted log: {} + {} = {}", 1, 2, 3);
+    LOG_INFO("Testing string formatting: Hello, {}", "world");
+    
+    // 测试异步日志
+    LOG_INFO("Testing async logging...");
+    auto logger = &globalLogger();
+    logger->setAsyncLogging(true);
+    LOG_INFO("Async logging enabled");
+    
+    // 测试日志文件
+    LOG_INFO("Testing log file...");
     
     // 初始化GLFW
-    std::cout << "Initializing GLFW..." << std::endl;
+    LOG_INFO("Initializing GLFW...");
     if (!glfwInit()) {
-        std::cout << "Failed to initialize GLFW!" << std::endl;
+        LOG_ERROR("Failed to initialize GLFW!");
         return -1;
     }
-    std::cout << "GLFW initialized successfully!" << std::endl;
+    LOG_INFO("GLFW initialized successfully!");
     
     // 创建窗口
-    std::cout << "Creating window..." << std::endl;
+    LOG_INFO("Creating window...");
     GLFWwindow* window = glfwCreateWindow(800, 600, "CadToy", NULL, NULL);
     if (!window) {
-        std::cout << "Failed to create window!" << std::endl;
+        LOG_ERROR("Failed to create window!");
         glfwTerminate();
         return -1;
     }
-    std::cout << "Window created successfully!" << std::endl;
+    LOG_INFO("Window created successfully!");
     
     // 设置当前上下文
-    std::cout << "Setting GLFW context..." << std::endl;
+    LOG_INFO("Setting GLFW context...");
     glfwMakeContextCurrent(window);
-    std::cout << "Context set successfully!" << std::endl;
+    LOG_INFO("Context set successfully!");
     
     // 初始化OpenGL函数指针（使用glad）
-    std::cout << "Initializing glad..." << std::endl;
+    LOG_INFO("Initializing glad...");
     if (!gladLoadGL(glfwGetProcAddress)) {
-        std::cout << "Failed to initialize glad!" << std::endl;
+        LOG_ERROR("Failed to initialize glad!");
         glfwTerminate();
         return -1;
     }
-    std::cout << "glad initialized successfully!" << std::endl;
+    LOG_INFO("glad initialized successfully!");
     
     // 输出OpenGL版本
-    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+    LOG_INFO("OpenGL version: {}", (const char*)glGetString(GL_VERSION));
     
     // 初始化输入处理器
-    std::cout << "Initializing InputHandler..." << std::endl;
+    LOG_INFO("Initializing InputHandler...");
     InputHandler::initialize(window);
-    std::cout << "InputHandler initialized successfully!" << std::endl;
+    LOG_INFO("InputHandler initialized successfully!");
     
     // 初始化渲染器
-    std::cout << "Initializing Renderer..." << std::endl;
+    LOG_INFO("Initializing Renderer...");
     Renderer::initialize(window);
-    std::cout << "Renderer initialized successfully!" << std::endl;
+    LOG_INFO("Renderer initialized successfully!");
     
     // 注册命令输入回调
-    std::cout << "Registering command input callback..." << std::endl;
+    LOG_INFO("Registering command input callback...");
     InputHandler::registerCallback(InputEventType::COMMAND_ENTERED, []() {
         std::string command = InputHandler::getCommandInput();
-        std::cout << "Executing command: " << command << std::endl;
+        LOG_INFO("Executing command: {}", command);
         CommandParser::parseCommand(command);
     });
-    std::cout << "Callback registered successfully!" << std::endl;
+    LOG_INFO("Callback registered successfully!");
     
     // 主循环
-    std::cout << "Entering main loop..." << std::endl;
+    LOG_INFO("Entering main loop...");
     while (!glfwWindowShouldClose(window)) {
         // 处理事件
         glfwPollEvents();
@@ -87,17 +110,17 @@ int main() {
     }
     
     // 清理资源
-    std::cout << "Cleaning up resources..." << std::endl;
+    LOG_INFO("Cleaning up resources...");
     Renderer::cleanup();
     
     // 销毁窗口
-    std::cout << "Destroying window..." << std::endl;
+    LOG_INFO("Destroying window...");
     glfwDestroyWindow(window);
     
     // 终止GLFW
-    std::cout << "Terminating GLFW..." << std::endl;
+    LOG_INFO("Terminating GLFW...");
     glfwTerminate();
     
-    std::cout << "CadToy exited successfully!" << std::endl;
+    LOG_INFO("CadToy exited successfully!");
     return 0;
 }
