@@ -6,7 +6,7 @@ namespace tch {
 // 静态成员初始化
 bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
-float Renderer::s_cursorSize = 10.0f;
+float Renderer::s_cursorSize = 20.0f;
 
 // 栅格和坐标轴相关初始化
 bool Renderer::s_showGrid = true;         // 默认显示栅格
@@ -132,26 +132,35 @@ void Renderer::drawCursor(const glm::vec2& position) {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 绘制十字线
+    // 绘制空心框选框
+    float boxSize = s_cursorSize * 0.25f;
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+    glVertex2f(position.x - boxSize, position.y - boxSize);
+    glVertex2f(position.x + boxSize, position.y - boxSize);
+    glVertex2f(position.x + boxSize, position.y + boxSize);
+    glVertex2f(position.x - boxSize, position.y + boxSize);
+    glEnd();
+    
+    // 绘制从正方形四条边中点向外延伸的光标线条
     glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
     
-    // 水平线
-    glVertex2f(position.x - s_cursorSize, position.y);
-    glVertex2f(position.x + s_cursorSize, position.y);
-    
-    // 垂直线
+    // 上边中点向上延伸
+    glVertex2f(position.x, position.y - boxSize);
     glVertex2f(position.x, position.y - s_cursorSize);
-    glVertex2f(position.x, position.y + s_cursorSize);
-    glEnd();
     
-    // 绘制正方形
-    float halfSize = s_cursorSize * 0.5f;
-    glBegin(GL_LINE_LOOP);
-    glVertex2f(position.x - halfSize, position.y - halfSize);
-    glVertex2f(position.x + halfSize, position.y - halfSize);
-    glVertex2f(position.x + halfSize, position.y + halfSize);
-    glVertex2f(position.x - halfSize, position.y + halfSize);
+    // 下边中点向下延伸
+    glVertex2f(position.x, position.y + boxSize);
+    glVertex2f(position.x, position.y + s_cursorSize);
+    
+    // 左边中点向左延伸
+    glVertex2f(position.x - boxSize, position.y);
+    glVertex2f(position.x - s_cursorSize, position.y);
+    
+    // 右边中点向右延伸
+    glVertex2f(position.x + boxSize, position.y);
+    glVertex2f(position.x + s_cursorSize, position.y);
     glEnd();
     
     // 恢复矩阵状态
