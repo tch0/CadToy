@@ -33,10 +33,10 @@ void InputHandler::initialize(GLFWwindow* window) {
         InputHandler::handleMouseScroll(xoffset, yoffset);
     });
     
-    // 注册鼠标进入/离开窗口回调
-    glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) {
-        InputHandler::handleMouseEnter(entered);
-    });
+    // 鼠标进入/离开窗口的光标显示由ImGui控制，不再需要单独处理
+    // glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) {
+    //     InputHandler::handleMouseEnter(entered);
+    // });
     
     // 注册窗口大小变化回调
     glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height) {

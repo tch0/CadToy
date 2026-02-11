@@ -73,6 +73,13 @@ private:
     static float s_originX;                     // 坐标原点X位置
     static float s_originY;                     // 坐标原点Y位置
     static glm::vec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
+    
+    // 坐标系管理相关
+    static glm::vec2 s_screenMin;               // 屏幕左下角坐标
+    static glm::vec2 s_screenMax;               // 屏幕右上角坐标
+    static float s_zoomFactor;                  // 缩放因子
+    static float s_panX;                        // X轴平移量
+    static float s_panY;                        // Y轴平移量
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

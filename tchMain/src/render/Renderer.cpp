@@ -23,6 +23,13 @@ float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
 glm::vec3 Renderer::s_cursorPosition = glm::vec3(0.0f, 0.0f, 0.0f); // 当前光标位置（以窗口中央为原点）
 
+// 坐标系管理相关初始化
+glm::vec2 Renderer::s_screenMin = glm::vec2(-100.0f, -100.0f); // 屏幕左下角坐标
+glm::vec2 Renderer::s_screenMax = glm::vec2(100.0f, 100.0f);   // 屏幕右上角坐标
+float Renderer::s_zoomFactor = 1.0f;                         // 缩放因子
+float Renderer::s_panX = 0.0f;                               // X轴平移量
+float Renderer::s_panY = 0.0f;                               // Y轴平移量
+
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
     s_window = window;
@@ -70,6 +77,13 @@ void Renderer::beginRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    
+    // 使用ImGui的原生API来控制光标显示
+    ImGuiIO& io = ImGui::GetIO();
+    if (!io.WantCaptureMouse) {
+        // 当ImGui不想要捕获鼠标时，设置鼠标光标为None
+        ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+    }
 }
 
 // 结束渲染
@@ -133,10 +147,16 @@ void Renderer::drawCursor(const glm::vec2& position) {
         return;
     }
     
-    // 更新当前光标位置（转换为以窗口中央为原点的坐标系）
-    s_cursorPosition.x = position.x - s_originX;
-    s_cursorPosition.y = position.y - s_originY;
-    s_cursorPosition.z = 0.0f;
+    // 更新当前光标位置（转换为基于变换后的坐标系）
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 将屏幕鼠标坐标转换为逻辑坐标
+    float x = s_screenMin.x + (position.x / width) * (s_screenMax.x - s_screenMin.x);
+    float y = s_screenMin.y + (position.y / height) * (s_screenMax.y - s_screenMin.y);
+    float z = 0.0f;
+    
+    s_cursorPosition = glm::vec3(x, y, z);
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -144,7 +164,6 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glLoadIdentity();
     
     // 设置正交投影，Y轴朝上
-    int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
     glOrtho(0, width, 0, height, -1, 1);
     
@@ -347,18 +366,34 @@ void Renderer::drawAxes() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
+    // 计算屏幕到逻辑坐标的转换因子
+    float xScale = (s_screenMax.x - s_screenMin.x) / width;
+    float yScale = (s_screenMax.y - s_screenMin.y) / height;
+    
+    // 计算逻辑原点在屏幕上的位置
+    float originScreenX = (0.0f - s_screenMin.x) / xScale;
+    float originScreenY = (0.0f - s_screenMin.y) / yScale;
+    
     // 绘制X轴（正半轴）
     glBegin(GL_LINES);
     glColor3fv(s_xAxisColor);
-    glVertex2f(s_originX, s_originY);
-    glVertex2f(width, s_originY);
+    
+    // 只绘制在屏幕范围内的部分
+    if (originScreenX >= 0 && originScreenX <= width && originScreenY >= 0 && originScreenY <= height) {
+        glVertex2f(originScreenX, originScreenY);
+        glVertex2f(width, originScreenY);
+    }
     glEnd();
     
     // 绘制Y轴（正半轴，朝上）
     glBegin(GL_LINES);
     glColor3fv(s_yAxisColor);
-    glVertex2f(s_originX, s_originY);
-    glVertex2f(s_originX, height);
+    
+    // 只绘制在屏幕范围内的部分
+    if (originScreenX >= 0 && originScreenX <= width && originScreenY >= 0 && originScreenY <= height) {
+        glVertex2f(originScreenX, originScreenY);
+        glVertex2f(originScreenX, height);
+    }
     glEnd();
     
     // 恢复矩阵状态
@@ -398,41 +433,79 @@ glm::vec2 Renderer::getOrigin() {
 }
 
 void Renderer::zoomIn() {
-    s_gridScale *= 0.8f; // 放大20%
+    // 简化版缩放，默认以窗口中心为缩放中心
+    glm::vec2 center = (s_screenMin + s_screenMax) * 0.5f;
+    float scale = 1.25f; // 放大时，逻辑坐标系范围变大
+    
+    // 应用缩放
+    s_zoomFactor *= scale;
+    
+    // 调整屏幕边界
+    s_screenMin = center + (s_screenMin - center) * scale;
+    s_screenMax = center + (s_screenMax - center) * scale;
+    
+    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut() {
-    s_gridScale *= 1.25f; // 缩小25%
+    // 简化版缩放，默认以窗口中心为缩放中心
+    glm::vec2 center = (s_screenMin + s_screenMax) * 0.5f;
+    float scale = 0.8f; // 缩小时，逻辑坐标系范围变小
+    
+    // 应用缩放
+    s_zoomFactor *= scale;
+    
+    // 调整屏幕边界
+    s_screenMin = center + (s_screenMin - center) * scale;
+    s_screenMax = center + (s_screenMax - center) * scale;
+    
+    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    s_gridScale *= 1.25f;
 }
 
 void Renderer::zoomIn(const glm::vec2& mousePos) {
-    // 计算鼠标位置到原点的偏移量
-    float offsetX = mousePos.x - s_originX;
-    float offsetY = mousePos.y - s_originY;
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
     
-    // 应用缩放因子
-    float oldScale = s_gridScale;
-    s_gridScale *= 0.8f; // 放大20%
+    // 将屏幕鼠标坐标转换为逻辑坐标
+    float mouseX = s_screenMin.x + (mousePos.x / width) * (s_screenMax.x - s_screenMin.x);
+    float mouseY = s_screenMin.y + (mousePos.y / height) * (s_screenMax.y - s_screenMin.y);
+    glm::vec2 mouseLogic(mouseX, mouseY);
     
-    // 调整原点位置，使得鼠标位置在缩放后保持不变
-    float scaleFactor = s_gridScale / oldScale;
-    s_originX = mousePos.x - offsetX * scaleFactor;
-    s_originY = mousePos.y - offsetY * scaleFactor;
+    // 应用缩放（放大时，逻辑坐标系范围变大）
+    float scale = 1.25f;
+    s_zoomFactor *= scale;
+    
+    // 调整屏幕边界，以鼠标位置为中心缩放
+    s_screenMin = mouseLogic + (s_screenMin - mouseLogic) * scale;
+    s_screenMax = mouseLogic + (s_screenMax - mouseLogic) * scale;
+    
+    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut(const glm::vec2& mousePos) {
-    // 计算鼠标位置到原点的偏移量
-    float offsetX = mousePos.x - s_originX;
-    float offsetY = mousePos.y - s_originY;
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
     
-    // 应用缩放因子
-    float oldScale = s_gridScale;
-    s_gridScale *= 1.25f; // 缩小25%
+    // 将屏幕鼠标坐标转换为逻辑坐标
+    float mouseX = s_screenMin.x + (mousePos.x / width) * (s_screenMax.x - s_screenMin.x);
+    float mouseY = s_screenMin.y + (mousePos.y / height) * (s_screenMax.y - s_screenMin.y);
+    glm::vec2 mouseLogic(mouseX, mouseY);
     
-    // 调整原点位置，使得鼠标位置在缩放后保持不变
-    float scaleFactor = s_gridScale / oldScale;
-    s_originX = mousePos.x - offsetX * scaleFactor;
-    s_originY = mousePos.y - offsetY * scaleFactor;
+    // 应用缩放（缩小时，逻辑坐标系范围变小）
+    float scale = 0.8f;
+    s_zoomFactor *= scale;
+    
+    // 调整屏幕边界，以鼠标位置为中心缩放
+    s_screenMin = mouseLogic + (s_screenMin - mouseLogic) * scale;
+    s_screenMax = mouseLogic + (s_screenMax - mouseLogic) * scale;
+    
+    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    s_gridScale *= 1.25f;
 }
 
 // 初始化ImGui
