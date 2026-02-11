@@ -5,12 +5,20 @@
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
 #include "debug/Logger.h"
+#include "sys/Global.h"
 #include <glm/glm.hpp>
 #include <iostream>
 
 using namespace tch;
 
-int main() {
+int main(int argc, char* argv[])
+{
+    // 系统初始化
+    checkOS();
+    checkSystemEndian();
+    buildCwd(argv[0]);
+    checkAndCreateImportantDirs();
+
     // 测试Logger功能
     LOG_INFO("Starting CadToy...");
     

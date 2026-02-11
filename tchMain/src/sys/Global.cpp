@@ -11,6 +11,22 @@ void checkOS()
     globalLogger().info(std::format("system: {}", SYSTEM_NAME));
 }
 
+// check the endian of the system
+void checkSystemEndian()
+{
+    uint32_t x = 0x11223344;
+    char* p = reinterpret_cast<char*>(&x);
+    if (*p == 0x11)
+    {
+        g_bBigEndian = true;
+    }
+    else
+    {
+        g_bBigEndian = false;
+    }
+    globalLogger().info(std::format("The endian of system: {}", g_bBigEndian ? "big endian" : "little endian"));
+}
+
 // build current working directory from exe path
 void buildCwd(const char* exePath)
 {
