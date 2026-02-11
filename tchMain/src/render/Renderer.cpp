@@ -372,4 +372,34 @@ void Renderer::zoomOut() {
     s_gridScale *= 1.25f; // 缩小25%
 }
 
+void Renderer::zoomIn(const glm::vec2& mousePos) {
+    // 计算鼠标位置到原点的偏移量
+    float offsetX = mousePos.x - s_originX;
+    float offsetY = mousePos.y - s_originY;
+    
+    // 应用缩放因子
+    float oldScale = s_gridScale;
+    s_gridScale *= 0.8f; // 放大20%
+    
+    // 调整原点位置，使得鼠标位置在缩放后保持不变
+    float scaleFactor = s_gridScale / oldScale;
+    s_originX = mousePos.x - offsetX * scaleFactor;
+    s_originY = mousePos.y - offsetY * scaleFactor;
+}
+
+void Renderer::zoomOut(const glm::vec2& mousePos) {
+    // 计算鼠标位置到原点的偏移量
+    float offsetX = mousePos.x - s_originX;
+    float offsetY = mousePos.y - s_originY;
+    
+    // 应用缩放因子
+    float oldScale = s_gridScale;
+    s_gridScale *= 1.25f; // 缩小25%
+    
+    // 调整原点位置，使得鼠标位置在缩放后保持不变
+    float scaleFactor = s_gridScale / oldScale;
+    s_originX = mousePos.x - offsetX * scaleFactor;
+    s_originY = mousePos.y - offsetY * scaleFactor;
+}
+
 } // namespace tch

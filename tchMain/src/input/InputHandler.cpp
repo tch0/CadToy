@@ -114,13 +114,16 @@ void InputHandler::handleMouseMove(double xpos, double ypos) {
 
 // 处理鼠标滚轮
 void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
+    // 获取当前鼠标位置
+    glm::vec2 mousePos = getMousePosition();
+    
     // 根据滚轮方向进行缩放（反转方向：向上滚放大，向下滚缩小）
     if (yoffset > 0) {
         // 滚轮向上，缩小栅格
-        Renderer::zoomOut();
+        Renderer::zoomOut(mousePos);
     } else if (yoffset < 0) {
         // 滚轮向下，放大栅格
-        Renderer::zoomIn();
+        Renderer::zoomIn(mousePos);
     }
     
     // 触发鼠标滚轮回调
@@ -144,7 +147,13 @@ void InputHandler::handleMouseEnter(int entered) {
 void InputHandler::handleWindowSize(int width, int height) {
     // 当窗口大小变化时，更新渲染器的视口大小
     Renderer::updateViewport(width, height);
-    // 这里可以添加其他需要响应窗口大小变化的逻辑
+    
+    // 计算窗口中心坐标
+    float centerX = width / 2.0f;
+    float centerY = height / 2.0f;
+    
+    // 更新坐标原点为窗口中心
+    Renderer::setOrigin(centerX, centerY);
 }
 
 // 获取鼠标位置

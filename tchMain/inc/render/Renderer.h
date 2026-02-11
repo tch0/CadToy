@@ -52,6 +52,8 @@ public:
     static glm::vec2 getOrigin();                // 获取坐标原点位置
     static void zoomIn();                        // 放大栅格
     static void zoomOut();                       // 缩小栅格
+    static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大栅格
+    static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小栅格
 
 private:
     // 静态成员变量
