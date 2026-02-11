@@ -1,5 +1,6 @@
 #pragma once
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 namespace tch {
 
@@ -27,6 +28,15 @@ public:
     // 绘制所有图形
     static void drawAll();
     
+    // 绘制十字光标
+    static void drawCursor(const glm::vec2& position);
+    
+    // 设置光标大小
+    static void setCursorSize(float size);
+    
+    // 获取光标大小
+    static float getCursorSize();
+    
     // 获取渲染器状态
     static bool isInitialized();
 
@@ -34,6 +44,7 @@ private:
     // 静态成员变量
     static bool m_initialized;
     static GLFWwindow* m_window;
+    static float m_cursorSize;
 };
 
 } // namespace tch

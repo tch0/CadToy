@@ -3,6 +3,7 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
+#include <glm/glm.hpp>
 #include <iostream>
 
 using namespace tch;
@@ -75,6 +76,10 @@ int main() {
         
         // 绘制所有图形
         Renderer::drawAll();
+        
+        // 绘制光标
+        glm::vec2 mousePos = InputHandler::getMousePosition();
+        Renderer::drawCursor(mousePos);
         
         // 结束渲染
         Renderer::endRender();

@@ -6,6 +6,7 @@ namespace tch {
 // 静态成员初始化
 bool Renderer::m_initialized = false;
 GLFWwindow* Renderer::m_window = nullptr;
+float Renderer::m_cursorSize = 30.0f;
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
@@ -74,6 +75,72 @@ void Renderer::drawAll() {
 // 获取渲染器状态
 bool Renderer::isInitialized() {
     return m_initialized;
+}
+
+// 绘制光标
+void Renderer::drawCursor(const glm::vec2& position) {
+    if (!m_initialized || !m_window) {
+        return;
+    }
+    
+    // 保存当前矩阵状态
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // 设置正交投影
+    int width, height;
+    glfwGetFramebufferSize(m_window, &width, &height);
+    glOrtho(0, width, height, 0, -1, 1);
+    
+    // 切换到模型视图矩阵
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // 禁用深度测试
+    glDisable(GL_DEPTH_TEST);
+    
+    // 绘制十字线
+    glBegin(GL_LINES);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+    
+    // 水平线
+    glVertex2f(position.x - m_cursorSize, position.y);
+    glVertex2f(position.x + m_cursorSize, position.y);
+    
+    // 垂直线
+    glVertex2f(position.x, position.y - m_cursorSize);
+    glVertex2f(position.x, position.y + m_cursorSize);
+    glEnd();
+    
+    // 绘制正方形
+    float halfSize = m_cursorSize * 0.5f;
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(position.x - halfSize, position.y - halfSize);
+    glVertex2f(position.x + halfSize, position.y - halfSize);
+    glVertex2f(position.x + halfSize, position.y + halfSize);
+    glVertex2f(position.x - halfSize, position.y + halfSize);
+    glEnd();
+    
+    // 恢复矩阵状态
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    
+    // 重新启用深度测试
+    glEnable(GL_DEPTH_TEST);
+}
+
+// 设置光标大小
+void Renderer::setCursorSize(float size) {
+    m_cursorSize = size;
+}
+
+// 获取光标大小
+float Renderer::getCursorSize() {
+    return m_cursorSize;
 }
 
 } // namespace tch
