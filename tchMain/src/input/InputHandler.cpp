@@ -99,7 +99,12 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
 
 // 处理鼠标移动
 void InputHandler::handleMouseMove(double xpos, double ypos) {
-    s_mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+    // 将鼠标坐标转换为OpenGL坐标系（Y轴向上）
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    float openglY = height - static_cast<float>(ypos);
+    
+    s_mousePosition = glm::vec2(static_cast<float>(xpos), openglY);
     
     // 触发鼠标移动回调
     if (s_callbacks.contains(InputEventType::MOUSE_MOVE)) {
@@ -109,6 +114,15 @@ void InputHandler::handleMouseMove(double xpos, double ypos) {
 
 // 处理鼠标滚轮
 void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
+    // 根据滚轮方向进行缩放（反转方向：向上滚放大，向下滚缩小）
+    if (yoffset > 0) {
+        // 滚轮向上，缩小栅格
+        Renderer::zoomOut();
+    } else if (yoffset < 0) {
+        // 滚轮向下，放大栅格
+        Renderer::zoomIn();
+    }
+    
     // 触发鼠标滚轮回调
     if (s_callbacks.contains(InputEventType::MOUSE_SCROLL)) {
         s_callbacks[InputEventType::MOUSE_SCROLL]();

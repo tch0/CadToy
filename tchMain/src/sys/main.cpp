@@ -1,12 +1,11 @@
-// glad/gl.h必须包含在glfw/glfw3.h之前，否则可能会导致奇怪无法找到定义的报错，而报错全然与glad/glfw无关，令人迷惑
-#include "glad/gl.h"
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
 #include "debug/Logger.h"
 #include "sys/Global.h"
-#include <glm/glm.hpp>
 #include <iostream>
 
 using namespace tch;

@@ -9,16 +9,16 @@ namespace tch {
 
 // 输入事件类型
 enum class InputEventType {
-    KEY_PRESS,
-    KEY_RELEASE,
-    MOUSE_PRESS,
-    MOUSE_RELEASE,
-    MOUSE_MOVE,
-    MOUSE_SCROLL,
-    COMMAND_ENTERED
+    KEY_PRESS,      // 按键按下
+    KEY_RELEASE,    // 按键释放
+    MOUSE_PRESS,    // 鼠标按下
+    MOUSE_RELEASE,  // 鼠标释放
+    MOUSE_MOVE,     // 鼠标移动
+    MOUSE_SCROLL,   // 鼠标滚轮
+    COMMAND_ENTERED // 命令输入
 };
 
-// 输入处理器
+// 输入处理器类
 class InputHandler {
 public:
     // 初始化输入处理器
@@ -69,12 +69,13 @@ public:
 private:
     // 窗口指针
     static GLFWwindow* s_window;
+    
     // 静态成员变量
-    static glm::vec2 s_mousePosition;
-    static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];
-    static bool s_keys[GLFW_KEY_LAST + 1];
-    static std::string s_commandInput;
-    static std::unordered_map<InputEventType, std::function<void()>> s_callbacks;
+    static glm::vec2 s_mousePosition;                              // 鼠标位置
+    static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];         // 鼠标按钮状态
+    static bool s_keys[GLFW_KEY_LAST + 1];                         // 键盘按键状态
+    static std::string s_commandInput;                             // 命令输入
+    static std::unordered_map<InputEventType, std::function<void()>> s_callbacks; // 事件回调映射
 };
 
 } // namespace tch
