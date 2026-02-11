@@ -112,6 +112,9 @@ int main(int argc, char* argv[])
         glm::vec2 mousePos = InputHandler::getMousePosition();
         Renderer::drawCursor(mousePos);
         
+        // 绘制状态栏
+        Renderer::drawStatusBar(mousePos);
+        
         // 结束渲染
         Renderer::endRender();
     }

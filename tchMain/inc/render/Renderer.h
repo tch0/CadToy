@@ -54,6 +54,7 @@ public:
     static void zoomOut();                       // 缩小栅格
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大栅格
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小栅格
+    static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
 
 private:
     // 静态成员变量
@@ -71,10 +72,13 @@ private:
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
     static float s_originX;                     // 坐标原点X位置
     static float s_originY;                     // 坐标原点Y位置
+    static glm::vec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格
     static void drawAxes();                     // 绘制XY轴
+    static void initializeImGui();              // 初始化ImGui
+    static void cleanupImGui();                 // 清理ImGui
 };
 
 } // namespace tch

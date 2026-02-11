@@ -1,5 +1,8 @@
 #include "render/Renderer.h"
 #include "Layer.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 namespace tch {
 
@@ -18,6 +21,7 @@ float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};   
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
 float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
+glm::vec3 Renderer::s_cursorPosition = glm::vec3(0.0f, 0.0f, 0.0f); // 当前光标位置（以窗口中央为原点）
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
@@ -39,10 +43,16 @@ void Renderer::initialize(GLFWwindow* window) {
     // 启用混合
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // 初始化ImGui
+    initializeImGui();
 }
 
 // 清理渲染器
 void Renderer::cleanup() {
+    // 清理ImGui
+    cleanupImGui();
+    
     s_initialized = false;
     s_window = nullptr;
 }
@@ -55,6 +65,11 @@ void Renderer::beginRender() {
     
     // 清除颜色缓冲
     glClear(GL_COLOR_BUFFER_BIT);
+    
+    // 开始ImGui渲染
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 }
 
 // 结束渲染
@@ -62,6 +77,10 @@ void Renderer::endRender() {
     if (!s_initialized || !s_window) {
         return;
     }
+    
+    // 渲染ImGui
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     
     // 交换缓冲区
     glfwSwapBuffers(s_window);
@@ -113,6 +132,11 @@ void Renderer::drawCursor(const glm::vec2& position) {
     if (!s_initialized || !s_window) {
         return;
     }
+    
+    // 更新当前光标位置（转换为以窗口中央为原点的坐标系）
+    s_cursorPosition.x = position.x - s_originX;
+    s_cursorPosition.y = position.y - s_originY;
+    s_cursorPosition.z = 0.0f;
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -409,6 +433,68 @@ void Renderer::zoomOut(const glm::vec2& mousePos) {
     float scaleFactor = s_gridScale / oldScale;
     s_originX = mousePos.x - offsetX * scaleFactor;
     s_originY = mousePos.y - offsetY * scaleFactor;
+}
+
+// 初始化ImGui
+void Renderer::initializeImGui() {
+    // 设置ImGui上下文
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // 配置ImGui
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    
+    // 设置ImGui样式
+    ImGui::StyleColorsDark();
+    
+    // 初始化ImGui GLFW后端
+    ImGui_ImplGlfw_InitForOpenGL(s_window, true);
+    
+    // 初始化ImGui OpenGL3后端
+    const char* glsl_version = "#version 330";
+    ImGui_ImplOpenGL3_Init(glsl_version);
+}
+
+// 清理ImGui
+void Renderer::cleanupImGui() {
+    // 清理ImGui OpenGL3后端
+    ImGui_ImplOpenGL3_Shutdown();
+    
+    // 清理ImGui GLFW后端
+    ImGui_ImplGlfw_Shutdown();
+    
+    // 销毁ImGui上下文
+    ImGui::DestroyContext();
+}
+
+// 绘制状态栏
+void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算状态栏位置和大小
+    float statusBarHeight = 35.0f;
+    ImVec2 statusBarPos(0, height - statusBarHeight);
+    ImVec2 statusBarSize(width, statusBarHeight);
+    
+    // 绘制状态栏
+    ImGui::SetNextWindowPos(statusBarPos);
+    ImGui::SetNextWindowSize(statusBarSize);
+    ImGui::SetNextWindowBgAlpha(0.9f);
+    
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                             ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | 
+                             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    
+    if (ImGui::Begin("StatusBar", nullptr, flags)) {
+        // 直接使用已保存的光标位置（以窗口中央为原点的坐标系）
+        ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosition.x, s_cursorPosition.y, s_cursorPosition.z);
+        ImGui::End();
+    }
 }
 
 } // namespace tch
