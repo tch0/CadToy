@@ -1,4 +1,5 @@
 #include "input/InputHandler.h"
+#include "render/Renderer.h"
 #include <iostream>
 
 namespace tch {
@@ -35,6 +36,11 @@ void InputHandler::initialize(GLFWwindow* window) {
     // 注册鼠标进入/离开窗口回调
     glfwSetCursorEnterCallback(window, [](GLFWwindow* window, int entered) {
         InputHandler::handleMouseEnter(entered);
+    });
+    
+    // 注册窗口大小变化回调
+    glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height) {
+        InputHandler::handleWindowSize(width, height);
     });
 }
 
@@ -118,6 +124,13 @@ void InputHandler::handleMouseEnter(int entered) {
         // 鼠标离开窗口，显示系统光标
         setMouseCursorVisible(true);
     }
+}
+
+// 处理窗口大小变化
+void InputHandler::handleWindowSize(int width, int height) {
+    // 当窗口大小变化时，更新渲染器的视口大小
+    Renderer::updateViewport(width, height);
+    // 这里可以添加其他需要响应窗口大小变化的逻辑
 }
 
 // 获取鼠标位置

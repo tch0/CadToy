@@ -62,6 +62,12 @@ void Renderer::setViewport(int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+// 更新视口大小（窗口大小变化时调用）
+void Renderer::updateViewport(int width, int height) {
+    // 直接调用setViewport方法更新视口大小
+    setViewport(width, height);
+}
+
 // 绘制所有图形
 void Renderer::drawAll() {
     if (!s_initialized || !s_window) {

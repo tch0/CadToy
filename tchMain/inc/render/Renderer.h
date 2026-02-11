@@ -28,6 +28,9 @@ public:
     // 绘制所有图形
     static void drawAll();
     
+    // 更新视口大小（窗口大小变化时调用）
+    static void updateViewport(int width, int height);
+    
     // 绘制十字光标
     static void drawCursor(const glm::vec2& position);
     

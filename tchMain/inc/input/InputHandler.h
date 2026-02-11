@@ -39,6 +39,9 @@ public:
     // 处理鼠标进入/离开窗口
     static void handleMouseEnter(int entered);
     
+    // 处理窗口大小变化
+    static void handleWindowSize(int width, int height);
+    
     // 获取鼠标位置
     static glm::vec2 getMousePosition();
     
