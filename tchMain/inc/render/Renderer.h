@@ -1,6 +1,7 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include "render/LogicalViewport.h"
 
 namespace tch {
 
@@ -55,6 +56,9 @@ public:
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大栅格
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小栅格
     static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
+    
+    // 逻辑视口相关方法
+    static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
 
 private:
     // 静态成员变量
@@ -72,14 +76,10 @@ private:
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
     static float s_originX;                     // 坐标原点X位置
     static float s_originY;                     // 坐标原点Y位置
-    static glm::vec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
+    static glm::dvec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
     
-    // 坐标系管理相关
-    static glm::vec2 s_screenMin;               // 屏幕左下角坐标
-    static glm::vec2 s_screenMax;               // 屏幕右上角坐标
-    static float s_zoomFactor;                  // 缩放因子
-    static float s_panX;                        // X轴平移量
-    static float s_panY;                        // Y轴平移量
+    // 逻辑视口
+    static LogicalViewport s_logicalViewport; // 逻辑视口
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

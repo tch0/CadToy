@@ -21,14 +21,10 @@ float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};   
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
 float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
-glm::vec3 Renderer::s_cursorPosition = glm::vec3(0.0f, 0.0f, 0.0f); // 当前光标位置（以窗口中央为原点）
+glm::dvec3 Renderer::s_cursorPosition = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置（以窗口中央为原点）
 
-// 坐标系管理相关初始化
-glm::vec2 Renderer::s_screenMin = glm::vec2(-100.0f, -100.0f); // 屏幕左下角坐标
-glm::vec2 Renderer::s_screenMax = glm::vec2(100.0f, 100.0f);   // 屏幕右上角坐标
-float Renderer::s_zoomFactor = 1.0f;                         // 缩放因子
-float Renderer::s_panX = 0.0f;                               // X轴平移量
-float Renderer::s_panY = 0.0f;                               // Y轴平移量
+// 逻辑视口初始化
+LogicalViewport Renderer::s_logicalViewport;
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
@@ -42,6 +38,9 @@ void Renderer::initialize(GLFWwindow* window) {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     setViewport(width, height);
+    
+    // 初始化逻辑视口
+    s_logicalViewport.initialize(width, height);
     
     // 设置坐标原点为窗口中心
     s_originX = width / 2.0f;
@@ -114,6 +113,9 @@ void Renderer::setViewport(int width, int height) {
 void Renderer::updateViewport(int width, int height) {
     // 直接调用setViewport方法更新视口大小
     setViewport(width, height);
+    
+    // 更新逻辑视口的窗口大小
+    s_logicalViewport.setWindowSize(width, height);
 }
 
 // 绘制所有图形
@@ -147,16 +149,9 @@ void Renderer::drawCursor(const glm::vec2& position) {
         return;
     }
     
-    // 更新当前光标位置（转换为基于变换后的坐标系）
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    
-    // 将屏幕鼠标坐标转换为逻辑坐标
-    float x = s_screenMin.x + (position.x / width) * (s_screenMax.x - s_screenMin.x);
-    float y = s_screenMin.y + (position.y / height) * (s_screenMax.y - s_screenMin.y);
-    float z = 0.0f;
-    
-    s_cursorPosition = glm::vec3(x, y, z);
+    // 更新当前光标位置（使用逻辑视口转换）
+    glm::dvec3 logicPos = s_logicalViewport.screenToLogic(position);
+    s_cursorPosition = logicPos;
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -164,6 +159,7 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glLoadIdentity();
     
     // 设置正交投影，Y轴朝上
+    int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
     glOrtho(0, width, 0, height, -1, 1);
     
@@ -366,13 +362,10 @@ void Renderer::drawAxes() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 计算屏幕到逻辑坐标的转换因子
-    float xScale = (s_screenMax.x - s_screenMin.x) / width;
-    float yScale = (s_screenMax.y - s_screenMin.y) / height;
-    
     // 计算逻辑原点在屏幕上的位置
-    float originScreenX = (0.0f - s_screenMin.x) / xScale;
-    float originScreenY = (0.0f - s_screenMin.y) / yScale;
+    glm::vec2 originScreenPos = s_logicalViewport.logicToScreen(glm::dvec3(0.0, 0.0, 0.0));
+    float originScreenX = originScreenPos.x;
+    float originScreenY = originScreenPos.y;
     
     // 绘制X轴（正半轴）
     glBegin(GL_LINES);
@@ -433,78 +426,34 @@ glm::vec2 Renderer::getOrigin() {
 }
 
 void Renderer::zoomIn() {
-    // 简化版缩放，默认以窗口中心为缩放中心
-    glm::vec2 center = (s_screenMin + s_screenMax) * 0.5f;
-    float scale = 1.25f; // 放大时，逻辑坐标系范围变大
+    // 使用逻辑视口进行缩放
+    s_logicalViewport.zoomIn();
     
-    // 应用缩放
-    s_zoomFactor *= scale;
-    
-    // 调整屏幕边界
-    s_screenMin = center + (s_screenMin - center) * scale;
-    s_screenMax = center + (s_screenMax - center) * scale;
-    
-    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
     s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut() {
-    // 简化版缩放，默认以窗口中心为缩放中心
-    glm::vec2 center = (s_screenMin + s_screenMax) * 0.5f;
-    float scale = 0.8f; // 缩小时，逻辑坐标系范围变小
+    // 使用逻辑视口进行缩放
+    s_logicalViewport.zoomOut();
     
-    // 应用缩放
-    s_zoomFactor *= scale;
-    
-    // 调整屏幕边界
-    s_screenMin = center + (s_screenMin - center) * scale;
-    s_screenMax = center + (s_screenMax - center) * scale;
-    
-    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
     s_gridScale *= 1.25f;
 }
 
 void Renderer::zoomIn(const glm::vec2& mousePos) {
-    // 获取窗口大小
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
+    // 使用逻辑视口进行缩放，以鼠标位置为中心
+    s_logicalViewport.zoomIn(mousePos);
     
-    // 将屏幕鼠标坐标转换为逻辑坐标
-    float mouseX = s_screenMin.x + (mousePos.x / width) * (s_screenMax.x - s_screenMin.x);
-    float mouseY = s_screenMin.y + (mousePos.y / height) * (s_screenMax.y - s_screenMin.y);
-    glm::vec2 mouseLogic(mouseX, mouseY);
-    
-    // 应用缩放（放大时，逻辑坐标系范围变大）
-    float scale = 1.25f;
-    s_zoomFactor *= scale;
-    
-    // 调整屏幕边界，以鼠标位置为中心缩放
-    s_screenMin = mouseLogic + (s_screenMin - mouseLogic) * scale;
-    s_screenMax = mouseLogic + (s_screenMax - mouseLogic) * scale;
-    
-    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
     s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut(const glm::vec2& mousePos) {
-    // 获取窗口大小
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
+    // 使用逻辑视口进行缩放，以鼠标位置为中心
+    s_logicalViewport.zoomOut(mousePos);
     
-    // 将屏幕鼠标坐标转换为逻辑坐标
-    float mouseX = s_screenMin.x + (mousePos.x / width) * (s_screenMax.x - s_screenMin.x);
-    float mouseY = s_screenMin.y + (mousePos.y / height) * (s_screenMax.y - s_screenMin.y);
-    glm::vec2 mouseLogic(mouseX, mouseY);
-    
-    // 应用缩放（缩小时，逻辑坐标系范围变小）
-    float scale = 0.8f;
-    s_zoomFactor *= scale;
-    
-    // 调整屏幕边界，以鼠标位置为中心缩放
-    s_screenMin = mouseLogic + (s_screenMin - mouseLogic) * scale;
-    s_screenMax = mouseLogic + (s_screenMax - mouseLogic) * scale;
-    
-    // 同时更新栅格缩放比例（栅格缩放与坐标缩放相反）
+    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
     s_gridScale *= 1.25f;
 }
 
@@ -568,6 +517,11 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
         ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosition.x, s_cursorPosition.y, s_cursorPosition.z);
         ImGui::End();
     }
+}
+
+// 获取逻辑视口
+LogicalViewport& Renderer::getLogicalViewport() {
+    return s_logicalViewport;
 }
 
 } // namespace tch
