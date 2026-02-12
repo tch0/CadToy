@@ -47,8 +47,6 @@ public:
     // 栅格和坐标轴控制方法
     static void setShowGrid(bool show);         // 设置是否显示栅格
     static void setShowAxes(bool show);         // 设置是否显示XY轴
-    static void setGridScale(float scale);       // 设置栅格缩放比例
-    static float getGridScale();                 // 获取栅格缩放比例
     static void setOrigin(float x, float y);     // 设置坐标原点位置
     static glm::vec2 getOrigin();                // 获取坐标原点位置
     static void zoomIn();                        // 放大栅格
@@ -69,7 +67,6 @@ private:
     // 栅格和坐标轴相关
     static bool s_showGrid;                     // 是否显示栅格
     static bool s_showAxes;                     // 是否显示XY轴
-    static float s_gridScale;                   // 栅格缩放比例
     static float s_mainGridColor[3];            // 主栅格颜色 RGB: 54,61,78
     static float s_subGridColor[3];             // 子栅格颜色 RGB: 38,45,55
     static float s_xAxisColor[3];               // X轴颜色 RGB: 97,37,39

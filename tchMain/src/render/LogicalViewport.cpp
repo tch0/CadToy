@@ -6,19 +6,63 @@ void LogicalViewport::initialize(int windowWidth, int windowHeight) {
     m_windowWidth = windowWidth;
     m_windowHeight = windowHeight;
     
-    // 初始化逻辑视口边界
-    // 默认情况下，逻辑视口与屏幕视口保持一致
-    // 但后续可以通过缩放进行调整
-    m_logicMin = glm::dvec2(-100.0, -100.0);
-    m_logicMax = glm::dvec2(100.0, 100.0);
+    // 计算窗口宽高比
+    double aspectRatio = static_cast<double>(windowWidth) / windowHeight;
+    
+    // 初始化逻辑视口边界，根据窗口宽高比调整
+    // 确保逻辑视口的宽高比与窗口匹配
+    double logicHeight = 200.0;
+    double logicWidth = logicHeight * aspectRatio;
+    
+    m_logicMin = glm::dvec2(-logicWidth / 2.0, -logicHeight / 2.0);
+    m_logicMax = glm::dvec2(logicWidth / 2.0, logicHeight / 2.0);
     
     // 初始化缩放因子
     m_zoomFactor = 1.0;
 }
 
 void LogicalViewport::setWindowSize(int width, int height) {
+    // 保存旧的窗口大小
+    int oldWidth = m_windowWidth;
+    int oldHeight = m_windowHeight;
+    
+    // 更新窗口大小
     m_windowWidth = width;
     m_windowHeight = height;
+    
+    // 计算旧的和新的窗口宽高比
+    double oldAspectRatio = static_cast<double>(oldWidth) / oldHeight;
+    double newAspectRatio = static_cast<double>(width) / height;
+    
+    // 只有当窗口大小发生变化且宽高比不同时，才调整逻辑视口
+    if (oldWidth > 0 && oldHeight > 0 && fabs(oldAspectRatio - newAspectRatio) > 0.001) {
+        // 计算逻辑视口的中心和大小
+        glm::dvec2 center = getWindowCenterLogic();
+        double logicWidth = m_logicMax.x - m_logicMin.x;
+        double logicHeight = m_logicMax.y - m_logicMin.y;
+        
+        // 计算当前逻辑视口的宽高比
+        double logicAspectRatio = logicWidth / logicHeight;
+        
+        // 调整逻辑视口的边界，保持中心不变，使宽高比与新窗口匹配
+        if (newAspectRatio > logicAspectRatio) {
+            // 新窗口更宽，增加逻辑视口的宽度
+            double newLogicWidth = logicHeight * newAspectRatio;
+            double halfWidth = newLogicWidth / 2.0;
+            double halfHeight = logicHeight / 2.0;
+            
+            m_logicMin = glm::dvec2(center.x - halfWidth, center.y - halfHeight);
+            m_logicMax = glm::dvec2(center.x + halfWidth, center.y + halfHeight);
+        } else {
+            // 新窗口更高，增加逻辑视口的高度
+            double newLogicHeight = logicWidth / newAspectRatio;
+            double halfWidth = logicWidth / 2.0;
+            double halfHeight = newLogicHeight / 2.0;
+            
+            m_logicMin = glm::dvec2(center.x - halfWidth, center.y - halfHeight);
+            m_logicMax = glm::dvec2(center.x + halfWidth, center.y + halfHeight);
+        }
+    }
 }
 
 glm::dvec3 LogicalViewport::screenToLogic(const glm::vec2& screenPos) const {

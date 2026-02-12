@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include <algorithm>
 
 namespace tch {
 
@@ -14,7 +15,7 @@ float Renderer::s_cursorSize = 20.0f;
 // 栅格和坐标轴相关初始化
 bool Renderer::s_showGrid = true;         // 默认显示栅格
 bool Renderer::s_showAxes = true;         // 默认显示XY轴
-float Renderer::s_gridScale = 1.0f;       // 默认栅格缩放比例
+
 float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f}; // 主栅格颜色 RGB: 54,61,78
 float Renderer::s_subGridColor[3] = {38.0f/255.0f, 45.0f/255.0f, 55.0f/255.0f};  // 子栅格颜色 RGB: 38,45,55
 float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};    // X轴颜色 RGB: 97,37,39
@@ -246,64 +247,91 @@ void Renderer::drawGrid() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 基础栅格间距
-    const float baseGridSize = 50.0f;
+    // 获取逻辑视口边界
+    glm::dvec2 logicMin = s_logicalViewport.getLogicMin();
+    glm::dvec2 logicMax = s_logicalViewport.getLogicMax();
     
-    // 计算当前有效的栅格间距（考虑缩放）
-    float currentEffectiveSize = baseGridSize * s_gridScale;
+    // 计算逻辑视口的宽度和高度
+    double logicWidth = logicMax.x - logicMin.x;
+    double logicHeight = logicMax.y - logicMin.y;
+    
+    // 基础栅格间距（逻辑坐标）
+    const double baseGridSize = 10.0;
+    
+    // 计算当前有效的栅格间距（考虑视口大小）
+    double currentEffectiveSize = baseGridSize;
     
     // 确定栅格级别
-    // 目标是保持主栅格大小在合理范围内（50-250像素）
-    float mainGridSize, subGridSize;
+    // 目标是保持栅格在屏幕上的大小在合理范围内（50-250像素）
+    double mainGridSize, subGridSize;
     
-    if (currentEffectiveSize < 50.0f) {
+    // 计算当前栅格在屏幕上的大小（水平和垂直方向）
+    double gridScreenSizeX = (baseGridSize / logicWidth) * width;
+    double gridScreenSizeY = (baseGridSize / logicHeight) * height;
+    
+    // 取较小的值，确保栅格单元格在屏幕上保持正方形
+    double gridScreenSize = std::min(gridScreenSizeX, gridScreenSizeY);
+    
+    if (gridScreenSize < 50.0) {
         // 当前栅格太小，需要增加栅格级别
         int level = 0;
-        float testSize = currentEffectiveSize;
-        while (testSize < 50.0f) {
-            testSize *= 5.0f;
+        double testSize = baseGridSize;
+        double testScreenSize = gridScreenSize;
+        while (testScreenSize < 50.0) {
+            testSize *= 5.0;
+            testScreenSize *= 5.0;
             level++;
         }
         
         // 设置新的栅格大小
         mainGridSize = testSize;
-        subGridSize = mainGridSize / 5.0f;
-    } else if (currentEffectiveSize > 250.0f) {
+        subGridSize = mainGridSize / 5.0;
+    } else if (gridScreenSize > 250.0) {
         // 当前栅格太大，需要减少栅格级别
         int level = 0;
-        float testSize = currentEffectiveSize;
-        while (testSize > 250.0f) {
-            testSize /= 5.0f;
+        double testSize = baseGridSize;
+        double testScreenSize = gridScreenSize;
+        while (testScreenSize > 250.0) {
+            testSize /= 5.0;
+            testScreenSize /= 5.0;
             level++;
         }
         
         // 设置新的栅格大小
         mainGridSize = testSize;
-        subGridSize = mainGridSize / 5.0f;
+        subGridSize = mainGridSize / 5.0;
     } else {
         // 栅格大小在合理范围内
-        mainGridSize = currentEffectiveSize;
-        subGridSize = mainGridSize / 5.0f;
+        mainGridSize = baseGridSize;
+        subGridSize = mainGridSize / 5.0;
     }
+    
+    // 计算逻辑原点
+    double originX = 0.0;
+    double originY = 0.0;
     
     // 绘制子栅格
     glBegin(GL_LINES);
     glColor3fv(s_subGridColor);
     
     // 计算起始位置，确保栅格线与原点对齐
-    float startX = fmod(s_originX, subGridSize);
-    float startY = fmod(s_originY, subGridSize);
+    double startX = floor(logicMin.x / subGridSize) * subGridSize;
+    double startY = floor(logicMin.y / subGridSize) * subGridSize;
     
     // 绘制垂直线
-    for (float x = startX; x < width; x += subGridSize) {
-        glVertex2f(x, 0);
-        glVertex2f(x, height);
+    for (double x = startX; x <= logicMax.x; x += subGridSize) {
+        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMin.y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
+        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
-    for (float y = startY; y < height; y += subGridSize) {
-        glVertex2f(0, y);
-        glVertex2f(width, y);
+    for (double y = startY; y <= logicMax.y; y += subGridSize) {
+        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMin.x, y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
+        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
     
@@ -312,19 +340,23 @@ void Renderer::drawGrid() {
     glColor3fv(s_mainGridColor);
     
     // 计算起始位置，确保栅格线与原点对齐
-    float mainStartX = fmod(s_originX, mainGridSize);
-    float mainStartY = fmod(s_originY, mainGridSize);
+    double mainStartX = floor(logicMin.x / mainGridSize) * mainGridSize;
+    double mainStartY = floor(logicMin.y / mainGridSize) * mainGridSize;
     
     // 绘制垂直线
-    for (float x = mainStartX; x < width; x += mainGridSize) {
-        glVertex2f(x, 0);
-        glVertex2f(x, height);
+    for (double x = mainStartX; x <= logicMax.x; x += mainGridSize) {
+        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMin.y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
+        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
-    for (float y = mainStartY; y < height; y += mainGridSize) {
-        glVertex2f(0, y);
-        glVertex2f(width, y);
+    for (double y = mainStartY; y <= logicMax.y; y += mainGridSize) {
+        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMin.x, y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
+        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
     
@@ -408,13 +440,7 @@ void Renderer::setShowAxes(bool show) {
     s_showAxes = show;
 }
 
-void Renderer::setGridScale(float scale) {
-    s_gridScale = scale;
-}
 
-float Renderer::getGridScale() {
-    return s_gridScale;
-}
 
 void Renderer::setOrigin(float x, float y) {
     s_originX = x;
@@ -428,33 +454,21 @@ glm::vec2 Renderer::getOrigin() {
 void Renderer::zoomIn() {
     // 使用逻辑视口进行缩放
     s_logicalViewport.zoomIn();
-    
-    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
-    s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut() {
     // 使用逻辑视口进行缩放
     s_logicalViewport.zoomOut();
-    
-    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
-    s_gridScale *= 1.25f;
 }
 
 void Renderer::zoomIn(const glm::vec2& mousePos) {
     // 使用逻辑视口进行缩放，以鼠标位置为中心
     s_logicalViewport.zoomIn(mousePos);
-    
-    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
-    s_gridScale *= 0.8f;
 }
 
 void Renderer::zoomOut(const glm::vec2& mousePos) {
     // 使用逻辑视口进行缩放，以鼠标位置为中心
     s_logicalViewport.zoomOut(mousePos);
-    
-    // 同时更新栅格缩放比例（栅格缩放与视口缩放相反）
-    s_gridScale *= 1.25f;
 }
 
 // 初始化ImGui
