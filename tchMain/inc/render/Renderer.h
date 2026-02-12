@@ -89,6 +89,10 @@ private:
     
     // 逻辑视口
     static LogicalViewport s_logicalViewport; // 逻辑视口
+    
+    // UI组件高度
+    static float s_menuBarHeight;              // 菜单栏高度
+    static float s_fileBarHeight;              // 文件栏高度
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

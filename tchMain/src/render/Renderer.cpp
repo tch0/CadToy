@@ -26,6 +26,10 @@ float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
 glm::dvec3 Renderer::s_cursorPosition = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置（以窗口中央为原点）
 
+// UI组件高度
+float Renderer::s_menuBarHeight = 0.0f;              // 菜单栏高度
+float Renderer::s_fileBarHeight = 30.0f;              // 文件栏高度
+
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
 static std::string s_currentCommand = ""; // 当前命令输入
@@ -40,7 +44,6 @@ static float s_propertyBarWidth = 250.0f; // 属性栏宽度
 static std::vector<std::string> s_files; // 打开的文件列表
 static int s_currentFileIndex = 0; // 当前文件索引
 static int s_fileCounter = 0; // 用于生成新文件名的计数器
-static float s_fileBarHeight = 30.0f; // 文件栏高度
 
 // 逻辑视口初始化
 LogicalViewport Renderer::s_logicalViewport;
@@ -618,6 +621,9 @@ void Renderer::drawMenuBar() {
             ImGui::EndMenu();
         }
         
+        // 更新菜单栏高度
+        s_menuBarHeight = ImGui::GetFrameHeight();
+        
         ImGui::EndMainMenuBar();
     }
 }
@@ -768,11 +774,10 @@ void Renderer::drawPropertyBar() {
     
     // 计算属性栏位置和大小
     float statusBarHeight = 35.0f;
-    float menuBarHeight = ImGui::GetFrameHeight(); // 使用不包含间距的高度
     // 计算属性栏高度，从文件栏下方到状态栏上方
-    float propertyBarHeight = height - statusBarHeight - menuBarHeight - s_fileBarHeight;
+    float propertyBarHeight = height - statusBarHeight - s_menuBarHeight - s_fileBarHeight;
     // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
-    ImVec2 propertyBarPos(width - s_propertyBarWidth, menuBarHeight + s_fileBarHeight);
+    ImVec2 propertyBarPos(width - s_propertyBarWidth, s_menuBarHeight + s_fileBarHeight);
     ImVec2 propertyBarSize(s_propertyBarWidth, propertyBarHeight);
     
     // 绘制属性栏
@@ -801,8 +806,7 @@ void Renderer::drawFileBar() {
     glfwGetFramebufferSize(s_window, &width, &height);
     
     // 计算文件栏位置和大小
-    float menuBarHeight = ImGui::GetFrameHeight(); // 使用不包含间距的高度，使文件栏紧挨着菜单栏
-    ImVec2 fileBarPos(0, menuBarHeight);
+    ImVec2 fileBarPos(0, s_menuBarHeight);
     ImVec2 fileBarSize(width, s_fileBarHeight);
     
     // 绘制文件栏背景
