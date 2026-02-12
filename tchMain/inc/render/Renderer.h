@@ -67,6 +67,9 @@ public:
     // 绘制文件栏
     static void drawFileBar(); // 绘制文件栏
     
+    // 更新可绘制区域
+    static void updateDrawableArea(); // 更新可绘制区域
+    
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
 
@@ -93,6 +96,7 @@ private:
     // UI组件高度
     static float s_menuBarHeight;              // 菜单栏高度
     static float s_fileBarHeight;              // 文件栏高度
+    static float s_statusBarHeight;            // 状态栏高度
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

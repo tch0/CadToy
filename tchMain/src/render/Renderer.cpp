@@ -29,6 +29,7 @@ glm::dvec3 Renderer::s_cursorPosition = glm::dvec3(0.0, 0.0, 0.0); // 当前光�
 // UI组件高度
 float Renderer::s_menuBarHeight = 0.0f;              // 菜单栏高度
 float Renderer::s_fileBarHeight = 30.0f;              // 文件栏高度
+float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
@@ -91,6 +92,48 @@ void Renderer::cleanup() {
     s_window = nullptr;
 }
 
+// 更新可绘制区域
+void Renderer::updateDrawableArea() {
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 状态栏高度
+    float statusBarHeight = s_statusBarHeight;
+    
+    // 计算可绘制区域的边界
+    // 左侧：0
+    // 顶部：菜单栏高度 + 文件栏高度
+    // 右侧：窗口宽度 - (属性栏宽度 if 可见)
+    // 底部：窗口高度 - 状态栏高度 - (命令栏高度 if 可见)
+    int left = 0;
+    int top = static_cast<int>(s_menuBarHeight + s_fileBarHeight);
+    int right = width - (s_propertyBarVisible ? static_cast<int>(s_propertyBarWidth) : 0);
+    int bottom = height - static_cast<int>(statusBarHeight) - (s_commandBarVisible ? static_cast<int>(s_commandBarHeight) : 0);
+    
+    // 确保可绘制区域有效
+    // 确保顶部边界小于底部边界
+    if (top >= bottom) {
+        // 如果顶部边界大于或等于底部边界，调整底部边界为顶部边界 + 1
+        bottom = top + 1;
+    }
+    
+    // 确保左右边界有效
+    if (left >= right) {
+        // 如果左边界大于或等于右边界，调整右边界为左边界 + 1
+        right = left + 1;
+    }
+    
+    // 确保边界在窗口范围内
+    top = std::max(0, std::min(top, height - 1));
+    bottom = std::max(1, std::min(bottom, height));
+    left = std::max(0, std::min(left, width - 1));
+    right = std::max(1, std::min(right, width));
+    
+    // 更新逻辑视口的可绘制区域
+    s_logicalViewport.setDrawableArea(left, top, right, bottom);
+}
+
 // 开始渲染
 void Renderer::beginRender() {
     if (!s_initialized || !s_window) {
@@ -104,6 +147,15 @@ void Renderer::beginRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    
+    // 绘制菜单栏
+    drawMenuBar();
+    
+    // 绘制文件栏
+    drawFileBar();
+    
+    // 更新可绘制区域
+    updateDrawableArea();
     
     // 使用ImGui的原生API来控制光标显示
     ImGuiIO& io = ImGui::GetIO();
@@ -177,9 +229,15 @@ void Renderer::drawCursor(const glm::vec2& position) {
         return;
     }
     
-    // 更新当前光标位置（使用逻辑视口转换）
-    glm::dvec3 logicPos = s_logicalViewport.screenToLogic(position);
-    s_cursorPosition = logicPos;
+    // 检查鼠标位置是否在可绘制区域内
+    bool isInDrawableArea = s_logicalViewport.isPointInDrawableArea(position);
+    
+    // 只有当鼠标在可绘制区域内时，才更新光标位置
+    if (isInDrawableArea) {
+        // 更新当前光标位置（使用逻辑视口转换）
+        glm::dvec3 logicPos = s_logicalViewport.screenToLogic(position);
+        s_cursorPosition = logicPos;
+    }
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -201,14 +259,24 @@ void Renderer::drawCursor(const glm::vec2& position) {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
+    // 计算光标在屏幕上的位置
+    glm::vec2 cursorScreenPos;
+    if (isInDrawableArea) {
+        // 如果鼠标在可绘制区域内，使用鼠标位置
+        cursorScreenPos = position;
+    } else {
+        // 如果鼠标不在可绘制区域内，使用逻辑光标位置转换到屏幕坐标
+        cursorScreenPos = s_logicalViewport.logicToScreen(s_cursorPosition);
+    }
+    
     // 绘制空心框选框
     float boxSize = s_cursorSize * 0.25f;
     glBegin(GL_LINE_LOOP);
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
-    glVertex2f(position.x - boxSize, position.y - boxSize);
-    glVertex2f(position.x + boxSize, position.y - boxSize);
-    glVertex2f(position.x + boxSize, position.y + boxSize);
-    glVertex2f(position.x - boxSize, position.y + boxSize);
+    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y - boxSize);
+    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y - boxSize);
+    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y + boxSize);
+    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y + boxSize);
     glEnd();
     
     // 绘制从正方形四条边中点向外延伸的光标线条
@@ -216,20 +284,20 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
     
     // 上边中点向上延伸
-    glVertex2f(position.x, position.y - boxSize);
-    glVertex2f(position.x, position.y - s_cursorSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - boxSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_cursorSize);
     
     // 下边中点向下延伸
-    glVertex2f(position.x, position.y + boxSize);
-    glVertex2f(position.x, position.y + s_cursorSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + boxSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_cursorSize);
     
     // 左边中点向左延伸
-    glVertex2f(position.x - boxSize, position.y);
-    glVertex2f(position.x - s_cursorSize, position.y);
+    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y);
+    glVertex2f(cursorScreenPos.x - s_cursorSize, cursorScreenPos.y);
     
     // 右边中点向右延伸
-    glVertex2f(position.x + boxSize, position.y);
-    glVertex2f(position.x + s_cursorSize, position.y);
+    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y);
+    glVertex2f(cursorScreenPos.x + s_cursorSize, cursorScreenPos.y);
     glEnd();
     
     // 恢复矩阵状态
@@ -263,10 +331,12 @@ void Renderer::drawGrid() {
     glPushMatrix();
     glLoadIdentity();
     
-    // 设置正交投影，Y轴朝上
+    // 设置正交投影，Y轴朝下（标准鼠标坐标系）
+    // 注意：glOrtho的参数顺序是left, right, bottom, top, near, far
+    // 在标准鼠标坐标系中，Y轴向下，所以底部在屏幕顶部，顶部在屏幕底部
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
-    glOrtho(0, width, 0, height, -1, 1);
+    glOrtho(0, width, height, 0, -1, 1);
     
     // 切换到模型视图矩阵
     glMatrixMode(GL_MODELVIEW);
@@ -284,10 +354,15 @@ void Renderer::drawGrid() {
     double logicWidth = logicMax.x - logicMin.x;
     double logicHeight = logicMax.y - logicMin.y;
     
+    // 获取可绘制区域大小
+    glm::ivec2 drawableSize = s_logicalViewport.getDrawableAreaSize();
+    int drawableWidth = drawableSize.x;
+    int drawableHeight = drawableSize.y;
+    
     // 基础栅格间距（逻辑坐标）
     const double baseGridSize = 10.0;
     
-    // 计算当前有效的栅格间距（考虑视口大小）
+    // 计算当前有效的栅格间距（考虑可绘制区域大小）
     double currentEffectiveSize = baseGridSize;
     
     // 确定栅格级别
@@ -295,8 +370,8 @@ void Renderer::drawGrid() {
     double mainGridSize, subGridSize;
     
     // 计算当前栅格在屏幕上的大小（水平和垂直方向）
-    double gridScreenSizeX = (baseGridSize / logicWidth) * width;
-    double gridScreenSizeY = (baseGridSize / logicHeight) * height;
+    double gridScreenSizeX = (baseGridSize / logicWidth) * drawableWidth;
+    double gridScreenSizeY = (baseGridSize / logicHeight) * drawableHeight;
     
     // 取较小的值，确保栅格单元格在屏幕上保持正方形
     double gridScreenSize = std::min(gridScreenSizeX, gridScreenSizeY);
@@ -410,10 +485,12 @@ void Renderer::drawAxes() {
     glPushMatrix();
     glLoadIdentity();
     
-    // 设置正交投影，Y轴朝上
+    // 设置正交投影，Y轴朝下（标准鼠标坐标系）
+    // 注意：glOrtho的参数顺序是left, right, bottom, top, near, far
+    // 在标准鼠标坐标系中，Y轴向下，所以底部在屏幕顶部，顶部在屏幕底部
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
-    glOrtho(0, width, 0, height, -1, 1);
+    glOrtho(0, width, height, 0, -1, 1);
     
     // 切换到模型视图矩阵
     glMatrixMode(GL_MODELVIEW);
@@ -422,6 +499,10 @@ void Renderer::drawAxes() {
     
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
+    
+    // 获取可绘制区域边界
+    int drawableLeft, drawableTop, drawableRight, drawableBottom;
+    s_logicalViewport.getDrawableArea(drawableLeft, drawableTop, drawableRight, drawableBottom);
     
     // 计算逻辑原点在屏幕上的位置
     glm::vec2 originScreenPos = s_logicalViewport.logicToScreen(glm::dvec3(0.0, 0.0, 0.0));
@@ -432,10 +513,10 @@ void Renderer::drawAxes() {
     glBegin(GL_LINES);
     glColor3fv(s_xAxisColor);
     
-    // 只绘制在屏幕范围内的部分
-    if (originScreenX >= 0 && originScreenX <= width && originScreenY >= 0 && originScreenY <= height) {
+    // 只绘制在可绘制区域范围内的部分
+    if (originScreenX >= drawableLeft && originScreenX <= drawableRight && originScreenY >= drawableTop && originScreenY <= drawableBottom) {
         glVertex2f(originScreenX, originScreenY);
-        glVertex2f(width, originScreenY);
+        glVertex2f(drawableRight, originScreenY);
     }
     glEnd();
     
@@ -443,10 +524,10 @@ void Renderer::drawAxes() {
     glBegin(GL_LINES);
     glColor3fv(s_yAxisColor);
     
-    // 只绘制在屏幕范围内的部分
-    if (originScreenX >= 0 && originScreenX <= width && originScreenY >= 0 && originScreenY <= height) {
+    // 只绘制在可绘制区域范围内的部分
+    if (originScreenX >= drawableLeft && originScreenX <= drawableRight && originScreenY >= drawableTop && originScreenY <= drawableBottom) {
         glVertex2f(originScreenX, originScreenY);
-        glVertex2f(originScreenX, height);
+        glVertex2f(originScreenX, drawableTop);
     }
     glEnd();
     
@@ -564,7 +645,7 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
     glfwGetFramebufferSize(s_window, &width, &height);
     
     // 计算状态栏位置和大小
-    float statusBarHeight = 35.0f;
+    float statusBarHeight = s_statusBarHeight;
     ImVec2 statusBarPos(0, height - statusBarHeight);
     ImVec2 statusBarSize(width, statusBarHeight);
     
@@ -639,7 +720,7 @@ void Renderer::drawCommandBar() {
     glfwGetFramebufferSize(s_window, &width, &height);
     
     // 计算命令栏位置（位于状态栏正上方，属性栏左侧）
-    float statusBarHeight = 35.0f;
+    float statusBarHeight = s_statusBarHeight;
     // 计算命令栏宽度，考虑属性栏的宽度
     float commandBarWidth = width - (s_propertyBarVisible ? s_propertyBarWidth : 0.0f);
     ImVec2 commandBarPos(0, height - statusBarHeight - s_commandBarHeight);
@@ -773,7 +854,7 @@ void Renderer::drawPropertyBar() {
     glfwGetFramebufferSize(s_window, &width, &height);
     
     // 计算属性栏位置和大小
-    float statusBarHeight = 35.0f;
+    float statusBarHeight = s_statusBarHeight;
     // 计算属性栏高度，从文件栏下方到状态栏上方
     float propertyBarHeight = height - statusBarHeight - s_menuBarHeight - s_fileBarHeight;
     // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
