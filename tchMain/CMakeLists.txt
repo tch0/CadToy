@@ -23,3 +23,8 @@ target_link_libraries(tchMain
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_main_sources} ${tch_main_headers})
+
+#-------------------------------------------------------------------------------------#
+#            copy resources to build directory
+#-------------------------------------------------------------------------------------#
+copy_dir_to_target_file_dir(tchMain fonts ${CMAKE_SOURCE_DIR}/fonts)
