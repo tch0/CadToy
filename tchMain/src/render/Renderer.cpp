@@ -183,10 +183,12 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glPushMatrix();
     glLoadIdentity();
     
-    // 设置正交投影，Y轴朝上
+    // 设置正交投影，Y轴朝下（标准鼠标坐标系）
+    // 注意：glOrtho的参数顺序是left, right, bottom, top, near, far
+    // 在标准鼠标坐标系中，Y轴向下，所以底部在屏幕顶部，顶部在屏幕底部
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
-    glOrtho(0, width, 0, height, -1, 1);
+    glOrtho(0, width, height, 0, -1, 1);
     
     // 切换到模型视图矩阵
     glMatrixMode(GL_MODELVIEW);

@@ -99,12 +99,8 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
 
 // 处理鼠标移动
 void InputHandler::handleMouseMove(double xpos, double ypos) {
-    // 将鼠标坐标转换为OpenGL坐标系（Y轴向上）
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    float openglY = height - static_cast<float>(ypos);
-    
-    s_mousePosition = glm::vec2(static_cast<float>(xpos), openglY);
+    // 使用标准鼠标坐标系（Y轴向下，左上角为原点）
+    s_mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
     
     // 触发鼠标移动回调
     if (s_callbacks.contains(InputEventType::MOUSE_MOVE)) {

@@ -68,7 +68,8 @@ void LogicalViewport::setWindowSize(int width, int height) {
 glm::dvec3 LogicalViewport::screenToLogic(const glm::vec2& screenPos) const {
     // 计算屏幕坐标到逻辑坐标的转换
     double x = m_logicMin.x + (screenPos.x / m_windowWidth) * (m_logicMax.x - m_logicMin.x);
-    double y = m_logicMin.y + (screenPos.y / m_windowHeight) * (m_logicMax.y - m_logicMin.y);
+    // 屏幕y轴向下，逻辑y轴向上，所以需要反转y坐标
+    double y = m_logicMin.y + ((m_windowHeight - screenPos.y) / m_windowHeight) * (m_logicMax.y - m_logicMin.y);
     double z = 0.0; // 目前z坐标始终为0
     
     return glm::dvec3(x, y, z);
@@ -77,7 +78,8 @@ glm::dvec3 LogicalViewport::screenToLogic(const glm::vec2& screenPos) const {
 glm::vec2 LogicalViewport::logicToScreen(const glm::dvec3& logicPos) const {
     // 计算逻辑坐标到屏幕坐标的转换
     double x = (logicPos.x - m_logicMin.x) / (m_logicMax.x - m_logicMin.x) * m_windowWidth;
-    double y = (logicPos.y - m_logicMin.y) / (m_logicMax.y - m_logicMin.y) * m_windowHeight;
+    // 逻辑y轴向上，屏幕y轴向下，所以需要反转y坐标
+    double y = m_windowHeight - (logicPos.y - m_logicMin.y) / (m_logicMax.y - m_logicMin.y) * m_windowHeight;
     
     return glm::vec2(static_cast<float>(x), static_cast<float>(y));
 }
