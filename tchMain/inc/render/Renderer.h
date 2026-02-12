@@ -64,6 +64,9 @@ public:
     // 绘制属性栏
     static void drawPropertyBar(); // 绘制属性栏
     
+    // 绘制文件栏
+    static void drawFileBar(); // 绘制文件栏
+    
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
 

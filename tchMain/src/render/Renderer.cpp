@@ -36,6 +36,12 @@ static float s_commandBarHeight = 150.0f; // 命令栏高度
 static bool s_propertyBarVisible = true; // 属性栏是否可见
 static float s_propertyBarWidth = 250.0f; // 属性栏宽度
 
+// 文件栏相关
+static std::vector<std::string> s_files; // 打开的文件列表
+static int s_currentFileIndex = 0; // 当前文件索引
+static int s_fileCounter = 0; // 用于生成新文件名的计数器
+static float s_fileBarHeight = 30.0f; // 文件栏高度
+
 // 逻辑视口初始化
 LogicalViewport Renderer::s_logicalViewport;
 
@@ -65,6 +71,12 @@ void Renderer::initialize(GLFWwindow* window) {
     
     // 初始化ImGui
     initializeImGui();
+    
+    // 初始化文件列表，创建一个默认的未命名文件
+    s_files.clear();
+    s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
+    s_fileCounter++;
+    s_currentFileIndex = 0;
 }
 
 // 清理渲染器
@@ -754,11 +766,11 @@ void Renderer::drawPropertyBar() {
     
     // 计算属性栏位置和大小
     float statusBarHeight = 35.0f;
-    float menuBarHeight = ImGui::GetFrameHeightWithSpacing();
-    // 计算属性栏高度，从菜单栏下方到状态栏上方
-    float propertyBarHeight = height - statusBarHeight - menuBarHeight;
+    float menuBarHeight = ImGui::GetFrameHeight(); // 使用不包含间距的高度
+    // 计算属性栏高度，从文件栏下方到状态栏上方
+    float propertyBarHeight = height - statusBarHeight - menuBarHeight - s_fileBarHeight;
     // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
-    ImVec2 propertyBarPos(width - s_propertyBarWidth, menuBarHeight);
+    ImVec2 propertyBarPos(width - s_propertyBarWidth, menuBarHeight + s_fileBarHeight);
     ImVec2 propertyBarSize(s_propertyBarWidth, propertyBarHeight);
     
     // 绘制属性栏
@@ -775,6 +787,88 @@ void Renderer::drawPropertyBar() {
         // 监听属性栏宽度变化
         ImVec2 currentSize = ImGui::GetWindowSize();
         s_propertyBarWidth = currentSize.x;
+        
+        ImGui::End();
+    }
+}
+
+// 绘制文件栏
+void Renderer::drawFileBar() {
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算文件栏位置和大小
+    float menuBarHeight = ImGui::GetFrameHeight(); // 使用不包含间距的高度，使文件栏紧挨着菜单栏
+    ImVec2 fileBarPos(0, menuBarHeight);
+    ImVec2 fileBarSize(width, s_fileBarHeight);
+    
+    // 绘制文件栏背景
+    ImGui::SetNextWindowPos(fileBarPos);
+    ImGui::SetNextWindowSize(fileBarSize);
+    ImGui::SetNextWindowBgAlpha(0.9f);
+    
+    // 使用参考实现中的窗口标志
+    ImGuiWindowFlags tabWindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | 
+                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav | 
+                                     ImGuiWindowFlags_NoSavedSettings;
+    
+    if (ImGui::Begin("FileBar", nullptr, tabWindowFlags)) {
+        // 使用参考实现中的TabBar标志
+        ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | 
+                                      ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
+                                      ImGuiTabBarFlags_FittingPolicyScroll;
+        
+        if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
+            // 使用TabItemButton实现+号按钮
+            if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing)) {
+                // 创建新文件
+                s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
+                s_fileCounter++;
+                s_currentFileIndex = s_files.size() - 1;
+            }
+            
+            // 遍历文件列表
+            for (size_t i = 0; i < s_files.size(); i++) {
+                // 使用ImGui的TabItem，带有关闭按钮
+                ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
+                
+                bool tabOpen = true;
+                if (ImGui::BeginTabItem(s_files[i].c_str(), &tabOpen, tabItemFlags)) {
+                    // 设置当前文件索引
+                    if (s_currentFileIndex != i) {
+                        s_currentFileIndex = i;
+                    }
+                    ImGui::EndTabItem();
+                }
+                
+                // 添加工具提示
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(s_files[i].c_str());
+                }
+                
+                // 处理标签关闭
+                if (!tabOpen) {
+                    if (s_files.size() > 1) {
+                        s_files.erase(s_files.begin() + i);
+                        if (s_currentFileIndex >= i) {
+                            s_currentFileIndex = std::max(0, s_currentFileIndex - 1);
+                        }
+                    } else {
+                        // 如果只剩最后一个文件，关闭后创建新文件
+                        s_files.clear();
+                        s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
+                        s_fileCounter++;
+                        s_currentFileIndex = 0;
+                    }
+                }
+            }
+            
+            ImGui::EndTabBar();
+        }
+        
+        // 更新文件栏高度
+        s_fileBarHeight = ImGui::GetWindowSize().y;
         
         ImGui::End();
     }

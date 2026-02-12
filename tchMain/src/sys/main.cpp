@@ -108,6 +108,9 @@ int main(int argc, char* argv[])
         // 绘制菜单栏
         Renderer::drawMenuBar();
         
+        // 绘制文件栏
+        Renderer::drawFileBar();
+        
         // 绘制所有图形
         Renderer::drawAll();
         
