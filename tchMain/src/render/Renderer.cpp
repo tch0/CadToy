@@ -3,6 +3,8 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "sys/Global.h"
+#include "debug/Logger.h"
 #include <algorithm>
 
 namespace tch {
@@ -481,6 +483,29 @@ void Renderer::initializeImGui() {
     // 配置ImGui
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    
+    // 加载自定义字体
+    std::filesystem::path fontPath = g_pathCwd / "fonts" / "consolas.ttf";
+    std::string fontPathStr = fontPath.string();
+    
+    LOG_INFO("Attempting to load font from: {}", fontPathStr);
+    
+    // 尝试加载字体
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), 16.0f);
+    
+    if (font) {
+        LOG_INFO("Font loaded successfully: consolas.ttf");
+    } else {
+        LOG_WARNING("Failed to load font: {}", fontPathStr);
+        LOG_INFO("Using default ImGui font instead with size 16");
+        
+        // 即使使用默认字体，也设置字号为16
+        io.Fonts->Clear();
+        ImFontConfig config;
+        config.SizePixels = 16.0f;
+        io.Fonts->AddFontDefault(&config);
+        io.Fonts->Build();
+    }
     
     // 设置ImGui样式
     ImGui::StyleColorsDark();
