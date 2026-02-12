@@ -51,9 +51,12 @@ public:
     static glm::vec2 getOrigin();                // 获取坐标原点位置
     static void zoomIn();                        // 放大栅格
     static void zoomOut();                       // 缩小栅格
-    static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大栅格
-    static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小栅格
+    static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
+    static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
     static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
+    
+    // 绘制菜单栏
+    static void drawMenuBar(); // 绘制菜单栏
     
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口

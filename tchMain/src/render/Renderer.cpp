@@ -533,6 +533,45 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
     }
 }
 
+// 绘制菜单栏
+void Renderer::drawMenuBar() {
+    if (ImGui::BeginMainMenuBar()) {
+        // File菜单
+        if (ImGui::BeginMenu("File")) {
+            ImGui::MenuItem("New");
+            ImGui::MenuItem("Open");
+            ImGui::MenuItem("Open Recent");
+            ImGui::MenuItem("Save");
+            ImGui::MenuItem("Save As...");
+            ImGui::MenuItem("Close");
+            ImGui::Separator();
+            ImGui::MenuItem("Quit");
+            ImGui::EndMenu();
+        }
+        
+        // Edit菜单
+        if (ImGui::BeginMenu("Edit")) {
+            ImGui::MenuItem("Undo");
+            ImGui::MenuItem("Redo");
+            ImGui::Separator();
+            ImGui::MenuItem("Cut");
+            ImGui::MenuItem("Copy");
+            ImGui::MenuItem("Paste");
+            ImGui::MenuItem("Select All");
+            ImGui::MenuItem("Erase");
+            ImGui::EndMenu();
+        }
+        
+        // Tools菜单
+        if (ImGui::BeginMenu("Tools")) {
+            ImGui::MenuItem("Options");
+            ImGui::EndMenu();
+        }
+        
+        ImGui::EndMainMenuBar();
+    }
+}
+
 // 获取逻辑视口
 LogicalViewport& Renderer::getLogicalViewport() {
     return s_logicalViewport;
