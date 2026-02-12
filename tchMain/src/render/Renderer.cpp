@@ -32,6 +32,10 @@ static std::string s_currentCommand = ""; // 当前命令输入
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 
+// 属性栏相关
+static bool s_propertyBarVisible = true; // 属性栏是否可见
+static float s_propertyBarWidth = 250.0f; // 属性栏宽度
+
 // 逻辑视口初始化
 LogicalViewport Renderer::s_logicalViewport;
 
@@ -596,6 +600,7 @@ void Renderer::drawMenuBar() {
         // Tools菜单
         if (ImGui::BeginMenu("Tools")) {
             ImGui::MenuItem("Options");
+            ImGui::MenuItem("Properties", nullptr, &s_propertyBarVisible);
             ImGui::EndMenu();
         }
         
@@ -613,10 +618,12 @@ void Renderer::drawCommandBar() {
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
     
-    // 计算命令栏位置（位于状态栏正上方）
+    // 计算命令栏位置（位于状态栏正上方，属性栏左侧）
     float statusBarHeight = 35.0f;
+    // 计算命令栏宽度，考虑属性栏的宽度
+    float commandBarWidth = width - (s_propertyBarVisible ? s_propertyBarWidth : 0.0f);
     ImVec2 commandBarPos(0, height - statusBarHeight - s_commandBarHeight);
-    ImVec2 commandBarSize(width, s_commandBarHeight);
+    ImVec2 commandBarSize(commandBarWidth, s_commandBarHeight);
     
     // 绘制命令栏
     ImGui::SetNextWindowPos(commandBarPos);
@@ -687,7 +694,7 @@ void Renderer::drawCommandBar() {
     // 减小拖动条高度，使其更美观
     float resizeBarHeight = 2.0f;
     ImVec2 resizeBarPos(0, height - statusBarHeight - s_commandBarHeight);
-    ImVec2 resizeBarSize(width, resizeBarHeight);
+    ImVec2 resizeBarSize(commandBarWidth, resizeBarHeight);
     
     // 使用ImDrawList直接绘制拖动条，避免ImGui窗口最小高度限制
     ImDrawList* drawList = ImGui::GetBackgroundDrawList();
@@ -732,6 +739,44 @@ void Renderer::drawCommandBar() {
     // 确保在窗口外释放鼠标时也能停止拖动
     if (isResizing && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         isResizing = false;
+    }
+}
+
+// 绘制属性栏
+void Renderer::drawPropertyBar() {
+    if (!s_propertyBarVisible) {
+        return;
+    }
+    
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算属性栏位置和大小
+    float statusBarHeight = 35.0f;
+    float menuBarHeight = ImGui::GetFrameHeightWithSpacing();
+    // 计算属性栏高度，从菜单栏下方到状态栏上方
+    float propertyBarHeight = height - statusBarHeight - menuBarHeight;
+    // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
+    ImVec2 propertyBarPos(width - s_propertyBarWidth, menuBarHeight);
+    ImVec2 propertyBarSize(s_propertyBarWidth, propertyBarHeight);
+    
+    // 绘制属性栏
+    ImGui::SetNextWindowPos(propertyBarPos);
+    ImGui::SetNextWindowSize(propertyBarSize);
+    
+    // 使用ImGui的原生窗口功能，支持拖动调整大小和关闭按钮
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
+                             ImGuiWindowFlags_NoBringToFrontOnFocus;
+    
+    if (ImGui::Begin("Properties", &s_propertyBarVisible, flags)) {
+        // 预留空白区域，等待添加实际属性
+        
+        // 监听属性栏宽度变化
+        ImVec2 currentSize = ImGui::GetWindowSize();
+        s_propertyBarWidth = currentSize.x;
+        
+        ImGui::End();
     }
 }
 

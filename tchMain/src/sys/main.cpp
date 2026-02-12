@@ -118,6 +118,9 @@ int main(int argc, char* argv[])
         // 绘制命令栏
         Renderer::drawCommandBar();
         
+        // 绘制属性栏
+        Renderer::drawPropertyBar();
+        
         // 绘制状态栏
         Renderer::drawStatusBar(mousePos);
         

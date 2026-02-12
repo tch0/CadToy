@@ -61,6 +61,9 @@ public:
     // 绘制命令栏
     static void drawCommandBar(); // 绘制命令栏
     
+    // 绘制属性栏
+    static void drawPropertyBar(); // 绘制属性栏
+    
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
 
