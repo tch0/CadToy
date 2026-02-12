@@ -6,6 +6,7 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 #include <algorithm>
+#include <array>
 
 namespace tch {
 
@@ -17,7 +18,6 @@ float Renderer::s_cursorSize = 20.0f;
 // 栅格和坐标轴相关初始化
 bool Renderer::s_showGrid = true;         // 默认显示栅格
 bool Renderer::s_showAxes = true;         // 默认显示XY轴
-
 float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f}; // 主栅格颜色 RGB: 54,61,78
 float Renderer::s_subGridColor[3] = {38.0f/255.0f, 45.0f/255.0f, 55.0f/255.0f};  // 子栅格颜色 RGB: 38,45,55
 float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};    // X轴颜色 RGB: 97,37,39
@@ -25,6 +25,12 @@ float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};   
 float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
 glm::dvec3 Renderer::s_cursorPosition = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置（以窗口中央为原点）
+
+// 命令栏相关
+static std::vector<std::string> s_commandHistory; // 命令执行历史
+static std::string s_currentCommand = ""; // 当前命令输入
+static bool s_commandBarVisible = true; // 命令栏是否可见
+static float s_commandBarHeight = 150.0f; // 命令栏高度
 
 // 逻辑视口初始化
 LogicalViewport Renderer::s_logicalViewport;
@@ -594,6 +600,138 @@ void Renderer::drawMenuBar() {
         }
         
         ImGui::EndMainMenuBar();
+    }
+}
+
+// 绘制命令栏
+void Renderer::drawCommandBar() {
+    if (!s_commandBarVisible) {
+        return;
+    }
+    
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算命令栏位置（位于状态栏正上方）
+    float statusBarHeight = 35.0f;
+    ImVec2 commandBarPos(0, height - statusBarHeight - s_commandBarHeight);
+    ImVec2 commandBarSize(width, s_commandBarHeight);
+    
+    // 绘制命令栏
+    ImGui::SetNextWindowPos(commandBarPos);
+    ImGui::SetNextWindowSize(commandBarSize);
+    ImGui::SetNextWindowBgAlpha(0.9f);
+    
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                             ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | 
+                             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    
+    if (ImGui::Begin("CommandBar", nullptr, flags)) {
+        // 命令执行历史部分（去掉标题和最上方的分隔符）
+        
+        // 创建可滚动区域显示命令历史，去掉周围的框
+        ImGui::BeginChild("CommandHistory", ImVec2(0, -30), false, ImGuiWindowFlags_HorizontalScrollbar);
+        for (const auto& cmd : s_commandHistory) {
+            ImGui::Text("%s", cmd.c_str());
+        }
+        ImGui::EndChild();
+        
+        // 命令输入栏部分
+        ImGui::Separator();
+        
+        // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Command:");
+        ImGui::SameLine();
+        
+        std::array<char, 256> commandBuffer{};
+        if (!s_currentCommand.empty()) {
+            // 安全地复制字符串，避免越界
+            size_t copySize = std::min(s_currentCommand.size(), commandBuffer.size() - 1);
+            std::copy(s_currentCommand.begin(), s_currentCommand.begin() + copySize, commandBuffer.begin());
+            commandBuffer[copySize] = '\0'; // 确保以空字符结尾
+        }
+        
+        // 使用PushItemWidth使输入框占满剩余空间
+        ImGui::PushItemWidth(-1);
+        // 添加提示字符串
+        ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
+        if (s_currentCommand.empty()) {
+            inputFlags |= ImGuiInputTextFlags_CallbackAlways;
+        }
+        
+        // 使用更简单的方式添加提示文本
+        if (ImGui::InputTextWithHint("##CommandInput", "Input Command Here", commandBuffer.data(), commandBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            // 当用户按下Enter键时，添加命令到历史记录并清空输入
+            std::string command(commandBuffer.data());
+            if (!command.empty()) {
+                s_commandHistory.push_back(command);
+                s_currentCommand.clear();
+            }
+        } else {
+            // 更新当前命令输入
+            s_currentCommand = commandBuffer.data();
+        }
+        ImGui::PopItemWidth();
+        
+        ImGui::End();
+    }
+    
+    // 绘制拖动条，允许调整命令栏高度
+    static bool isResizing = false;
+    static float resizeStartY = 0.0f;
+    static float resizeStartHeight = 0.0f;
+    
+    // 减小拖动条高度，使其更美观
+    float resizeBarHeight = 2.0f;
+    ImVec2 resizeBarPos(0, height - statusBarHeight - s_commandBarHeight);
+    ImVec2 resizeBarSize(width, resizeBarHeight);
+    
+    // 使用ImDrawList直接绘制拖动条，避免ImGui窗口最小高度限制
+    ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+    
+    // 绘制拖动条背景
+    drawList->AddRectFilled(resizeBarPos, ImVec2(resizeBarPos.x + resizeBarSize.x, resizeBarPos.y + resizeBarSize.y), ImGui::GetColorU32(ImVec4(0.5f, 0.5f, 0.5f, 0.7f)));
+    
+    // 检测鼠标是否悬停在拖动条上
+    ImVec2 mousePos = ImGui::GetMousePos();
+    bool isHovered = mousePos.x >= resizeBarPos.x && mousePos.x <= resizeBarPos.x + resizeBarSize.x && 
+                     mousePos.y >= resizeBarPos.y && mousePos.y <= resizeBarPos.y + resizeBarSize.y;
+    
+    // 设置鼠标光标
+    if (isHovered) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+    }
+    
+    // 开始拖动
+    if (isHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        isResizing = true;
+        resizeStartY = mousePos.y;
+        resizeStartHeight = s_commandBarHeight;
+    }
+    
+    // 正在拖动
+    if (isResizing) {
+        float currentY = mousePos.y;
+        float deltaY = currentY - resizeStartY;
+        float newHeight = resizeStartHeight - deltaY;
+        
+        // 限制高度范围，增大最小高度和最大高度以适应更大的屏幕
+        if (newHeight > 150.0f && newHeight < 1080.0f) {
+            s_commandBarHeight = newHeight;
+        }
+        
+        // 停止拖动
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            isResizing = false;
+        }
+    }
+    
+    // 确保在窗口外释放鼠标时也能停止拖动
+    if (isResizing && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        isResizing = false;
     }
 }
 

@@ -58,6 +58,9 @@ public:
     // 绘制菜单栏
     static void drawMenuBar(); // 绘制菜单栏
     
+    // 绘制命令栏
+    static void drawCommandBar(); // 绘制命令栏
+    
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
 
