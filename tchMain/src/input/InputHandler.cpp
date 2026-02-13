@@ -113,18 +113,21 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
     // 获取当前鼠标位置
     glm::vec2 mousePos = getMousePosition();
     
-    // 根据滚轮方向进行缩放（反转方向：向上滚放大，向下滚缩小）
-    if (yoffset > 0) {
-        // 滚轮向上，缩小栅格
-        Renderer::zoomOut(mousePos);
-    } else if (yoffset < 0) {
-        // 滚轮向下，放大栅格
-        Renderer::zoomIn(mousePos);
-    }
-    
-    // 触发鼠标滚轮回调
-    if (s_callbacks.contains(InputEventType::MOUSE_SCROLL)) {
-        s_callbacks[InputEventType::MOUSE_SCROLL]();
+    // 检查鼠标是否在可绘制区域内
+    if (Renderer::getLogicalViewport().isPointInDrawableArea(mousePos)) {
+        // 根据滚轮方向进行缩放（反转方向：向上滚放大，向下滚缩小）
+        if (yoffset > 0) {
+            // 滚轮向上，缩小栅格
+            Renderer::zoomOut(mousePos);
+        } else if (yoffset < 0) {
+            // 滚轮向下，放大栅格
+            Renderer::zoomIn(mousePos);
+        }
+        
+        // 触发鼠标滚轮回调
+        if (s_callbacks.contains(InputEventType::MOUSE_SCROLL)) {
+            s_callbacks[InputEventType::MOUSE_SCROLL]();
+        }
     }
 }
 
