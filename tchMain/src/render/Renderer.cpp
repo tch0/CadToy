@@ -675,6 +675,9 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
 // 绘制选项对话框
 void Renderer::drawOptionsDialog() {
     if (s_optionsDialogVisible) {
+        // 使用BeginPopupModal创建真正的模态对话框
+        ImGui::OpenPopup("Options");
+        
         // 设置对话框位置为屏幕中央
         ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         
@@ -682,10 +685,10 @@ void Renderer::drawOptionsDialog() {
         ImGui::SetNextWindowSize(ImVec2(400, 300));
         
         // 使用模态对话框标志
-        ImGuiWindowFlags flags = ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
                                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
         
-        if (ImGui::Begin("Options", &s_optionsDialogVisible, flags)) {
+        if (ImGui::BeginPopupModal("Options", &s_optionsDialogVisible, flags)) {
             // 对话框标题
             ImGui::Text("Options");
             ImGui::Separator();
@@ -719,6 +722,7 @@ void Renderer::drawOptionsDialog() {
                 // 应用设置
                 s_showGrid = showGrid;
                 s_showAxes = showAxes;
+                ImGui::CloseCurrentPopup();
                 s_optionsDialogVisible = false;
             }
             
@@ -726,10 +730,11 @@ void Renderer::drawOptionsDialog() {
             ImGui::SameLine();
             if (ImGui::Button("Cancel", ImVec2(80, 30))) {
                 // 不应用设置，直接关闭对话框
+                ImGui::CloseCurrentPopup();
                 s_optionsDialogVisible = false;
             }
             
-            ImGui::End();
+            ImGui::EndPopup();
         }
     }
 }
