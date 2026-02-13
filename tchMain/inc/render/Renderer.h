@@ -82,6 +82,10 @@ public:
     static bool isPropertyBarVisible(); // 获取属性栏是否可见
     static void setPropertyBarVisible(bool visible); // 设置属性栏是否可见
     
+    // 选项对话框相关方法
+    static void showOptionsDialog(bool visible); // 显示或隐藏选项对话框
+    static void drawOptionsDialog(); // 绘制选项对话框
+    
     
 
 private:

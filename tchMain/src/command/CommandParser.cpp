@@ -88,6 +88,8 @@ bool CommandParser::executeCommand(const std::string& commandName, const std::ve
         return executePropertiesCommand(arguments);
     } else if (commandName == "PROPERTIESCLOSE") {
         return executePropertiesCloseCommand(arguments);
+    } else if (commandName == "OPTIONS") {
+        return executeOptionsCommand(arguments);
     } else {
         cmdPrint("Unknown command: " + commandName);
         return false;
@@ -461,6 +463,13 @@ bool CommandParser::executePropertiesCloseCommand(const std::vector<std::string>
     return true;
 }
 
+// 执行选项命令
+bool CommandParser::executeOptionsCommand(const std::vector<std::string>& arguments) {
+    // 设置选项对话框为可见
+    Renderer::showOptionsDialog(true);
+    return true;
+}
+
 // 执行帮助命令
 bool CommandParser::executeHelpCommand(const std::vector<std::string>& arguments) {
     showHelp();
@@ -488,6 +497,7 @@ void CommandParser::showHelp() {
     cmdPrint("  HELP                    - Show this help");
     cmdPrint("  PROPERTIES              - Open properties bar");
     cmdPrint("  PROPERTIESCLOSE         - Close properties bar");
+    cmdPrint("  OPTIONS                 - Open options dialog");
 }
 
 } // namespace tch

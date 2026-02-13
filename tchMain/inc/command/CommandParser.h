@@ -71,6 +71,9 @@ private:
     // 执行关闭属性栏命令
     static bool executePropertiesCloseCommand(const std::vector<std::string>& arguments);
     
+    // 执行选项命令
+    static bool executeOptionsCommand(const std::vector<std::string>& arguments);
+    
     // 执行帮助命令
     static bool executeHelpCommand(const std::vector<std::string>& arguments);
 };

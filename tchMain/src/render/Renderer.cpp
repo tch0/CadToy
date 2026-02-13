@@ -37,6 +37,9 @@ static std::string s_currentCommand = ""; // 当前命令输入
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 
+// 选项对话框相关
+static bool s_optionsDialogVisible = false; // 选项对话框是否可见
+
 // 属性栏相关
 static bool s_propertyBarVisible = true; // 属性栏是否可见
 static float s_propertyBarWidth = 250.0f; // 属性栏宽度
@@ -170,6 +173,9 @@ void Renderer::endRender() {
     if (!s_initialized || !s_window) {
         return;
     }
+    
+    // 绘制选项对话框
+    drawOptionsDialog();
     
     // 渲染ImGui
     ImGui::Render();
@@ -666,6 +672,68 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
     }
 }
 
+// 绘制选项对话框
+void Renderer::drawOptionsDialog() {
+    if (s_optionsDialogVisible) {
+        // 设置对话框位置为屏幕中央
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        
+        // 设置对话框大小
+        ImGui::SetNextWindowSize(ImVec2(400, 300));
+        
+        // 使用模态对话框标志
+        ImGuiWindowFlags flags = ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+        
+        if (ImGui::Begin("Options", &s_optionsDialogVisible, flags)) {
+            // 对话框标题
+            ImGui::Text("Options");
+            ImGui::Separator();
+            
+            // 对话框内容（示例）
+            static bool showGrid = s_showGrid;
+            static bool showAxes = s_showAxes;
+            
+            ImGui::Checkbox("Show Grid", &showGrid);
+            ImGui::Checkbox("Show Axes", &showAxes);
+            
+            // 垂直填充空间，将按钮推到底部
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+            
+            // 底部分隔线
+            ImGui::Separator();
+            
+            // 右对齐按钮
+            ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 170);
+            
+            // 确定按钮
+            if (ImGui::Button("OK", ImVec2(80, 30))) {
+                // 应用设置
+                s_showGrid = showGrid;
+                s_showAxes = showAxes;
+                s_optionsDialogVisible = false;
+            }
+            
+            // 取消按钮
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(80, 30))) {
+                // 不应用设置，直接关闭对话框
+                s_optionsDialogVisible = false;
+            }
+            
+            ImGui::End();
+        }
+    }
+}
+
 // 绘制菜单栏
 void Renderer::drawMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
@@ -697,7 +765,10 @@ void Renderer::drawMenuBar() {
         
         // Tools菜单
         if (ImGui::BeginMenu("Tools")) {
-            ImGui::MenuItem("Options");
+            if (ImGui::MenuItem("Options")) {
+                // 执行OPTIONS命令
+                Renderer::showOptionsDialog(true);
+            }
             ImGui::MenuItem("Properties", nullptr, &s_propertyBarVisible);
             ImGui::EndMenu();
         }
@@ -1023,6 +1094,11 @@ bool Renderer::isPropertyBarVisible() {
 // 设置属性栏是否可见
 void Renderer::setPropertyBarVisible(bool visible) {
     s_propertyBarVisible = visible;
+}
+
+// 显示或隐藏选项对话框
+void Renderer::showOptionsDialog(bool visible) {
+    s_optionsDialogVisible = visible;
 }
 
 } // namespace tch
