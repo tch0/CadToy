@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include "render/LogicalViewport.h"
@@ -75,6 +77,12 @@ public:
     
     // 命令栏相关方法
     static void addCommandToHistory(const std::string& command); // 添加命令到历史记录
+    
+    // 属性栏相关方法
+    static bool isPropertyBarVisible(); // 获取属性栏是否可见
+    static void setPropertyBarVisible(bool visible); // 设置属性栏是否可见
+    
+    
 
 private:
     // 静态成员变量

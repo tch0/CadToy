@@ -1015,6 +1015,14 @@ void Renderer::addCommandToHistory(const std::string& command) {
     s_commandHistory.push_back(command);
 }
 
+// 获取属性栏是否可见
+bool Renderer::isPropertyBarVisible() {
+    return s_propertyBarVisible;
+}
 
+// 设置属性栏是否可见
+void Renderer::setPropertyBarVisible(bool visible) {
+    s_propertyBarVisible = visible;
+}
 
 } // namespace tch

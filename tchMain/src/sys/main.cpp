@@ -105,11 +105,7 @@ int main(int argc, char* argv[])
         // 开始渲染
         Renderer::beginRender();
         
-        // 绘制菜单栏
-        Renderer::drawMenuBar();
-        
-        // 绘制文件栏
-        Renderer::drawFileBar();
+        // 绘制菜单栏和文件栏已经在beginRender()方法中调用，不需要重复调用
         
         // 绘制所有图形
         Renderer::drawAll();

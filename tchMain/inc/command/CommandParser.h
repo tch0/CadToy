@@ -65,6 +65,12 @@ private:
     // 执行退出命令
     static bool executeExitCommand(const std::vector<std::string>& arguments);
     
+    // 执行属性栏命令
+    static bool executePropertiesCommand(const std::vector<std::string>& arguments);
+    
+    // 执行关闭属性栏命令
+    static bool executePropertiesCloseCommand(const std::vector<std::string>& arguments);
+    
     // 执行帮助命令
     static bool executeHelpCommand(const std::vector<std::string>& arguments);
 };
