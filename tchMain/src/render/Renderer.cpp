@@ -739,11 +739,55 @@ void Renderer::drawCommandBar() {
     if (ImGui::Begin("CommandBar", nullptr, flags)) {
         // 命令执行历史部分（去掉标题和最上方的分隔符）
         
-        // 创建可滚动区域显示命令历史，去掉周围的框
+        // 创建区域显示命令历史，去掉周围的框，添加水平滚动条
         ImGui::BeginChild("CommandHistory", ImVec2(0, -30), false, ImGuiWindowFlags_HorizontalScrollbar);
-        for (const auto& cmd : s_commandHistory) {
-            ImGui::Text("%s", cmd.c_str());
+        
+        // 使用单个只读InputText显示所有命令历史，支持多行选择和复制
+        std::string historyText;
+        size_t maxCommandLength = 0;
+        for (size_t i = 0; i < s_commandHistory.size(); i++) {
+            const auto& cmd = s_commandHistory[i];
+            historyText += cmd;
+            // 最后一行不添加换行符
+            if (i < s_commandHistory.size() - 1) {
+                historyText += "\n";
+            }
+            if (cmd.length() > maxCommandLength) {
+                maxCommandLength = cmd.length();
+            }
         }
+        
+        // 为InputText创建一个静态缓冲区，避免每次都重新分配内存
+        static std::string buffer;
+        buffer = historyText;
+        
+        // 计算InputText的宽度，使用最长命令的长度，确保能显示完整的命令
+        // 每个字符大约占8个像素宽度（根据字体大小调整）
+        float charWidth = 8.0f;
+        float minWidth = ImGui::GetWindowWidth();
+        float neededWidth = maxCommandLength * charWidth + 20; // 20是额外的边距
+        float inputTextWidth = std::max(minWidth, neededWidth);
+        
+        // 保存当前样式
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+        
+        // 获取子窗口高度，直接使用子窗口的完整高度，不再减去30
+        float childHeight = ImGui::GetWindowHeight();
+        
+        // 使用只读InputText，支持多行选择和复制，设置宽度为计算出的宽度，高度为子窗口的完整大小
+        ImGui::InputTextMultiline("##CommandHistory", &buffer[0], buffer.size(), ImVec2(inputTextWidth, childHeight), 
+                                 ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_NoUndoRedo | 
+                                 ImGuiInputTextFlags_AllowTabInput);
+        
+        // 暂时移除自动滚动功能，等后续命令执行相关内容完成后再实现
+        // ImGui::SetScrollHereY(1.0f);
+        // ImGui::SetScrollY(ImGui::GetScrollMaxY());
+        
+        // 恢复样式
+        ImGui::PopStyleColor(3);
+        
         ImGui::EndChild();
         
         // 命令输入栏部分
