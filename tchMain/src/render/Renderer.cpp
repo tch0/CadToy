@@ -681,11 +681,11 @@ void Renderer::drawOptionsDialog() {
         // 设置对话框位置为屏幕中央
         ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         
-        // 设置对话框大小
-        ImGui::SetNextWindowSize(ImVec2(400, 300));
+        // 不强制设置对话框大小，让ImGui从ini文件读取
+        // ImGui::SetNextWindowSize(ImVec2(400, 300));
         
-        // 使用模态对话框标志
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+        // 使用模态对话框标志，允许调整大小
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | 
                                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
         
         if (ImGui::BeginPopupModal("Options", &s_optionsDialogVisible, flags)) {
@@ -693,10 +693,15 @@ void Renderer::drawOptionsDialog() {
             ImGui::Text("Options");
             ImGui::Separator();
             
-            // 对话框内容（示例）
+            // 对话框内容
             static bool showGrid = s_showGrid;
             static bool showAxes = s_showAxes;
             
+            // Grid & Axes 标题
+            ImGui::Text("Grid & Axes");
+            ImGui::Spacing();
+            
+            // 选项
             ImGui::Checkbox("Show Grid", &showGrid);
             ImGui::Checkbox("Show Axes", &showAxes);
             
