@@ -5,7 +5,7 @@
 #include "Color.h"
 #include "UndoRedo.h"
 #include "SaveLoad.h"
-#include <iostream>
+#include "utils/GlobalUtils.h"
 #include <sstream>
 
 namespace tch {
@@ -84,7 +84,7 @@ bool CommandParser::executeCommand(const std::string& commandName, const std::ve
     } else if (commandName == "HELP") {
         return executeHelpCommand(arguments);
     } else {
-        std::cout << "Unknown command: " << commandName << std::endl;
+        tch::cmdPrint("Unknown command: " + commandName);
         return false;
     }
 }
@@ -92,7 +92,7 @@ bool CommandParser::executeCommand(const std::string& commandName, const std::ve
 // 执行绘制直线命令
 bool CommandParser::executeLineCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 4) {
-        std::cout << "Usage: LINE X1 Y1 X2 Y2" << std::endl;
+        tch::cmdPrint("Usage: LINE X1 Y1 X2 Y2");
         return false;
     }
     
@@ -114,11 +114,11 @@ bool CommandParser::executeLineCommand(const std::vector<std::string>& arguments
             // 添加到撤销栈
             UndoRedoManager::getInstance().addOperation(std::make_shared<DrawOperation>(line));
             
-            std::cout << "Line drawn from (" << x1 << ", " << y1 << ") to (" << x2 << ", " << y2 << ")" << std::endl;
+            tch::cmdPrint("Line drawn from (" + std::to_string(x1) + ", " + std::to_string(y1) + ") to (" + std::to_string(x2) + ", " + std::to_string(y2) + ")");
             return true;
         }
     } catch (...) {
-        std::cout << "Invalid arguments for LINE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for LINE command");
     }
     
     return false;
@@ -127,7 +127,7 @@ bool CommandParser::executeLineCommand(const std::vector<std::string>& arguments
 // 执行绘制圆命令
 bool CommandParser::executeCircleCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 3) {
-        std::cout << "Usage: CIRCLE X Y RADIUS" << std::endl;
+        tch::cmdPrint("Usage: CIRCLE X Y RADIUS");
         return false;
     }
     
@@ -148,11 +148,11 @@ bool CommandParser::executeCircleCommand(const std::vector<std::string>& argumen
             // 添加到撤销栈
             UndoRedoManager::getInstance().addOperation(std::make_shared<DrawOperation>(circle));
             
-            std::cout << "Circle drawn at (" << x << ", " << y << ") with radius " << radius << std::endl;
+            tch::cmdPrint("Circle drawn at (" + std::to_string(x) + ", " + std::to_string(y) + ") with radius " + std::to_string(radius));
             return true;
         }
     } catch (...) {
-        std::cout << "Invalid arguments for CIRCLE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for CIRCLE command");
     }
     
     return false;
@@ -161,7 +161,7 @@ bool CommandParser::executeCircleCommand(const std::vector<std::string>& argumen
 // 执行绘制矩形命令
 bool CommandParser::executeRectCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 4) {
-        std::cout << "Usage: RECT X Y WIDTH HEIGHT" << std::endl;
+        tch::cmdPrint("Usage: RECT X Y WIDTH HEIGHT");
         return false;
     }
     
@@ -183,11 +183,11 @@ bool CommandParser::executeRectCommand(const std::vector<std::string>& arguments
             // 添加到撤销栈
             UndoRedoManager::getInstance().addOperation(std::make_shared<DrawOperation>(rect));
             
-            std::cout << "Rectangle drawn at (" << x << ", " << y << ") with width " << width << " and height " << height << std::endl;
+            tch::cmdPrint("Rectangle drawn at (" + std::to_string(x) + ", " + std::to_string(y) + ") with width " + std::to_string(width) + " and height " + std::to_string(height));
             return true;
         }
     } catch (...) {
-        std::cout << "Invalid arguments for RECT command" << std::endl;
+        tch::cmdPrint("Invalid arguments for RECT command");
     }
     
     return false;
@@ -196,7 +196,7 @@ bool CommandParser::executeRectCommand(const std::vector<std::string>& arguments
 // 执行平移命令
 bool CommandParser::executeTranslateCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 2) {
-        std::cout << "Usage: TRANSLATE X Y" << std::endl;
+        tch::cmdPrint("Usage: TRANSLATE X Y");
         return false;
     }
     
@@ -207,10 +207,10 @@ bool CommandParser::executeTranslateCommand(const std::vector<std::string>& argu
         
         // 这里简化处理，实际应该获取选中的图形
         // 这里只是示例，实际实现需要选中图形的逻辑
-        std::cout << "Translate by (" << x << ", " << y << ")" << std::endl;
+        tch::cmdPrint("Translate by (" + std::to_string(x) + ", " + std::to_string(y) + ")");
         return true;
     } catch (...) {
-        std::cout << "Invalid arguments for TRANSLATE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for TRANSLATE command");
     }
     
     return false;
@@ -219,7 +219,7 @@ bool CommandParser::executeTranslateCommand(const std::vector<std::string>& argu
 // 执行旋转命令
 bool CommandParser::executeRotateCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 3) {
-        std::cout << "Usage: ROTATE X Y ANGLE" << std::endl;
+        tch::cmdPrint("Usage: ROTATE X Y ANGLE");
         return false;
     }
     
@@ -229,10 +229,10 @@ bool CommandParser::executeRotateCommand(const std::vector<std::string>& argumen
         float angle = std::stof(arguments[2]);
         
         // 这里简化处理，实际应该获取选中的图形
-        std::cout << "Rotate by " << angle << " degrees around (" << x << ", " << y << ")" << std::endl;
+        tch::cmdPrint("Rotate by " + std::to_string(angle) + " degrees around (" + std::to_string(x) + ", " + std::to_string(y) + ")");
         return true;
     } catch (...) {
-        std::cout << "Invalid arguments for ROTATE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for ROTATE command");
     }
     
     return false;
@@ -241,7 +241,7 @@ bool CommandParser::executeRotateCommand(const std::vector<std::string>& argumen
 // 执行缩放命令
 bool CommandParser::executeScaleCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 3) {
-        std::cout << "Usage: SCALE X Y SCALE_FACTOR" << std::endl;
+        tch::cmdPrint("Usage: SCALE X Y SCALE_FACTOR");
         return false;
     }
     
@@ -251,10 +251,10 @@ bool CommandParser::executeScaleCommand(const std::vector<std::string>& argument
         float factor = std::stof(arguments[2]);
         
         // 这里简化处理，实际应该获取选中的图形
-        std::cout << "Scale by " << factor << " around (" << x << ", " << y << ")" << std::endl;
+        tch::cmdPrint("Scale by " + std::to_string(factor) + " around (" + std::to_string(x) + ", " + std::to_string(y) + ")");
         return true;
     } catch (...) {
-        std::cout << "Invalid arguments for SCALE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for SCALE command");
     }
     
     return false;
@@ -263,7 +263,7 @@ bool CommandParser::executeScaleCommand(const std::vector<std::string>& argument
 // 执行创建图层命令
 bool CommandParser::executeLayerCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
-        std::cout << "Usage: LAYER NAME" << std::endl;
+        tch::cmdPrint("Usage: LAYER NAME");
         return false;
     }
     
@@ -272,10 +272,10 @@ bool CommandParser::executeLayerCommand(const std::vector<std::string>& argument
         
         // 创建图层
         int layerId = LayerManager::getInstance().createLayer(name);
-        std::cout << "Layer created: " << name << " (ID: " << layerId << ")" << std::endl;
+        tch::cmdPrint("Layer created: " + name + " (ID: " + std::to_string(layerId) + ")");
         return true;
     } catch (...) {
-        std::cout << "Invalid arguments for LAYER command" << std::endl;
+        tch::cmdPrint("Invalid arguments for LAYER command");
     }
     
     return false;
@@ -284,7 +284,7 @@ bool CommandParser::executeLayerCommand(const std::vector<std::string>& argument
 // 执行删除图层命令
 bool CommandParser::executeDeleteLayerCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
-        std::cout << "Usage: DELETE_LAYER NAME" << std::endl;
+        tch::cmdPrint("Usage: DELETE_LAYER NAME");
         return false;
     }
     
@@ -296,13 +296,13 @@ bool CommandParser::executeDeleteLayerCommand(const std::vector<std::string>& ar
         if (layer) {
             // 删除图层
             LayerManager::getInstance().deleteLayer(layer->getId());
-            std::cout << "Layer deleted: " << name << std::endl;
+            tch::cmdPrint("Layer deleted: " + name);
             return true;
         } else {
-            std::cout << "Layer not found: " << name << std::endl;
+            tch::cmdPrint("Layer not found: " + name);
         }
     } catch (...) {
-        std::cout << "Invalid arguments for DELETE_LAYER command" << std::endl;
+        tch::cmdPrint("Invalid arguments for DELETE_LAYER command");
     }
     
     return false;
@@ -311,7 +311,7 @@ bool CommandParser::executeDeleteLayerCommand(const std::vector<std::string>& ar
 // 执行切换图层命令
 bool CommandParser::executeSwitchLayerCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
-        std::cout << "Usage: SWITCH_LAYER NAME" << std::endl;
+        tch::cmdPrint("Usage: SWITCH_LAYER NAME");
         return false;
     }
     
@@ -323,13 +323,13 @@ bool CommandParser::executeSwitchLayerCommand(const std::vector<std::string>& ar
         if (layer) {
             // 切换图层
             LayerManager::getInstance().setCurrentLayer(layer->getId());
-            std::cout << "Switched to layer: " << name << std::endl;
+            tch::cmdPrint("Switched to layer: " + name);
             return true;
         } else {
-            std::cout << "Layer not found: " << name << std::endl;
+            tch::cmdPrint("Layer not found: " + name);
         }
     } catch (...) {
-        std::cout << "Invalid arguments for SWITCH_LAYER command" << std::endl;
+        tch::cmdPrint("Invalid arguments for SWITCH_LAYER command");
     }
     
     return false;
@@ -338,7 +338,7 @@ bool CommandParser::executeSwitchLayerCommand(const std::vector<std::string>& ar
 // 执行设置颜色命令
 bool CommandParser::executeColorCommand(const std::vector<std::string>& arguments) {
     if (arguments.size() != 3) {
-        std::cout << "Usage: COLOR R G B" << std::endl;
+        tch::cmdPrint("Usage: COLOR R G B");
         return false;
     }
     
@@ -348,10 +348,10 @@ bool CommandParser::executeColorCommand(const std::vector<std::string>& argument
         float b = std::stof(arguments[2]);
         
         // 这里简化处理，实际应该设置选中图形的颜色
-        std::cout << "Set color to (" << r << ", " << g << ", " << b << ")" << std::endl;
+        tch::cmdPrint("Set color to (" + std::to_string(r) + ", " + std::to_string(g) + ", " + std::to_string(b) + ")");
         return true;
     } catch (...) {
-        std::cout << "Invalid arguments for COLOR command" << std::endl;
+        tch::cmdPrint("Invalid arguments for COLOR command");
     }
     
     return false;
@@ -360,10 +360,10 @@ bool CommandParser::executeColorCommand(const std::vector<std::string>& argument
 // 执行撤销命令
 bool CommandParser::executeUndoCommand(const std::vector<std::string>& arguments) {
     if (UndoRedoManager::getInstance().undo()) {
-        std::cout << "Undo successful" << std::endl;
+        tch::cmdPrint("Undo successful");
         return true;
     } else {
-        std::cout << "Nothing to undo" << std::endl;
+        tch::cmdPrint("Nothing to undo");
         return false;
     }
 }
@@ -371,10 +371,10 @@ bool CommandParser::executeUndoCommand(const std::vector<std::string>& arguments
 // 执行重做命令
 bool CommandParser::executeRedoCommand(const std::vector<std::string>& arguments) {
     if (UndoRedoManager::getInstance().redo()) {
-        std::cout << "Redo successful" << std::endl;
+        tch::cmdPrint("Redo successful");
         return true;
     } else {
-        std::cout << "Nothing to redo" << std::endl;
+        tch::cmdPrint("Nothing to redo");
         return false;
     }
 }
@@ -382,7 +382,7 @@ bool CommandParser::executeRedoCommand(const std::vector<std::string>& arguments
 // 执行保存命令
 bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
-        std::cout << "Usage: SAVE FILE_PATH" << std::endl;
+        tch::cmdPrint("Usage: SAVE FILE_PATH");
         return false;
     }
     
@@ -390,13 +390,13 @@ bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments
         std::string filePath = arguments[0];
         
         if (SaveLoad::saveToFile(filePath)) {
-            std::cout << "Saved to file: " << filePath << std::endl;
+            tch::cmdPrint("Saved to file: " + filePath);
             return true;
         } else {
-            std::cout << "Failed to save file: " << filePath << std::endl;
+            tch::cmdPrint("Failed to save file: " + filePath);
         }
     } catch (...) {
-        std::cout << "Invalid arguments for SAVE command" << std::endl;
+        tch::cmdPrint("Invalid arguments for SAVE command");
     }
     
     return false;
@@ -405,7 +405,7 @@ bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments
 // 执行加载命令
 bool CommandParser::executeLoadCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
-        std::cout << "Usage: LOAD FILE_PATH" << std::endl;
+        tch::cmdPrint("Usage: LOAD FILE_PATH");
         return false;
     }
     
@@ -413,13 +413,13 @@ bool CommandParser::executeLoadCommand(const std::vector<std::string>& arguments
         std::string filePath = arguments[0];
         
         if (SaveLoad::loadFromFile(filePath)) {
-            std::cout << "Loaded from file: " << filePath << std::endl;
+            tch::cmdPrint("Loaded from file: " + filePath);
             return true;
         } else {
-            std::cout << "Failed to load file: " << filePath << std::endl;
+            tch::cmdPrint("Failed to load file: " + filePath);
         }
     } catch (...) {
-        std::cout << "Invalid arguments for LOAD command" << std::endl;
+        tch::cmdPrint("Invalid arguments for LOAD command");
     }
     
     return false;
@@ -427,7 +427,7 @@ bool CommandParser::executeLoadCommand(const std::vector<std::string>& arguments
 
 // 执行退出命令
 bool CommandParser::executeExitCommand(const std::vector<std::string>& arguments) {
-    std::cout << "Exiting..." << std::endl;
+    tch::cmdPrint("Exiting...");
     // 这里简化处理，实际应该清理资源并退出程序
     return true;
 }
@@ -440,23 +440,23 @@ bool CommandParser::executeHelpCommand(const std::vector<std::string>& arguments
 
 // 显示帮助信息
 void CommandParser::showHelp() {
-    std::cout << "Available commands:" << std::endl;
-    std::cout << "  LINE X1 Y1 X2 Y2        - Draw a line" << std::endl;
-    std::cout << "  CIRCLE X Y RADIUS       - Draw a circle" << std::endl;
-    std::cout << "  RECT X Y WIDTH HEIGHT   - Draw a rectangle" << std::endl;
-    std::cout << "  TRANSLATE X Y           - Translate selected shapes" << std::endl;
-    std::cout << "  ROTATE X Y ANGLE        - Rotate selected shapes" << std::endl;
-    std::cout << "  SCALE X Y SCALE_FACTOR  - Scale selected shapes" << std::endl;
-    std::cout << "  LAYER NAME              - Create a new layer" << std::endl;
-    std::cout << "  DELETE_LAYER NAME       - Delete a layer" << std::endl;
-    std::cout << "  SWITCH_LAYER NAME       - Switch to a layer" << std::endl;
-    std::cout << "  COLOR R G B             - Set color" << std::endl;
-    std::cout << "  UNDO                    - Undo last operation" << std::endl;
-    std::cout << "  REDO                    - Redo last operation" << std::endl;
-    std::cout << "  SAVE FILE_PATH          - Save to file" << std::endl;
-    std::cout << "  LOAD FILE_PATH          - Load from file" << std::endl;
-    std::cout << "  EXIT                    - Exit the program" << std::endl;
-    std::cout << "  HELP                    - Show this help" << std::endl;
+    tch::cmdPrint("Available commands:");
+    tch::cmdPrint("  LINE X1 Y1 X2 Y2        - Draw a line");
+    tch::cmdPrint("  CIRCLE X Y RADIUS       - Draw a circle");
+    tch::cmdPrint("  RECT X Y WIDTH HEIGHT   - Draw a rectangle");
+    tch::cmdPrint("  TRANSLATE X Y           - Translate selected shapes");
+    tch::cmdPrint("  ROTATE X Y ANGLE        - Rotate selected shapes");
+    tch::cmdPrint("  SCALE X Y SCALE_FACTOR  - Scale selected shapes");
+    tch::cmdPrint("  LAYER NAME              - Create a new layer");
+    tch::cmdPrint("  DELETE_LAYER NAME       - Delete a layer");
+    tch::cmdPrint("  SWITCH_LAYER NAME       - Switch to a layer");
+    tch::cmdPrint("  COLOR R G B             - Set color");
+    tch::cmdPrint("  UNDO                    - Undo last operation");
+    tch::cmdPrint("  REDO                    - Redo last operation");
+    tch::cmdPrint("  SAVE FILE_PATH          - Save to file");
+    tch::cmdPrint("  LOAD FILE_PATH          - Load from file");
+    tch::cmdPrint("  EXIT                    - Exit the program");
+    tch::cmdPrint("  HELP                    - Show this help");
 }
 
 } // namespace tch

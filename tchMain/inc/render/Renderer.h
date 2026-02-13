@@ -72,6 +72,9 @@ public:
     
     // 逻辑视口相关方法
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
+    
+    // 命令栏相关方法
+    static void addCommandToHistory(const std::string& command); // 添加命令到历史记录
 
 private:
     // 静态成员变量

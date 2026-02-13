@@ -1010,4 +1010,11 @@ LogicalViewport& Renderer::getLogicalViewport() {
     return s_logicalViewport;
 }
 
+// 添加命令到历史记录
+void Renderer::addCommandToHistory(const std::string& command) {
+    s_commandHistory.push_back(command);
+}
+
+
+
 } // namespace tch
