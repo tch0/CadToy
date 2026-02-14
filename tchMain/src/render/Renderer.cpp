@@ -605,7 +605,7 @@ void Renderer::initializeImGui() {
     LOG_INFO("Attempting to load English font from: {}", consolasPathStr);
     
     // 尝试加载Consolas字体
-    ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(consolasPathStr.c_str(), 16.0f);
+    ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(consolasPathStr.c_str(), 18.0f);
     
     if (!consolasFont) {
         LOG_WARNING("Failed to load Consolas font: {}", consolasPathStr);
@@ -623,8 +623,8 @@ void Renderer::initializeImGui() {
     
     LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
     
-    // 尝试加载微软雅黑字体，使用完整中文字符范围
-    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 16.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
+    // 尝试加载微软雅黑字体，仅加载常见中文字符以节省内存，如果需要全部中文汉字，可以使用io.Fonts->GetGlyphRangesChineseFull()，中英文使用不同字号看起来大小才相符
+    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
     
     if (!msyhFont) {
         LOG_WARNING("Failed to load Microsoft YaHei font: {}", msyhPathStr);
