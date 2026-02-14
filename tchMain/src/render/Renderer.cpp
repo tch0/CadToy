@@ -598,28 +598,43 @@ void Renderer::initializeImGui() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     
-    // 加载自定义字体
-    std::filesystem::path fontPath = g_pathCwd / "fonts" / "consolas.ttf";
-    std::string fontPathStr = fontPath.string();
+    // 1. 加载Consolas字体用于英文显示
+    std::filesystem::path consolasPath = g_pathCwd / "fonts" / "consolas.ttf";
+    std::string consolasPathStr = consolasPath.string();
     
-    LOG_INFO("Attempting to load font from: {}", fontPathStr);
+    LOG_INFO("Attempting to load English font from: {}", consolasPathStr);
     
-    // 尝试加载字体
-    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), 16.0f);
+    // 尝试加载Consolas字体
+    ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(consolasPathStr.c_str(), 16.0f);
     
-    if (font) {
-        LOG_INFO("Font loaded successfully: consolas.ttf");
-    } else {
-        LOG_WARNING("Failed to load font: {}", fontPathStr);
-        LOG_INFO("Using default ImGui font instead with size 16");
-        
-        // 即使使用默认字体，也设置字号为16
-        io.Fonts->Clear();
-        ImFontConfig config;
-        config.SizePixels = 16.0f;
-        io.Fonts->AddFontDefault(&config);
-        io.Fonts->Build();
+    if (!consolasFont) {
+        LOG_WARNING("Failed to load Consolas font: {}", consolasPathStr);
+        LOG_INFO("Using default ImGui font instead");
+        io.Fonts->AddFontDefault();
     }
+    
+    // 2. 配置中文字体加载选项
+    ImFontConfig config;
+    config.MergeMode = true;
+    
+    // 3. 加载微软雅黑字体用于中文显示
+    std::filesystem::path msyhPath = g_pathCwd / "fonts" / "MSYH.TTC";
+    std::string msyhPathStr = msyhPath.string();
+    
+    LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
+    
+    // 尝试加载微软雅黑字体，使用完整中文字符范围
+    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 16.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
+    
+    if (!msyhFont) {
+        LOG_WARNING("Failed to load Microsoft YaHei font: {}", msyhPathStr);
+        LOG_INFO("Chinese characters may not display correctly");
+    }
+    
+    // 4. 构建字体图集
+    io.Fonts->Build();
+    
+    LOG_INFO("Font loading completed");
     
     // 设置ImGui样式
     ImGui::StyleColorsDark();
