@@ -39,7 +39,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/publish)
 #-------------------------------------------------------------------------------------#
 #                    Project
 #-------------------------------------------------------------------------------------#
-project(OpenGLExample
+project(CadToyVideCodingVersion
     DESCRIPTION "An OpenGL Example"
     VERSION "0.1"
     LANGUAGES CXX
@@ -254,6 +254,6 @@ add_subdirectory(imgui)
 
 add_subdirectory(tchGeneral)    # cross-platform basis
 add_subdirectory(tchPlatform)   # multi-platform basis
-add_subdirectory(tchMain)       # cross-platform execuatable
+add_subdirectory(tchCadToy)       # cross-platform execuatable
 
-set_target_properties(tchMain PROPERTIES UNITY_BUILD ON) # UNITY building
+set_target_properties(tchCadToy PROPERTIES UNITY_BUILD ON) # UNITY building

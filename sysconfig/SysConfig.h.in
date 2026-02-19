@@ -1,7 +1,7 @@
 #pragma once
 
-#define VERSION_MAJOR @OpenGLExample_VERSION_MAJOR@
-#define VERSION_MINOR @OpenGLExample_VERSION_MINOR@
+#define VERSION_MAJOR @CadToyVideCodingVersion_VERSION_MAJOR@
+#define VERSION_MINOR @CadToyVideCodingVersion_VERSION_MINOR@
 
 #cmakedefine TCH_OS_MACOSX
 #cmakedefine TCH_OS_UNIX

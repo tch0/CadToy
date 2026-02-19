@@ -93,8 +93,8 @@ logger.setLowestOutputLevel(Logger::Debug);
 
 ## 5. 代码结构
 
-- **头文件**：`tchMain/inc/debug/Logger.h` - 包含 Logger 类的声明和宏定义
-- **源文件**：`tchMain/src/debug/Logger.cpp` - 包含 Logger 类的实现
+- **头文件**：`tchCadToy/inc/debug/Logger.h` - 包含 Logger 类的声明和宏定义
+- **源文件**：`tchCadToy/src/debug/Logger.cpp` - 包含 Logger 类的实现
 
 ## 6. 技术亮点
 
