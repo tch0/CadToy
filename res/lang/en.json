@@ -25,6 +25,8 @@
   "optionsDialog.gridAxes": "Grid & Axes",
   "optionsDialog.showGrid": "Show Grid",
   "optionsDialog.showAxes": "Show Axes",
+  "optionsDialog.tab.selection": "Selection Set",
+  "optionsDialog.pickBoxSize": "PickBox Size",
   "optionsDialog.tab.language": "Language",
   "optionsDialog.language": "Language",
   "optionsDialog.ok": "OK",

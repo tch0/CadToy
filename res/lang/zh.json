@@ -25,6 +25,8 @@
   "optionsDialog.gridAxes": "栅格和坐标轴",
   "optionsDialog.showGrid": "显示栅格",
   "optionsDialog.showAxes": "显示坐标轴",
+  "optionsDialog.tab.selection": "选择集",
+  "optionsDialog.pickBoxSize": "选择框大小",
   "optionsDialog.tab.language": "语言",
   "optionsDialog.language": "语言",
   "optionsDialog.ok": "确定",

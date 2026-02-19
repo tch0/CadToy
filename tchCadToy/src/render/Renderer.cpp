@@ -716,6 +716,7 @@ void Renderer::drawOptionsDialog() {
             // 对话框内容
             static bool showGrid = s_showGrid;
             static bool showAxes = s_showAxes;
+            static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
             
             // 创建选项卡栏
             if (ImGui::BeginTabBar("OptionsTabs")) {
@@ -732,7 +733,49 @@ void Renderer::drawOptionsDialog() {
                     ImGui::EndTabItem();
                 }
                 
-                // 第二个选项卡：语言
+                // 第二个选项卡：选择集
+                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.selection").c_str())) {
+                    // 选择框大小
+                    ImGui::Spacing();
+                    ImGui::Text(loc.get("optionsDialog.pickBoxSize").c_str());
+                    ImGui::Spacing();
+                    
+                    // 首先绘制预览框
+                    ImGui::BeginGroup();
+                    
+                    // 创建一个更大的预览区域，确保最大选择框也能完全显示
+                    ImVec2 previewSize(120, 120);
+                    ImGui::BeginChild("Preview", previewSize, true);
+                    
+                    // 计算预览框的位置和大小
+                    ImVec2 previewPos = ImGui::GetCursorScreenPos();
+                    ImVec2 center(previewSize.x / 2 - 10, previewSize.y / 2 - 10);
+                    
+                    // 绘制预览框（正方形）
+                    ImGui::GetWindowDrawList()->AddRect(
+                        ImVec2(previewPos.x + center.x - pickBoxSizeInt, previewPos.y + center.y - pickBoxSizeInt),
+                        ImVec2(previewPos.x + center.x + pickBoxSizeInt, previewPos.y + center.y + pickBoxSizeInt),
+                        IM_COL32(255, 255, 255, 255),
+                        0.0f,
+                        0,
+                        1.0f
+                    );
+                    
+                    ImGui::EndChild();
+                    ImGui::EndGroup();
+                    
+                    // 然后在左侧绘制滑块，对齐到预览框底部
+                    ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
+                    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
+                    
+                    ImGui::PushItemWidth(250); // 设置滑块宽度，增加到250使其更长
+                    ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
+                    ImGui::PopItemWidth();
+                    
+                    ImGui::EndTabItem();
+                }
+                
+                // 第三个选项卡：语言
                 if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.language").c_str())) {
                     // 语言选择
                     ImGui::Spacing();
@@ -786,6 +829,7 @@ void Renderer::drawOptionsDialog() {
                 // 应用设置
                 s_showGrid = showGrid;
                 s_showAxes = showAxes;
+                s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
                 ImGui::CloseCurrentPopup();
                 s_optionsDialogVisible = false;
             }
