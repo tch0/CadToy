@@ -295,4 +295,12 @@ void LogicalViewport::getDrawableArea(int& left, int& top, int& right, int& bott
     bottom = m_drawableBottom;
 }
 
+// 平移功能，根据逻辑坐标位移调整视口
+void LogicalViewport::pan(const glm::dvec2& deltaLogic) {
+    // 调整逻辑视口边界，实现平移效果
+    // 注意：deltaLogic是鼠标拖动的位移，需要取反，因为鼠标向右拖动时，画布应该向左移动
+    m_logicMin -= deltaLogic;
+    m_logicMax -= deltaLogic;
+}
+
 } // namespace tch

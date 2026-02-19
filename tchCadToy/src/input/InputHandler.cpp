@@ -1,5 +1,6 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
+#include <imgui.h>
 #include <iostream>
 
 namespace tch {
@@ -7,6 +8,8 @@ namespace tch {
 // 静态成员初始化
 GLFWwindow* InputHandler::s_window = nullptr;
 glm::vec2 InputHandler::s_mousePosition(0.0f, 0.0f);
+glm::vec2 InputHandler::s_lastMousePosition(0.0f, 0.0f); // 初始化上一次鼠标位置
+bool InputHandler::s_mouseMiddleButtonPressedInDrawableArea = false; // 初始化鼠标中间按钮是否在可绘制区域内按下
 bool InputHandler::s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {false};
 bool InputHandler::s_keys[GLFW_KEY_LAST + 1] = {false};
 std::string InputHandler::s_commandInput = "";
@@ -80,14 +83,31 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
 
 // 处理鼠标输入
 void InputHandler::handleMousePress(int button, int action, int mods) {
+    // 如果ImGui需要鼠标，就不处理鼠标按下/释放事件
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
+    
     if (action == GLFW_PRESS) {
         s_mouseButtons[button] = true;
+        
+        // 当鼠标中间按钮被按下时，记录当前鼠标位置作为上一次位置
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+            s_lastMousePosition = s_mousePosition;
+            // 检查鼠标是否在可绘制区域内
+            s_mouseMiddleButtonPressedInDrawableArea = Renderer::getLogicalViewport().isPointInDrawableArea(s_mousePosition);
+        }
         
         // 触发鼠标按下回调
         if (s_callbacks.contains(InputEventType::MOUSE_PRESS)) {
             s_callbacks[InputEventType::MOUSE_PRESS]();
         }
     } else if (action == GLFW_RELEASE) {
+        // 当鼠标中间按钮被释放时，重置标志
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+            s_mouseMiddleButtonPressedInDrawableArea = false;
+        }
+        
         s_mouseButtons[button] = false;
         
         // 触发鼠标释放回调
@@ -99,8 +119,35 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
 
 // 处理鼠标移动
 void InputHandler::handleMouseMove(double xpos, double ypos) {
+    // 如果ImGui需要鼠标，就不处理鼠标移动，也不更新鼠标位置
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
+    
     // 使用标准鼠标坐标系（Y轴向下，左上角为原点）
-    s_mousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+    glm::vec2 newMousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+    
+    // 检查鼠标中间按钮是否被按下且按下时位于可绘制区域
+    if (s_mouseButtons[GLFW_MOUSE_BUTTON_MIDDLE] && s_mouseMiddleButtonPressedInDrawableArea) {
+        // 计算鼠标位移
+        glm::vec2 deltaScreen = newMousePosition - s_lastMousePosition;
+        
+        // 即使鼠标不在可绘制区域内，只要按下时在可绘制区域内，就继续平移
+        // 将屏幕位移转换为逻辑坐标
+        // 计算位移的逻辑坐标：通过计算两个点的逻辑坐标之差
+        glm::dvec3 logicPosNew = Renderer::getLogicalViewport().screenToLogic(newMousePosition);
+        glm::dvec3 logicPosLast = Renderer::getLogicalViewport().screenToLogic(s_lastMousePosition);
+        glm::dvec2 deltaLogic = glm::dvec2(logicPosNew.x - logicPosLast.x, logicPosNew.y - logicPosLast.y);
+        
+        // 调用Renderer的pan方法进行平移
+        Renderer::pan(deltaLogic);
+        
+        // 更新上一次鼠标位置
+        s_lastMousePosition = newMousePosition;
+    }
+    
+    // 更新当前鼠标位置
+    s_mousePosition = newMousePosition;
     
     // 触发鼠标移动回调
     if (s_callbacks.contains(InputEventType::MOUSE_MOVE)) {
@@ -110,6 +157,11 @@ void InputHandler::handleMouseMove(double xpos, double ypos) {
 
 // 处理鼠标滚轮
 void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
+    // 如果ImGui需要鼠标，就不处理鼠标滚轮
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
+    
     // 获取当前鼠标位置
     glm::vec2 mousePos = getMousePosition();
     

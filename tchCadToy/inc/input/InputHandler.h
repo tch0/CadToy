@@ -72,6 +72,8 @@ private:
     
     // 静态成员变量
     static glm::vec2 s_mousePosition;                              // 鼠标位置
+    static glm::vec2 s_lastMousePosition;                          // 上一次鼠标位置（用于拖动计算）
+    static bool s_mouseMiddleButtonPressedInDrawableArea;          // 鼠标中间按钮是否在可绘制区域内按下
     static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];         // 鼠标按钮状态
     static bool s_keys[GLFW_KEY_LAST + 1];                         // 键盘按键状态
     static std::string s_commandInput;                             // 命令输入

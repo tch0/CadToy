@@ -47,6 +47,9 @@ public:
     
     // 计算可绘制区域中心的逻辑坐标
     glm::dvec2 getWindowCenterLogic() const;
+    
+    // 平移功能，根据逻辑坐标位移调整视口
+    void pan(const glm::dvec2& deltaLogic);
 
 private:
     // 窗口大小

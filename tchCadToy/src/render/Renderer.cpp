@@ -597,6 +597,12 @@ void Renderer::zoomOut(const glm::vec2& mousePos) {
     s_logicalViewport.zoomOut(mousePos);
 }
 
+// 平移功能
+void Renderer::pan(const glm::dvec2& deltaLogic) {
+    // 使用逻辑视口进行平移
+    s_logicalViewport.pan(deltaLogic);
+}
+
 // 初始化ImGui
 void Renderer::initializeImGui() {
     // 设置ImGui上下文

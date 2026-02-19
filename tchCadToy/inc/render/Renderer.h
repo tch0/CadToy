@@ -55,6 +55,7 @@ public:
     static void zoomOut();                       // 缩小栅格
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
+    static void pan(const glm::dvec2& deltaLogic); // 平移功能
     static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
     
     // 绘制菜单栏
