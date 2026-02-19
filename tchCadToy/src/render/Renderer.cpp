@@ -14,7 +14,7 @@ namespace tch {
 // 静态成员初始化
 bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
-float Renderer::s_crossCursorSize = 20.0f;
+float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 
 // 栅格和坐标轴相关初始化
@@ -722,6 +722,7 @@ void Renderer::drawOptionsDialog() {
             // 对话框内容
             static bool showGrid = s_showGrid;
             static bool showAxes = s_showAxes;
+            static int crossCursorSize = static_cast<int>(s_crossCursorSize);
             static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
             
             // 创建选项卡栏
@@ -735,6 +736,19 @@ void Renderer::drawOptionsDialog() {
                     // 选项
                     ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
                     ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
+                    
+                    // 在十字光标大小设置前添加分隔线，与前面的栅格坐标轴设置分开
+                    ImGui::Separator();
+                    
+                    // 十字光标大小
+                    ImGui::Spacing();
+                    ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
+                    ImGui::Spacing();
+                    
+                    // 滑块控件，范围5-100，使用整数，长度设为500
+                    ImGui::PushItemWidth(500); // 设置滑块宽度为500
+                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 5, 100, "%d");
+                    ImGui::PopItemWidth();
                     
                     ImGui::EndTabItem();
                 }
@@ -774,7 +788,7 @@ void Renderer::drawOptionsDialog() {
                     ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
                     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
                     
-                    ImGui::PushItemWidth(250); // 设置滑块宽度，增加到250使其更长
+                    ImGui::PushItemWidth(500); // 设置滑块宽度为500
                     ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
                     ImGui::PopItemWidth();
                     
@@ -835,6 +849,7 @@ void Renderer::drawOptionsDialog() {
                 // 应用设置
                 s_showGrid = showGrid;
                 s_showAxes = showAxes;
+                s_crossCursorSize = static_cast<float>(crossCursorSize);
                 s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
                 ImGui::CloseCurrentPopup();
                 s_optionsDialogVisible = false;
