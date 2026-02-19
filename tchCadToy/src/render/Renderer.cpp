@@ -14,7 +14,7 @@ namespace tch {
 // 静态成员初始化
 bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
-float Renderer::s_cursorSize = 20.0f;
+float Renderer::s_crossCursorSize = 20.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 
 // 栅格和坐标轴相关初始化
@@ -289,26 +289,32 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y + s_pickBoxSize);
     glEnd();
     
-    // 绘制从正方形四条边中点向外延伸的光标线条
-    glBegin(GL_LINES);
-    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
-    
-    // 上边中点向上延伸
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize);
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_cursorSize);
-    
-    // 下边中点向下延伸
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize);
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_cursorSize);
-    
-    // 左边中点向左延伸
-    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y);
-    glVertex2f(cursorScreenPos.x - s_cursorSize, cursorScreenPos.y);
-    
-    // 右边中点向右延伸
-    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y);
-    glVertex2f(cursorScreenPos.x + s_cursorSize, cursorScreenPos.y);
-    glEnd();
+    // 只有当十字光标尺寸大于0且大于选择框尺寸时，才绘制光标的四条线
+    if (s_crossCursorSize > 0 && s_crossCursorSize > s_pickBoxSize) {
+        // 计算线段长度：十字光标大小减去选择框大小
+        float lineLength = s_crossCursorSize - s_pickBoxSize;
+        
+        // 绘制从正方形四条边中点向外延伸的光标线条
+        glBegin(GL_LINES);
+        glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+        
+        // 上边中点向上延伸
+        glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize);
+        glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize - lineLength);
+        
+        // 下边中点向下延伸
+        glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize);
+        glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize + lineLength);
+        
+        // 左边中点向左延伸
+        glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y);
+        glVertex2f(cursorScreenPos.x - s_pickBoxSize - lineLength, cursorScreenPos.y);
+        
+        // 右边中点向右延伸
+        glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y);
+        glVertex2f(cursorScreenPos.x + s_pickBoxSize + lineLength, cursorScreenPos.y);
+        glEnd();
+    }
     
     // 恢复矩阵状态
     glPopMatrix();
@@ -320,14 +326,14 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glEnable(GL_DEPTH_TEST);
 }
 
-// 设置光标大小
-void Renderer::setCursorSize(float size) {
-    s_cursorSize = size;
+// 设置十字光标大小
+void Renderer::setCrossCursorSize(float size) {
+    s_crossCursorSize = size;
 }
 
-// 获取光标大小
-float Renderer::getCursorSize() {
-    return s_cursorSize;
+// 获取十字光标大小
+float Renderer::getCrossCursorSize() {
+    return s_crossCursorSize;
 }
 
 // 绘制栅格

@@ -37,11 +37,11 @@ public:
     // 绘制十字光标
     static void drawCursor(const glm::vec2& position);
     
-    // 设置光标大小
-    static void setCursorSize(float size);
+    // 设置十字光标大小
+    static void setCrossCursorSize(float size);
     
-    // 获取光标大小
-    static float getCursorSize();
+    // 获取十字光标大小
+    static float getCrossCursorSize();
     
     // 获取渲染器状态
     static bool isInitialized();
@@ -92,7 +92,7 @@ private:
     // 静态成员变量
     static bool s_initialized;                  // 渲染器初始化状态
     static GLFWwindow* s_window;                // 窗口指针
-    static float s_cursorSize;                  // 光标大小
+    static float s_crossCursorSize;            // 十字光标大小（包含选择框的总大小，线段长度为十字光标大小减去选择框大小）
     static float s_pickBoxSize;                // 拾取框大小
     
     // 栅格和坐标轴相关
