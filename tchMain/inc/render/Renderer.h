@@ -93,6 +93,7 @@ private:
     static bool s_initialized;                  // 渲染器初始化状态
     static GLFWwindow* s_window;                // 窗口指针
     static float s_cursorSize;                  // 光标大小
+    static float s_pickBoxSize;                // 拾取框大小
     
     // 栅格和坐标轴相关
     static bool s_showGrid;                     // 是否显示栅格

@@ -14,6 +14,7 @@ namespace tch {
 bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
 float Renderer::s_cursorSize = 20.0f;
+float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 
 // 栅格和坐标轴相关初始化
 bool Renderer::s_showGrid = true;         // 默认显示栅格
@@ -275,14 +276,13 @@ void Renderer::drawCursor(const glm::vec2& position) {
         cursorScreenPos = s_logicalViewport.logicToScreen(s_cursorPosition);
     }
     
-    // 绘制空心框选框
-    float boxSize = s_cursorSize * 0.25f;
+    // 绘制拾取框
     glBegin(GL_LINE_LOOP);
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
-    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y - boxSize);
-    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y - boxSize);
-    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y + boxSize);
-    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y + boxSize);
+    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y - s_pickBoxSize);
+    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y - s_pickBoxSize);
+    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y + s_pickBoxSize);
+    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y + s_pickBoxSize);
     glEnd();
     
     // 绘制从正方形四条边中点向外延伸的光标线条
@@ -290,19 +290,19 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
     
     // 上边中点向上延伸
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - boxSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize);
     glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_cursorSize);
     
     // 下边中点向下延伸
-    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + boxSize);
+    glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize);
     glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_cursorSize);
     
     // 左边中点向左延伸
-    glVertex2f(cursorScreenPos.x - boxSize, cursorScreenPos.y);
+    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y);
     glVertex2f(cursorScreenPos.x - s_cursorSize, cursorScreenPos.y);
     
     // 右边中点向右延伸
-    glVertex2f(cursorScreenPos.x + boxSize, cursorScreenPos.y);
+    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y);
     glVertex2f(cursorScreenPos.x + s_cursorSize, cursorScreenPos.y);
     glEnd();
     
@@ -623,7 +623,7 @@ void Renderer::initializeImGui() {
     
     LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
     
-    // 尝试加载微软雅黑字体，仅加载常见中文字符以节省内存，如果需要全部中文汉字，可以使用io.Fonts->GetGlyphRangesChineseFull()，中英文使用不同字号看起来大小才相符
+    // 尝试加载微软雅黑字体，仅加载常见中文字符以节省内存，如果需要全部中文汉字，可以使用io.Fonts->GetGlyphRangesChineseFull()，中文字号略大看起来才和英文匹配
     ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
     
     if (!msyhFont) {
