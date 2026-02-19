@@ -717,40 +717,55 @@ void Renderer::drawOptionsDialog() {
             static bool showGrid = s_showGrid;
             static bool showAxes = s_showAxes;
             
-            // Grid & Axes 标题
-            ImGui::Text(loc.get("optionsDialog.gridAxes").c_str());
-            ImGui::Spacing();
-            
-            // 选项
-            ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
-            ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
-            
-            // 语言选择
-            ImGui::Spacing();
-            ImGui::Text(loc.get("optionsDialog.language").c_str());
-            ImGui::Spacing();
-            
-            // 获取当前语言
-            std::string currentLanguage = loc.getCurrentLanguage();
-            
-            // 语言选择下拉框，显示固定的语言选项
-            if (ImGui::BeginCombo("##LanguageSelect", (currentLanguage == "en" ? "English" : "中文"))) {
-                bool isEnglishSelected = (currentLanguage == "en");
-                if (ImGui::Selectable("English", isEnglishSelected)) {
-                    loc.setLanguage("en");
-                }
-                if (isEnglishSelected) {
-                    ImGui::SetItemDefaultFocus();
+            // 创建选项卡栏
+            if (ImGui::BeginTabBar("OptionsTabs")) {
+                // 第一个选项卡：显示
+                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.display").c_str())) {
+                    // Grid & Axes 标题
+                    ImGui::Text(loc.get("optionsDialog.gridAxes").c_str());
+                    ImGui::Spacing();
+                    
+                    // 选项
+                    ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
+                    ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
+                    
+                    ImGui::EndTabItem();
                 }
                 
-                bool isChineseSelected = (currentLanguage == "zh");
-                if (ImGui::Selectable("中文", isChineseSelected)) {
-                    loc.setLanguage("zh");
+                // 第二个选项卡：语言
+                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.language").c_str())) {
+                    // 语言选择
+                    ImGui::Spacing();
+                    ImGui::Text(loc.get("optionsDialog.language").c_str());
+                    ImGui::Spacing();
+                    
+                    // 获取当前语言
+                    std::string currentLanguage = loc.getCurrentLanguage();
+                    
+                    // 语言选择下拉框，显示固定的语言选项
+                    if (ImGui::BeginCombo("##LanguageSelect", (currentLanguage == "en" ? "English" : "中文"))) {
+                        bool isEnglishSelected = (currentLanguage == "en");
+                        if (ImGui::Selectable("English", isEnglishSelected)) {
+                            loc.setLanguage("en");
+                        }
+                        if (isEnglishSelected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                        
+                        bool isChineseSelected = (currentLanguage == "zh");
+                        if (ImGui::Selectable("中文", isChineseSelected)) {
+                            loc.setLanguage("zh");
+                        }
+                        if (isChineseSelected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    
+                    ImGui::EndTabItem();
                 }
-                if (isChineseSelected) {
-                    ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
+                
+                ImGui::EndTabBar();
             }
             
             // 垂直填充空间，将按钮推到底部
