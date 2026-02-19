@@ -28,3 +28,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_main_sources} ${tch_ma
 #            copy resources to build directory
 #-------------------------------------------------------------------------------------#
 copy_dir_to_target_file_dir(tchMain fonts ${CMAKE_SOURCE_DIR}/fonts)
+copy_dir_to_target_file_dir(tchMain res/lang ${CMAKE_SOURCE_DIR}/res/lang)

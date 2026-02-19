@@ -1,0 +1,35 @@
+{
+  "menu.file": "File",
+  "menu.edit": "Edit",
+  "menu.tools": "Tools",
+  "menu.language": "Language",
+  "menu.file.new": "New",
+  "menu.file.open": "Open",
+  "menu.file.openRecent": "Open Recent",
+  "menu.file.save": "Save",
+  "menu.file.saveAs": "Save As...",
+  "menu.file.close": "Close",
+  "menu.file.quit": "Quit",
+  "menu.edit.undo": "Undo",
+  "menu.edit.redo": "Redo",
+  "menu.edit.cut": "Cut",
+  "menu.edit.copy": "Copy",
+  "menu.edit.paste": "Paste",
+  "menu.edit.selectAll": "Select All",
+  "menu.edit.erase": "Erase",
+  "menu.tools.options": "Options",
+  "menu.tools.properties": "Properties",
+
+  "optionsDialog.title": "Options",
+  "optionsDialog.gridAxes": "Grid & Axes",
+  "optionsDialog.showGrid": "Show Grid",
+  "optionsDialog.showAxes": "Show Axes",
+  "optionsDialog.language": "Language",
+  "optionsDialog.ok": "OK",
+  "optionsDialog.cancel": "Cancel",
+
+  "commandBar.prompt": "Command:",
+  "commandBar.inputPrompt": "Input Command Here",
+
+  "propertyBar.title": "Properties"
+}

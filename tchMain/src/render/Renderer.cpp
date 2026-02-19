@@ -5,6 +5,7 @@
 #include "imgui_impl_opengl3.h"
 #include "sys/Global.h"
 #include "debug/Logger.h"
+#include "utils/LocalizationManager.h"
 #include <algorithm>
 #include <array>
 
@@ -79,6 +80,9 @@ void Renderer::initialize(GLFWwindow* window) {
     
     // 初始化ImGui
     initializeImGui();
+    
+    // 初始化本地化管理器
+    LocalizationManager::getInstance().initialize();
     
     // 初始化文件列表，创建一个默认的未命名文件
     s_files.clear();
@@ -623,8 +627,8 @@ void Renderer::initializeImGui() {
     
     LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
     
-    // 尝试加载微软雅黑字体，仅加载常见中文字符以节省内存，如果需要全部中文汉字，可以使用io.Fonts->GetGlyphRangesChineseFull()，中文字号略大看起来才和英文匹配
-    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+    // 尝试加载微软雅黑字体，加载完整中文字符集以确保所有汉字都能显示，中文字号略大看起来才和英文匹配
+    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
     
     if (!msyhFont) {
         LOG_WARNING("Failed to load Microsoft YaHei font: {}", msyhPathStr);
@@ -690,6 +694,7 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
 // 绘制选项对话框
 void Renderer::drawOptionsDialog() {
     if (s_optionsDialogVisible) {
+        auto& loc = LocalizationManager::getInstance();
         // 使用BeginPopupModal创建真正的模态对话框
         ImGui::OpenPopup("Options");
         
@@ -705,7 +710,7 @@ void Renderer::drawOptionsDialog() {
         
         if (ImGui::BeginPopupModal("Options", &s_optionsDialogVisible, flags)) {
             // 对话框标题
-            ImGui::Text("Options");
+            ImGui::Text(loc.get("optionsDialog.title").c_str());
             ImGui::Separator();
             
             // 对话框内容
@@ -713,18 +718,42 @@ void Renderer::drawOptionsDialog() {
             static bool showAxes = s_showAxes;
             
             // Grid & Axes 标题
-            ImGui::Text("Grid & Axes");
+            ImGui::Text(loc.get("optionsDialog.gridAxes").c_str());
             ImGui::Spacing();
             
             // 选项
-            ImGui::Checkbox("Show Grid", &showGrid);
-            ImGui::Checkbox("Show Axes", &showAxes);
+            ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
+            ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
+            
+            // 语言选择
+            ImGui::Spacing();
+            ImGui::Text(loc.get("optionsDialog.language").c_str());
+            ImGui::Spacing();
+            
+            // 获取当前语言
+            std::string currentLanguage = loc.getCurrentLanguage();
+            
+            // 语言选择下拉框，显示固定的语言选项
+            if (ImGui::BeginCombo("##LanguageSelect", (currentLanguage == "en" ? "English" : "中文"))) {
+                bool isEnglishSelected = (currentLanguage == "en");
+                if (ImGui::Selectable("English", isEnglishSelected)) {
+                    loc.setLanguage("en");
+                }
+                if (isEnglishSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+                
+                bool isChineseSelected = (currentLanguage == "zh");
+                if (ImGui::Selectable("中文", isChineseSelected)) {
+                    loc.setLanguage("zh");
+                }
+                if (isChineseSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
             
             // 垂直填充空间，将按钮推到底部
-            ImGui::Spacing();
-            ImGui::Spacing();
-            ImGui::Spacing();
-            ImGui::Spacing();
             ImGui::Spacing();
             ImGui::Spacing();
             ImGui::Spacing();
@@ -738,7 +767,7 @@ void Renderer::drawOptionsDialog() {
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 170);
             
             // 确定按钮
-            if (ImGui::Button("OK", ImVec2(80, 30))) {
+            if (ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(80, 30))) {
                 // 应用设置
                 s_showGrid = showGrid;
                 s_showAxes = showAxes;
@@ -748,7 +777,7 @@ void Renderer::drawOptionsDialog() {
             
             // 取消按钮
             ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(80, 30))) {
+            if (ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(80, 30))) {
                 // 不应用设置，直接关闭对话框
                 ImGui::CloseCurrentPopup();
                 s_optionsDialogVisible = false;
@@ -761,40 +790,52 @@ void Renderer::drawOptionsDialog() {
 
 // 绘制菜单栏
 void Renderer::drawMenuBar() {
+    auto& loc = LocalizationManager::getInstance();
     if (ImGui::BeginMainMenuBar()) {
         // File菜单
-        if (ImGui::BeginMenu("File")) {
-            ImGui::MenuItem("New");
-            ImGui::MenuItem("Open");
-            ImGui::MenuItem("Open Recent");
-            ImGui::MenuItem("Save");
-            ImGui::MenuItem("Save As...");
-            ImGui::MenuItem("Close");
+        if (ImGui::BeginMenu(loc.get("menu.file").c_str())) {
+            ImGui::MenuItem(loc.get("menu.file.new").c_str());
+            ImGui::MenuItem(loc.get("menu.file.open").c_str());
+            ImGui::MenuItem(loc.get("menu.file.openRecent").c_str());
+            ImGui::MenuItem(loc.get("menu.file.save").c_str());
+            ImGui::MenuItem(loc.get("menu.file.saveAs").c_str());
+            ImGui::MenuItem(loc.get("menu.file.close").c_str());
             ImGui::Separator();
-            ImGui::MenuItem("Quit");
+            ImGui::MenuItem(loc.get("menu.file.quit").c_str());
             ImGui::EndMenu();
         }
         
         // Edit菜单
-        if (ImGui::BeginMenu("Edit")) {
-            ImGui::MenuItem("Undo");
-            ImGui::MenuItem("Redo");
+        if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
+            ImGui::MenuItem(loc.get("menu.edit.undo").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.redo").c_str());
             ImGui::Separator();
-            ImGui::MenuItem("Cut");
-            ImGui::MenuItem("Copy");
-            ImGui::MenuItem("Paste");
-            ImGui::MenuItem("Select All");
-            ImGui::MenuItem("Erase");
+            ImGui::MenuItem(loc.get("menu.edit.cut").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.copy").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.paste").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.erase").c_str());
             ImGui::EndMenu();
         }
         
         // Tools菜单
-        if (ImGui::BeginMenu("Tools")) {
-            if (ImGui::MenuItem("Options")) {
+        if (ImGui::BeginMenu(loc.get("menu.tools").c_str())) {
+            if (ImGui::MenuItem(loc.get("menu.tools.options").c_str())) {
                 // 执行OPTIONS命令
                 Renderer::showOptionsDialog(true);
             }
-            ImGui::MenuItem("Properties", nullptr, &s_propertyBarVisible);
+            ImGui::MenuItem(loc.get("menu.tools.properties").c_str(), nullptr, &s_propertyBarVisible);
+            ImGui::EndMenu();
+        }
+        
+        // Language菜单
+        if (ImGui::BeginMenu(loc.get("menu.language").c_str())) {
+            if (ImGui::MenuItem("English", nullptr, loc.getCurrentLanguage() == "en")) {
+                loc.setLanguage("en");
+            }
+            if (ImGui::MenuItem("中文", nullptr, loc.getCurrentLanguage() == "zh")) {
+                loc.setLanguage("zh");
+            }
             ImGui::EndMenu();
         }
         
@@ -832,6 +873,7 @@ void Renderer::drawCommandBar() {
                              ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | 
                              ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     
+    auto& loc = LocalizationManager::getInstance();
     if (ImGui::Begin("CommandBar", nullptr, flags)) {
         // 命令执行历史部分（去掉标题和最上方的分隔符）
         
@@ -890,9 +932,9 @@ void Renderer::drawCommandBar() {
         ImGui::Separator();
         
         // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("Command:");
-        ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text(loc.get("commandBar.prompt").c_str());
+            ImGui::SameLine();
         
         std::array<char, 256> commandBuffer{};
         if (!s_currentCommand.empty()) {
@@ -904,14 +946,9 @@ void Renderer::drawCommandBar() {
         
         // 使用PushItemWidth使输入框占满剩余空间
         ImGui::PushItemWidth(-1);
-        // 添加提示字符串
-        ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
-        if (s_currentCommand.empty()) {
-            inputFlags |= ImGuiInputTextFlags_CallbackAlways;
-        }
         
         // 使用更简单的方式添加提示文本
-        if (ImGui::InputTextWithHint("##CommandInput", "Input Command Here", commandBuffer.data(), commandBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
+        if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), commandBuffer.data(), commandBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
             // 当用户按下Enter键时，添加命令到历史记录并清空输入
             std::string command(commandBuffer.data());
             if (!command.empty()) {
@@ -1009,7 +1046,8 @@ void Renderer::drawPropertyBar() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
                              ImGuiWindowFlags_NoBringToFrontOnFocus;
     
-    if (ImGui::Begin("Properties", &s_propertyBarVisible, flags)) {
+    auto& loc = LocalizationManager::getInstance();
+    if (ImGui::Begin(loc.get("propertyBar.title").c_str(), &s_propertyBarVisible, flags)) {
         // 预留空白区域，等待添加实际属性
         
         // 监听属性栏宽度变化
