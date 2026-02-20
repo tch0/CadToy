@@ -44,8 +44,12 @@ static float s_commandBarHeight = 150.0f; // 命令栏高度
 static bool s_optionsDialogVisible = false; // 选项对话框是否可见
 
 // 属性栏相关
-static bool s_propertyBarVisible = true; // 属性栏是否可见
-static float s_propertyBarWidth = 250.0f; // 属性栏宽度
+static bool s_propertyBarVisible = true;    // 属性栏是否可见
+static float s_propertyBarWidth = 250.0f;   // 属性栏宽度
+
+// 示例与调试窗口相关
+static bool s_demoWindowVisible = false;     // Demo窗口是否可见
+static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可见
 
 // 文件栏相关
 static std::vector<std::string> s_files; // 打开的文件列表
@@ -182,6 +186,16 @@ void Renderer::endRender() {
     
     // 绘制选项对话框
     drawOptionsDialog();
+    
+    // 绘制Demo窗口
+    if (s_demoWindowVisible) {
+        ImGui::ShowDemoWindow(&s_demoWindowVisible);
+    }
+    
+    // 绘制Metrics窗口
+    if (s_metricsWindowVisible) {
+        ImGui::ShowMetricsWindow(&s_metricsWindowVisible);
+    }
     
     // 渲染ImGui
     ImGui::Render();
@@ -938,6 +952,9 @@ void Renderer::drawMenuBar() {
                 Renderer::showOptionsDialog(true);
             }
             ImGui::MenuItem(loc.get("menu.tools.properties").c_str(), nullptr, &s_propertyBarVisible);
+            ImGui::Separator();
+            ImGui::MenuItem(loc.get("menu.tools.demo").c_str(), nullptr, &s_demoWindowVisible);
+            ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
             ImGui::EndMenu();
         }
         

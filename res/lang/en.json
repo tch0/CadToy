@@ -18,6 +18,8 @@
   "menu.tools": "Tools",
   "menu.tools.options": "Options",
   "menu.tools.properties": "Properties",
+  "menu.tools.demo": "Dear ImGui Demo Window",
+  "menu.tools.metrics": "Dear ImGui Metrics/Debugger",
   "menu.language": "Language",
   
   "optionsDialog.title": "Options",

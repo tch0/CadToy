@@ -18,6 +18,8 @@
   "menu.tools": "工具",
   "menu.tools.options": "选项",
   "menu.tools.properties": "属性",
+  "menu.tools.demo": "Dear ImGui 示例窗口",
+  "menu.tools.metrics": "Dear ImGui 调试窗口",
   "menu.language": "语言",
 
   "optionsDialog.title": "选项",
