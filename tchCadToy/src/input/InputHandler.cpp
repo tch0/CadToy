@@ -1,7 +1,8 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
+#include "debug/Logger.h"
+#include "command/CommandParser.h"
 #include <imgui.h>
-#include <iostream>
 
 namespace tch {
 
@@ -14,6 +15,49 @@ bool InputHandler::s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {false};
 bool InputHandler::s_keys[GLFW_KEY_LAST + 1] = {false};
 std::string InputHandler::s_commandInput = "";
 std::unordered_map<InputEventType, std::function<void()>> InputHandler::s_callbacks;
+std::vector<ShortcutItem> InputHandler::s_shortcuts;
+
+// 注册默认快捷键
+void InputHandler::registerDefaultShortcuts() {
+    // Ctrl+N new
+    registerCtrlShortcut(GLFW_KEY_N, "new", "New", "N");
+    
+    // Ctrl+O open
+    registerCtrlShortcut(GLFW_KEY_O, "open", "Open", "O");
+    
+    // Ctrl+S save
+    registerCtrlShortcut(GLFW_KEY_S, "save", "Save", "S");
+    
+    // Ctrl+Shift+S saveas
+    registerCtrlShiftShortcut(GLFW_KEY_S, "saveas", "Save As", "S");
+    
+    // Ctrl+W close
+    registerCtrlShortcut(GLFW_KEY_W, "close", "Close", "W");
+    
+    // Ctrl+Q quit
+    registerCtrlShortcut(GLFW_KEY_Q, "exit", "Quit", "Q");
+    
+    // Ctrl+Z undo
+    registerCtrlShortcut(GLFW_KEY_Z, "undo", "Undo", "Z");
+    
+    // Ctrl+Y redo
+    registerCtrlShortcut(GLFW_KEY_Y, "redo", "Redo", "Y");
+    
+    // Ctrl+X cutclip
+    registerCtrlShortcut(GLFW_KEY_X, "cut", "Cut", "X");
+    
+    // Ctrl+C copyclip
+    registerCtrlShortcut(GLFW_KEY_C, "copy", "Copy", "C");
+    
+    // Ctrl+V pasteclip
+    registerCtrlShortcut(GLFW_KEY_V, "paste", "Paste", "V");
+    
+    // Ctrl+A selectall
+    registerCtrlShortcut(GLFW_KEY_A, "selectall", "Select All", "A");
+    
+    // DEL erase
+    registerShortcut(GLFW_KEY_DELETE, "erase", "Erase", "Delete");
+}
 
 // 初始化输入处理器
 void InputHandler::initialize(GLFWwindow* window) {
@@ -45,26 +89,83 @@ void InputHandler::initialize(GLFWwindow* window) {
     glfwSetWindowSizeCallback(window, [](GLFWwindow* window, int width, int height) {
         InputHandler::handleWindowSize(width, height);
     });
+    
+    // 注册默认快捷键
+    registerDefaultShortcuts();
 }
 
 // 处理键盘输入
 void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
+    // 如果ImGui需要键盘，就不处理键盘事件
+    if (ImGui::GetIO().WantCaptureKeyboard) {
+        return;
+    }
+    
     if (action == GLFW_PRESS) {
         s_keys[key] = true;
         
-        // 处理命令输入
-        if (key >= GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT) {
-            s_commandInput += static_cast<char>(key);
-        } else if (key == GLFW_KEY_BACKSPACE && !s_commandInput.empty()) {
-            s_commandInput.pop_back();
-        } else if (key == GLFW_KEY_ENTER) {
-            std::cout << "Command entered: " << s_commandInput << std::endl;
-            // 触发命令输入回调
-            if (s_callbacks.contains(InputEventType::COMMAND_ENTERED)) {
-                s_callbacks[InputEventType::COMMAND_ENTERED]();
+        // 优先匹配按键更多的模式
+        // 1. 检查Ctrl+Shift+键快捷键
+        bool ctrlShiftPressed = (mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT);
+        if (ctrlShiftPressed) {
+            for (const auto& shortcut : s_shortcuts) {
+                if (shortcut.type == ShortcutType::CTRL_SHIFT_KEY && shortcut.key == key) {
+                    LOG_INFO("Executing shortcut: Ctrl+Shift+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
+                    CommandParser::executeCommand(shortcut.commandName, {});
+                    // 触发按键按下回调
+                    if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
+                        s_callbacks[InputEventType::KEY_PRESS]();
+                    }
+                    return;
+                }
             }
-            // 这里可以添加命令执行逻辑
-            s_commandInput.clear();
+        }
+        
+        // 2. 检查Ctrl+键快捷键
+        bool ctrlPressed = (mods & GLFW_MOD_CONTROL);
+        if (ctrlPressed && !ctrlShiftPressed) {
+            for (const auto& shortcut : s_shortcuts) {
+                if (shortcut.type == ShortcutType::CTRL_KEY && shortcut.key == key) {
+                    LOG_INFO("Executing shortcut: Ctrl+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
+                    CommandParser::executeCommand(shortcut.commandName, {});
+                    // 触发按键按下回调
+                    if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
+                        s_callbacks[InputEventType::KEY_PRESS]();
+                    }
+                    return;
+                }
+            }
+        }
+        
+        // 3. 检查单个按键快捷键
+        bool noModifiers = (mods == 0);
+        if (noModifiers) {
+            for (const auto& shortcut : s_shortcuts) {
+                if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
+                    LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
+                    CommandParser::executeCommand(shortcut.commandName, {});
+                    // 触发按键按下回调
+                    if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
+                        s_callbacks[InputEventType::KEY_PRESS]();
+                    }
+                    return;
+                }
+            }
+            
+            // 如果没有匹配的单个按键快捷键，处理命令输入
+            if (key >= GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT) {
+                s_commandInput += static_cast<char>(key);
+            } else if (key == GLFW_KEY_BACKSPACE && !s_commandInput.empty()) {
+                s_commandInput.pop_back();
+            } else if (key == GLFW_KEY_ENTER) {
+                LOG_INFO("Command entered: {}", s_commandInput);
+                // 触发命令输入回调
+                if (s_callbacks.contains(InputEventType::COMMAND_ENTERED)) {
+                    s_callbacks[InputEventType::COMMAND_ENTERED]();
+                }
+                // 这里可以添加命令执行逻辑
+                s_commandInput.clear();
+            }
         }
         
         // 触发按键按下回调
@@ -246,6 +347,52 @@ void InputHandler::registerCallback(InputEventType eventType, const std::functio
 // 取消注册事件回调
 void InputHandler::unregisterCallback(InputEventType eventType) {
     s_callbacks.erase(eventType);
+}
+
+// 注册单个按键快捷键
+void InputHandler::registerShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString) {
+    // 先移除已存在的相同快捷键
+    unregisterShortcut(key, ShortcutType::SINGLE_KEY);
+    // 添加新的快捷键
+    s_shortcuts.push_back({key, ShortcutType::SINGLE_KEY, commandName, name, keyString});
+    LOG_INFO("Registered shortcut: {} (key: {}, keyString: {}, command: {})", name, key, keyString, commandName);
+}
+
+// 注册Ctrl+键快捷键
+void InputHandler::registerCtrlShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString) {
+    // 先移除已存在的相同快捷键
+    unregisterShortcut(key, ShortcutType::CTRL_KEY);
+    // 添加新的快捷键
+    s_shortcuts.push_back({key, ShortcutType::CTRL_KEY, commandName, name, keyString});
+    LOG_INFO("Registered Ctrl shortcut: {} (key: {}, keyString: {}, command: {})", name, key, keyString, commandName);
+}
+
+// 注册Ctrl+Shift+键快捷键
+void InputHandler::registerCtrlShiftShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString) {
+    // 先移除已存在的相同快捷键
+    unregisterShortcut(key, ShortcutType::CTRL_SHIFT_KEY);
+    // 添加新的快捷键
+    s_shortcuts.push_back({key, ShortcutType::CTRL_SHIFT_KEY, commandName, name, keyString});
+    LOG_INFO("Registered Ctrl+Shift shortcut: {} (key: {}, keyString: {}, command: {})", name, key, keyString, commandName);
+}
+
+// 取消注册快捷键
+void InputHandler::unregisterShortcut(int key, ShortcutType type) {
+    auto it = std::remove_if(s_shortcuts.begin(), s_shortcuts.end(),
+        [key, type](const ShortcutItem& item) {
+            return item.key == key && item.type == type;
+        });
+    if (it != s_shortcuts.end()) {
+        std::string name = it->name;
+        s_shortcuts.erase(it, s_shortcuts.end());
+        LOG_INFO("Unregistered shortcut: {}", name);
+    }
+}
+
+// 清除所有快捷键
+void InputHandler::clearAllShortcuts() {
+    LOG_INFO("Clearing all shortcuts");
+    s_shortcuts.clear();
 }
 
 // 设置鼠标指针可见性

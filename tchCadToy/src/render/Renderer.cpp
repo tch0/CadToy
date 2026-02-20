@@ -775,7 +775,7 @@ void Renderer::drawOptionsDialog() {
                     
                     // 计算预览框的位置和大小
                     ImVec2 previewPos = ImGui::GetCursorScreenPos();
-                    ImVec2 center(previewSize.x / 2 - 10, previewSize.y / 2 - 10);
+                    ImVec2 center(previewSize.x / 2 - 8, previewSize.y / 2 - 8);
                     
                     // 绘制预览框（正方形）
                     ImGui::GetWindowDrawList()->AddRect(
@@ -794,7 +794,7 @@ void Renderer::drawOptionsDialog() {
                     ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
                     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
                     
-                    ImGui::PushItemWidth(500); // 设置滑块宽度为500
+                    ImGui::PushItemWidth(250); // 设置滑块宽度为250
                     ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
                     ImGui::PopItemWidth();
                     
@@ -880,27 +880,27 @@ void Renderer::drawMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
         // File菜单
         if (ImGui::BeginMenu(loc.get("menu.file").c_str())) {
-            ImGui::MenuItem(loc.get("menu.file.new").c_str());
-            ImGui::MenuItem(loc.get("menu.file.open").c_str());
+            ImGui::MenuItem(loc.get("menu.file.new").c_str(), "Ctrl+N");
+            ImGui::MenuItem(loc.get("menu.file.open").c_str(), "Ctrl+O");
             ImGui::MenuItem(loc.get("menu.file.openRecent").c_str());
-            ImGui::MenuItem(loc.get("menu.file.save").c_str());
-            ImGui::MenuItem(loc.get("menu.file.saveAs").c_str());
-            ImGui::MenuItem(loc.get("menu.file.close").c_str());
+            ImGui::MenuItem(loc.get("menu.file.save").c_str(), "Ctrl+S");
+            ImGui::MenuItem(loc.get("menu.file.saveAs").c_str(), "Ctrl+Shift+S");
+            ImGui::MenuItem(loc.get("menu.file.close").c_str(), "Ctrl+W");
             ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.file.quit").c_str());
+            ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q");
             ImGui::EndMenu();
         }
         
         // Edit菜单
         if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
-            ImGui::MenuItem(loc.get("menu.edit.undo").c_str());
-            ImGui::MenuItem(loc.get("menu.edit.redo").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z");
+            ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y");
             ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.edit.cut").c_str());
-            ImGui::MenuItem(loc.get("menu.edit.copy").c_str());
-            ImGui::MenuItem(loc.get("menu.edit.paste").c_str());
-            ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str());
-            ImGui::MenuItem(loc.get("menu.edit.erase").c_str());
+            ImGui::MenuItem(loc.get("menu.edit.cut").c_str(), "Ctrl+X");
+            ImGui::MenuItem(loc.get("menu.edit.copy").c_str(), "Ctrl+C");
+            ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V");
+            ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A");
+            ImGui::MenuItem(loc.get("menu.edit.erase").c_str(), "Delete");
             ImGui::EndMenu();
         }
         

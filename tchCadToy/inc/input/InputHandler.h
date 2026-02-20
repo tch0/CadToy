@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <unordered_map>
+#include <vector>
 
 namespace tch {
 
@@ -16,6 +17,22 @@ enum class InputEventType {
     MOUSE_MOVE,     // 鼠标移动
     MOUSE_SCROLL,   // 鼠标滚轮
     COMMAND_ENTERED // 命令输入
+};
+
+// 快捷键结构
+enum class ShortcutType {
+    SINGLE_KEY,     // 单个按键
+    CTRL_KEY,       // Ctrl+键
+    CTRL_SHIFT_KEY  // Ctrl+Shift+键
+};
+
+// 快捷键项结构
+struct ShortcutItem {
+    int key;                    // 按键
+    ShortcutType type;          // 快捷键类型
+    std::string commandName;    // 命令名称
+    std::string name;           // 快捷键名称
+    std::string keyString;      // 按键字符串表示
 };
 
 // 输入处理器类
@@ -65,6 +82,25 @@ public:
     
     // 设置鼠标指针可见性
     static void setMouseCursorVisible(bool visible);
+    
+    // 注册单个按键快捷键
+    static void registerShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString);
+    
+    // 注册Ctrl+键快捷键
+    static void registerCtrlShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString);
+    
+    // 注册Ctrl+Shift+键快捷键
+    static void registerCtrlShiftShortcut(int key, const std::string& commandName, const std::string& name, const std::string& keyString);
+    
+    // 取消注册快捷键
+    static void unregisterShortcut(int key, ShortcutType type);
+    
+    // 清除所有快捷键
+    static void clearAllShortcuts();
+    
+private:
+    // 注册默认快捷键
+    static void registerDefaultShortcuts();
 
 private:
     // 窗口指针
@@ -78,6 +114,7 @@ private:
     static bool s_keys[GLFW_KEY_LAST + 1];                         // 键盘按键状态
     static std::string s_commandInput;                             // 命令输入
     static std::unordered_map<InputEventType, std::function<void()>> s_callbacks; // 事件回调映射
+    static std::vector<ShortcutItem> s_shortcuts;                  // 快捷键列表
 };
 
 } // namespace tch
