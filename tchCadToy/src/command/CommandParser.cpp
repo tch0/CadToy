@@ -8,6 +8,7 @@
 #include "SaveLoad.h"
 #include "utils/GlobalUtils.h"
 #include <sstream>
+#include <algorithm>
 
 namespace tch {
 
@@ -52,43 +53,47 @@ std::vector<std::string> CommandParser::splitArguments(const std::string& comman
 
 // 执行命令
 bool CommandParser::executeCommand(const std::string& commandName, const std::vector<std::string>& arguments) {
-    if (commandName == "LINE") {
+    // 将命令转换为全大写
+    std::string upperCommandName = commandName;
+    std::transform(upperCommandName.begin(), upperCommandName.end(), upperCommandName.begin(), ::toupper);
+    
+    if (upperCommandName == "LINE") {
         return executeLineCommand(arguments);
-    } else if (commandName == "CIRCLE") {
+    } else if (upperCommandName == "CIRCLE") {
         return executeCircleCommand(arguments);
-    } else if (commandName == "RECT") {
+    } else if (upperCommandName == "RECT") {
         return executeRectCommand(arguments);
-    } else if (commandName == "TRANSLATE") {
+    } else if (upperCommandName == "TRANSLATE") {
         return executeTranslateCommand(arguments);
-    } else if (commandName == "ROTATE") {
+    } else if (upperCommandName == "ROTATE") {
         return executeRotateCommand(arguments);
-    } else if (commandName == "SCALE") {
+    } else if (upperCommandName == "SCALE") {
         return executeScaleCommand(arguments);
-    } else if (commandName == "LAYER") {
+    } else if (upperCommandName == "LAYER") {
         return executeLayerCommand(arguments);
-    } else if (commandName == "DELETE_LAYER") {
+    } else if (upperCommandName == "DELETE_LAYER") {
         return executeDeleteLayerCommand(arguments);
-    } else if (commandName == "SWITCH_LAYER") {
+    } else if (upperCommandName == "SWITCH_LAYER") {
         return executeSwitchLayerCommand(arguments);
-    } else if (commandName == "COLOR") {
+    } else if (upperCommandName == "COLOR") {
         return executeColorCommand(arguments);
-    } else if (commandName == "UNDO") {
+    } else if (upperCommandName == "UNDO") {
         return executeUndoCommand(arguments);
-    } else if (commandName == "REDO") {
+    } else if (upperCommandName == "REDO") {
         return executeRedoCommand(arguments);
-    } else if (commandName == "SAVE") {
+    } else if (upperCommandName == "SAVE") {
         return executeSaveCommand(arguments);
-    } else if (commandName == "LOAD") {
+    } else if (upperCommandName == "LOAD") {
         return executeLoadCommand(arguments);
-    } else if (commandName == "EXIT") {
+    } else if (upperCommandName == "EXIT" || upperCommandName == "QUIT") {
         return executeExitCommand(arguments);
-    } else if (commandName == "HELP") {
+    } else if (upperCommandName == "HELP") {
         return executeHelpCommand(arguments);
-    } else if (commandName == "PROPERTIES") {
+    } else if (upperCommandName == "PROPERTIES") {
         return executePropertiesCommand(arguments);
-    } else if (commandName == "PROPERTIESCLOSE") {
+    } else if (upperCommandName == "PROPERTIESCLOSE") {
         return executePropertiesCloseCommand(arguments);
-    } else if (commandName == "OPTIONS") {
+    } else if (upperCommandName == "OPTIONS") {
         return executeOptionsCommand(arguments);
     } else {
         cmdPrint("Unknown command: " + commandName);

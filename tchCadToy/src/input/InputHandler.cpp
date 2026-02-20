@@ -36,7 +36,7 @@ void InputHandler::registerDefaultShortcuts() {
     registerCtrlShortcut(GLFW_KEY_W, "close", "Close", "W");
     
     // Ctrl+Q quit
-    registerCtrlShortcut(GLFW_KEY_Q, "exit", "Quit", "Q");
+    registerCtrlShortcut(GLFW_KEY_Q, "quit", "Quit", "Q");
     
     // Ctrl+Z undo
     registerCtrlShortcut(GLFW_KEY_Z, "undo", "Undo", "Z");

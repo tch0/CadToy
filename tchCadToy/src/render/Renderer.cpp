@@ -916,7 +916,7 @@ void Renderer::drawMenuBar() {
             }
             ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q")) {
-                CommandParser::executeCommand("exit", {});
+                CommandParser::executeCommand("quit", {});
             }
             ImGui::EndMenu();
         }
