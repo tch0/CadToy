@@ -15,8 +15,7 @@ enum class InputEventType {
     MOUSE_PRESS,    // 鼠标按下
     MOUSE_RELEASE,  // 鼠标释放
     MOUSE_MOVE,     // 鼠标移动
-    MOUSE_SCROLL,   // 鼠标滚轮
-    COMMAND_ENTERED // 命令输入
+    MOUSE_SCROLL    // 鼠标滚轮
 };
 
 // 快捷键结构
@@ -69,7 +68,7 @@ public:
     static bool isKeyPressed(int key);
     
     // 获取命令输入
-    static std::string getCommandInput();
+    static const std::string& getCommandInput();
     
     // 清除命令输入
     static void clearCommandInput();

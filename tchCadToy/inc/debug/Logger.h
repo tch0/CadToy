@@ -33,7 +33,7 @@ public:
 
     struct LogConfig
     {
-        LogLevel lowestLevel = Info;
+        LogLevel lowestLevel = Trace;
         bool coloredOutput = true;
         bool asyncLogging = false;
         size_t maxLogFileSize = 10 * 1024 * 1024; // 10MB

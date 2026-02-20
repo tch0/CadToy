@@ -87,15 +87,6 @@ int main(int argc, char* argv[])
     Renderer::initialize(window);
     LOG_INFO("Renderer initialized successfully!");
     
-    // 注册命令输入回调
-    LOG_INFO("Registering command input callback...");
-    InputHandler::registerCallback(InputEventType::COMMAND_ENTERED, []() {
-        std::string command = InputHandler::getCommandInput();
-        LOG_INFO("Executing command: {}", command);
-        CommandParser::parseCommand(command);
-    });
-    LOG_INFO("Callback registered successfully!");
-    
     // 主循环
     LOG_INFO("Entering main loop...");
     while (!glfwWindowShouldClose(window)) {

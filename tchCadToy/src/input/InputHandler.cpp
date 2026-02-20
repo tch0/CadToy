@@ -101,15 +101,15 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         s_keys[key] = true;
         
         // 检查当前焦点是否位于命令栏或其子窗口
-        bool isCommandBar = false;
+        bool bFocusIsOnCommandBar = false;
         ImGuiContext* ctx = ImGui::GetCurrentContext();
         if (ctx != nullptr && ctx->NavWindow != nullptr) {
             std::string windowName = ctx->NavWindow->Name;
-            isCommandBar = (windowName == "CommandBar" || windowName.substr(0, 11) == "CommandBar/");
+            bFocusIsOnCommandBar = (windowName == "CommandBar" || windowName.substr(0, 11) == "CommandBar/");
         }
         
-        // 画布上或者命令栏才处理快捷键
-        if (!isCommandBar && ImGui::GetIO().WantCaptureKeyboard) {
+        // 画布上或者命令栏才处理快捷键或者命令输入
+        if (!bFocusIsOnCommandBar && ImGui::GetIO().WantCaptureKeyboard) {
             return;
         }
         
@@ -149,11 +149,6 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         // 3. 检查单个按键快捷键
         bool noModifiers = (mods == 0);
         if (noModifiers) {
-            // 如果ImGui需要键盘，就不处理单个按键快捷键
-            if (ImGui::GetIO().WantCaptureKeyboard) {
-                return;
-            }
-            
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
@@ -168,18 +163,10 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             
             // 如果没有匹配的单个按键快捷键，处理命令输入
             if (key >= GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT) {
+                // 命令输入，所有字符都识别为大写，这里并未处理CAPSLOCK/Shift与大小写相关问题
                 s_commandInput += static_cast<char>(key);
-            } else if (key == GLFW_KEY_BACKSPACE && !s_commandInput.empty()) {
-                s_commandInput.pop_back();
-            } else if (key == GLFW_KEY_ENTER) {
-                LOG_INFO("Command entered: {}", s_commandInput);
-                // 触发命令输入回调
-                if (s_callbacks.contains(InputEventType::COMMAND_ENTERED)) {
-                    s_callbacks[InputEventType::COMMAND_ENTERED]();
-                }
-                // 这里可以添加命令执行逻辑
-                s_commandInput.clear();
             }
+            // Todo: 处理其他字符，比如空格、回车（执行上一条命令）等
         }
         
         // 触发按键按下回调
@@ -344,7 +331,7 @@ bool InputHandler::isKeyPressed(int key) {
 }
 
 // 获取命令输入
-std::string InputHandler::getCommandInput() {
+const std::string& InputHandler::getCommandInput() {
     return s_commandInput;
 }
 

@@ -7,6 +7,7 @@
 #include "debug/Logger.h"
 #include "utils/LocalizationManager.h"
 #include "command/CommandParser.h"
+#include "input/InputHandler.h"
 #include <algorithm>
 #include <array>
 
@@ -39,9 +40,9 @@ bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令
 
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
-static std::string s_currentCommand = ""; // 当前命令输入
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
+
 
 // 选项对话框相关
 static bool s_optionsDialogVisible = false; // 选项对话框是否可见
@@ -1046,30 +1047,45 @@ void Renderer::drawCommandBar() {
         ImGui::Text(loc.get("commandBar.prompt").c_str());
         ImGui::SameLine();
         
-        std::array<char, 256> commandBuffer{};
-        if (!s_currentCommand.empty()) {
-            // 安全地复制字符串，避免越界
-            size_t copySize = std::min(s_currentCommand.size(), commandBuffer.size() - 1);
-            std::copy(s_currentCommand.begin(), s_currentCommand.begin() + copySize, commandBuffer.begin());
-            commandBuffer[copySize] = '\0'; // 确保以空字符结尾
-        }
-        
         // 使用PushItemWidth使输入框占满剩余空间
         ImGui::PushItemWidth(-1);
         
-        // 使用更简单的方式添加提示文本
-        if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), commandBuffer.data(), commandBuffer.size(), ImGuiInputTextFlags_EnterReturnsTrue)) {
-            // 当用户按下Enter键时，添加命令到历史记录并清空输入
-            std::string command(commandBuffer.data());
+        // 检查InputHandler中的命令输入
+        const std::string& cmdInput = InputHandler::getCommandInput();
+
+        // 如果有输入则复制到到文本输入框的缓冲区，缓冲区在帧刷新中保持，必须定义为静态的
+        static std::array<char, 256> cmdBuffer{};
+
+        // TODO:
+        // 这个逻辑对第一个字符是必要的，但是后续焦点移到输入框后，在输入框中输入的所有字符也都会进入这里，每次都会把cmdBuffer用新输入的一个字符覆盖，
+        // 但程序运行结果是正常的，貌似是InputText的内部数据对cmdBuffer进行维护的结果，怎么看都是需要修改的，但目前没有好的方案，暂不修改。
+        if (!cmdInput.empty()) {
+            // 安全地复制字符串，避免越界
+            size_t copySize = std::min(cmdInput.size(), cmdBuffer.size() - 1);
+            std::copy(cmdInput.begin(), cmdInput.begin() + copySize, cmdBuffer.begin());
+            cmdBuffer[copySize] = '\0'; // 确保以空字符结尾
+            // 复制后清空命令输入
+            InputHandler::clearCommandInput();
+            // 设置焦点到输入框
+            ImGui::SetKeyboardFocusHere(0);
+        }
+        
+        // 回调函数处理文本选择问题，直接复制到缓冲区中的这个字符在输入时选中状态，所以需要取消其选中状态
+        auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
+            data->SelectionStart = data->SelectionEnd = data->BufTextLen;
+            return 0;
+        };
+        
+        // 如果已经输入了一个字符，则将其拷贝到缓冲区
+        if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), cmdBuffer.data(), cmdBuffer.size(), 
+            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, 
+            inputTextCallback, nullptr)) {
+            // 当用户按下Enter键时，执行命令并清空缓冲区
+            std::string command(cmdBuffer.data());
             if (!command.empty()) {
-                s_commandHistory.push_back(command);
-                // 设置滚动标志为true，确保新命令添加后会滚动到最底部
-                s_bScrollCommandHistoryToBottom = true;
-                s_currentCommand.clear();
+                CommandParser::parseCommand(command);
             }
-        } else {
-            // 更新当前命令输入
-            s_currentCommand = commandBuffer.data();
+            std::fill(cmdBuffer.begin(), cmdBuffer.end(), 0);
         }
         ImGui::PopItemWidth();
         
