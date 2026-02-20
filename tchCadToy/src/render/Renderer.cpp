@@ -6,6 +6,7 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 #include "utils/LocalizationManager.h"
+#include "command/CommandParser.h"
 #include <algorithm>
 #include <array>
 
@@ -880,27 +881,53 @@ void Renderer::drawMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
         // File菜单
         if (ImGui::BeginMenu(loc.get("menu.file").c_str())) {
-            ImGui::MenuItem(loc.get("menu.file.new").c_str(), "Ctrl+N");
-            ImGui::MenuItem(loc.get("menu.file.open").c_str(), "Ctrl+O");
+            if (ImGui::MenuItem(loc.get("menu.file.new").c_str(), "Ctrl+N")) {
+                CommandParser::executeCommand("new", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.file.open").c_str(), "Ctrl+O")) {
+                CommandParser::executeCommand("open", {});
+            }
             ImGui::MenuItem(loc.get("menu.file.openRecent").c_str());
-            ImGui::MenuItem(loc.get("menu.file.save").c_str(), "Ctrl+S");
-            ImGui::MenuItem(loc.get("menu.file.saveAs").c_str(), "Ctrl+Shift+S");
-            ImGui::MenuItem(loc.get("menu.file.close").c_str(), "Ctrl+W");
+            if (ImGui::MenuItem(loc.get("menu.file.save").c_str(), "Ctrl+S")) {
+                CommandParser::executeCommand("save", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.file.saveAs").c_str(), "Ctrl+Shift+S")) {
+                CommandParser::executeCommand("saveas", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.file.close").c_str(), "Ctrl+W")) {
+                CommandParser::executeCommand("close", {});
+            }
             ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q");
+            if (ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q")) {
+                CommandParser::executeCommand("exit", {});
+            }
             ImGui::EndMenu();
         }
         
         // Edit菜单
         if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
-            ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z");
-            ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y");
+            if (ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z")) {
+                CommandParser::executeCommand("undo", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y")) {
+                CommandParser::executeCommand("redo", {});
+            }
             ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.edit.cut").c_str(), "Ctrl+X");
-            ImGui::MenuItem(loc.get("menu.edit.copy").c_str(), "Ctrl+C");
-            ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V");
-            ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A");
-            ImGui::MenuItem(loc.get("menu.edit.erase").c_str(), "Delete");
+            if (ImGui::MenuItem(loc.get("menu.edit.cut").c_str(), "Ctrl+X")) {
+                CommandParser::executeCommand("cut", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.edit.copy").c_str(), "Ctrl+C")) {
+                CommandParser::executeCommand("copy", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V")) {
+                CommandParser::executeCommand("paste", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A")) {
+                CommandParser::executeCommand("selectall", {});
+            }
+            if (ImGui::MenuItem(loc.get("menu.edit.erase").c_str(), "Del")) {
+                CommandParser::executeCommand("erase", {});
+            }
             ImGui::EndMenu();
         }
         

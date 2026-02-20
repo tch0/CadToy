@@ -56,7 +56,7 @@ void InputHandler::registerDefaultShortcuts() {
     registerCtrlShortcut(GLFW_KEY_A, "selectall", "Select All", "A");
     
     // DEL erase
-    registerShortcut(GLFW_KEY_DELETE, "erase", "Erase", "Delete");
+    registerShortcut(GLFW_KEY_DELETE, "erase", "Erase", "Del");
 }
 
 // 初始化输入处理器
