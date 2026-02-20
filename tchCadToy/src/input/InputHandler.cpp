@@ -2,7 +2,8 @@
 #include "render/Renderer.h"
 #include "debug/Logger.h"
 #include "command/CommandParser.h"
-#include <imgui.h>
+#include "imgui.h"
+#include "imgui_internal.h"
 
 namespace tch {
 
@@ -96,13 +97,21 @@ void InputHandler::initialize(GLFWwindow* window) {
 
 // 处理键盘输入
 void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
-    // 如果ImGui需要键盘，就不处理键盘事件
-    if (ImGui::GetIO().WantCaptureKeyboard) {
-        return;
-    }
-    
     if (action == GLFW_PRESS) {
         s_keys[key] = true;
+        
+        // 检查当前焦点是否位于命令栏或其子窗口
+        bool isCommandBar = false;
+        ImGuiContext* ctx = ImGui::GetCurrentContext();
+        if (ctx != nullptr && ctx->NavWindow != nullptr) {
+            std::string windowName = ctx->NavWindow->Name;
+            isCommandBar = (windowName == "CommandBar" || windowName.substr(0, 11) == "CommandBar/");
+        }
+        
+        // 画布上或者命令栏才处理快捷键
+        if (!isCommandBar && ImGui::GetIO().WantCaptureKeyboard) {
+            return;
+        }
         
         // 优先匹配按键更多的模式
         // 1. 检查Ctrl+Shift+键快捷键
@@ -140,6 +149,11 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         // 3. 检查单个按键快捷键
         bool noModifiers = (mods == 0);
         if (noModifiers) {
+            // 如果ImGui需要键盘，就不处理单个按键快捷键
+            if (ImGui::GetIO().WantCaptureKeyboard) {
+                return;
+            }
+            
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
