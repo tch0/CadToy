@@ -34,6 +34,9 @@ float Renderer::s_menuBarHeight = 0.0f;              // 菜单栏高度
 float Renderer::s_fileBarHeight = 30.0f;              // 文件栏高度
 float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 
+// 命令历史滚动控制
+bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令历史滚动到底部
+
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
 static std::string s_currentCommand = ""; // 当前命令输入
@@ -1005,66 +1008,43 @@ void Renderer::drawCommandBar() {
     
     auto& loc = LocalizationManager::getInstance();
     if (ImGui::Begin("CommandBar", nullptr, flags)) {
-        // 命令执行历史部分（去掉标题和最上方的分隔符）
+        // 创建区域显示命令历史，添加垂直和水平滚动条，留出空间给命令输入栏
+        const float footerReserveHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+        ImGui::BeginChild("CommandHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
         
-        // 创建区域显示命令历史，去掉周围的框，添加水平滚动条
-        ImGui::BeginChild("CommandHistory", ImVec2(0, -30), false, ImGuiWindowFlags_HorizontalScrollbar);
+        // TODO：使用ImGuiListClipper会导致滚动条的行为变得奇怪，无法自动滚动到末尾，暂不使用
+        // // 使用静态的ImGuiListClipper来优化渲染，只绘制可见区域，提升历史条目过多时的性能
+        // static ImGuiListClipper clipper;
+        // float itemHeight = ImGui::GetTextLineHeight();
+        // clipper.Begin(s_commandHistory.size(), itemHeight);
         
-        // 使用单个只读InputText显示所有命令历史，支持多行选择和复制
-        std::string historyText;
-        size_t maxCommandLength = 0;
-        for (size_t i = 0; i < s_commandHistory.size(); i++) {
-            const auto& cmd = s_commandHistory[i];
-            historyText += cmd;
-            // 最后一行不添加换行符
-            if (i < s_commandHistory.size() - 1) {
-                historyText += "\n";
-            }
-            if (cmd.length() > maxCommandLength) {
-                maxCommandLength = cmd.length();
-            }
+        // while (clipper.Step()) {
+        //     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        //         // 绘制每一条命令历史
+        //         ImGui::TextUnformatted(s_commandHistory[i].c_str());
+        //     }
+        // }
+        
+        for (std::size_t i = 0; i < s_commandHistory.size(); i++)
+        {
+            ImGui::TextUnformatted(s_commandHistory[i].c_str());
         }
         
-        // 为InputText创建一个静态缓冲区，避免每次都重新分配内存
-        static std::string buffer;
-        buffer = historyText;
-        
-        // 计算InputText的宽度，使用最长命令的长度，确保能显示完整的命令
-        // 每个字符大约占8个像素宽度（根据字体大小调整）
-        float charWidth = 8.0f;
-        float minWidth = ImGui::GetWindowWidth();
-        float neededWidth = maxCommandLength * charWidth + 20; // 20是额外的边距
-        float inputTextWidth = std::max(minWidth, neededWidth);
-        
-        // 保存当前样式
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
-        
-        // 获取子窗口高度，直接使用子窗口的完整高度，不再减去30
-        float childHeight = ImGui::GetWindowHeight();
-        
-        // 使用只读InputText，支持多行选择和复制，设置宽度为计算出的宽度，高度为子窗口的完整大小
-        ImGui::InputTextMultiline("##CommandHistory", &buffer[0], buffer.size(), ImVec2(inputTextWidth, childHeight), 
-                                 ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_NoUndoRedo | 
-                                 ImGuiInputTextFlags_AllowTabInput);
-        
-        // 暂时移除自动滚动功能，等后续命令执行相关内容完成后再实现
-        // ImGui::SetScrollHereY(1.0f);
-        // ImGui::SetScrollY(ImGui::GetScrollMaxY());
-        
-        // 恢复样式
-        ImGui::PopStyleColor(3);
-        
+        // 根据标志决定是否滚动到最后，在绘制项目之前执行
+        if (!s_commandHistory.empty() && s_bScrollCommandHistoryToBottom) {
+            ImGui::SetScrollHereY(1.0f);
+            s_bScrollCommandHistoryToBottom = false;
+        }
+
         ImGui::EndChild();
-        
+
         // 命令输入栏部分
         ImGui::Separator();
         
         // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text(loc.get("commandBar.prompt").c_str());
-            ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text(loc.get("commandBar.prompt").c_str());
+        ImGui::SameLine();
         
         std::array<char, 256> commandBuffer{};
         if (!s_currentCommand.empty()) {
@@ -1083,6 +1063,8 @@ void Renderer::drawCommandBar() {
             std::string command(commandBuffer.data());
             if (!command.empty()) {
                 s_commandHistory.push_back(command);
+                // 设置滚动标志为true，确保新命令添加后会滚动到最底部
+                s_bScrollCommandHistoryToBottom = true;
                 s_currentCommand.clear();
             }
         } else {
@@ -1277,6 +1259,8 @@ LogicalViewport& Renderer::getLogicalViewport() {
 // 添加命令到历史记录
 void Renderer::addCommandToHistory(const std::string& command) {
     s_commandHistory.push_back(command);
+    // 设置滚动标志为true，确保新命令添加后会滚动到最底部
+    s_bScrollCommandHistoryToBottom = true;
 }
 
 // 获取属性栏是否可见

@@ -114,6 +114,9 @@ private:
     static float s_menuBarHeight;              // 菜单栏高度
     static float s_fileBarHeight;              // 文件栏高度
     static float s_statusBarHeight;            // 状态栏高度
+    
+    // 命令历史滚动控制
+    static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格
