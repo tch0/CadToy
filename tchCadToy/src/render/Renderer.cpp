@@ -1182,7 +1182,9 @@ void Renderer::drawPropertyBar() {
                              ImGuiWindowFlags_NoBringToFrontOnFocus;
     
     auto& loc = LocalizationManager::getInstance();
-    if (ImGui::Begin(loc.get("propertyBar.title").c_str(), &s_propertyBarVisible, flags)) {
+    // 使用ImGui的命名机制，##前面的内容显示在界面上，##后面的内容作为内部标识符
+    std::string windowName = loc.get("propertyBar.title") + "##PropertyBar";
+    if (ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags)) {
         // 预留空白区域，等待添加实际属性
         
         // 监听属性栏宽度变化
