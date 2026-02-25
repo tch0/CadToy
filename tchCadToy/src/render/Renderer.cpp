@@ -1047,8 +1047,8 @@ void Renderer::drawCommandBar() {
         ImGui::Text(loc.get("commandBar.prompt").c_str());
         ImGui::SameLine();
         
-        // 使用PushItemWidth使输入框占满剩余空间
-        ImGui::PushItemWidth(-1);
+        // 创建CommandInput子窗口
+        ImGui::BeginChild("CommandInput", ImVec2(0, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         
         // 检查InputHandler中的命令输入
         const std::string& cmdInput = InputHandler::getCommandInput();
@@ -1070,6 +1070,9 @@ void Renderer::drawCommandBar() {
             ImGui::SetKeyboardFocusHere(0);
         }
         
+        // 使用PushItemWidth使输入框占满剩余空间
+        ImGui::PushItemWidth(-1);
+        
         // 回调函数处理文本选择问题，直接复制到缓冲区中的这个字符在输入时选中状态，所以需要取消其选中状态
         auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
             data->SelectionStart = data->SelectionEnd = data->BufTextLen;
@@ -1087,7 +1090,11 @@ void Renderer::drawCommandBar() {
             }
             std::fill(cmdBuffer.begin(), cmdBuffer.end(), 0);
         }
+        
+        // 平衡PushItemWidth调用
         ImGui::PopItemWidth();
+        
+        ImGui::EndChild();
         
         ImGui::End();
     }
