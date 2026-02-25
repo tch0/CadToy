@@ -102,10 +102,13 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         
         // 检查当前焦点是否位于命令栏或其子窗口
         bool bFocusIsOnCommandBar = false;
-        ImGuiContext* ctx = ImGui::GetCurrentContext();
-        if (ctx != nullptr && ctx->NavWindow != nullptr) {
-            std::string windowName = ctx->NavWindow->Name;
-            bFocusIsOnCommandBar = (windowName == "CommandBar" || windowName.substr(0, 11) == "CommandBar/");
+        
+        // 窗口绘制逻辑外的焦点检测标准逻辑，找到命令栏窗口指针之后比较指针，而非获取NavWindow名称来比较字符串
+        if (ImGuiWindow* cmdBarWindow = ImGui::FindWindowByName("CommandBar")) {
+            ImGuiContext* ctx = ImGui::GetCurrentContext();
+            if (ctx->NavWindow && ctx->NavWindow->RootWindow == cmdBarWindow) {
+                bFocusIsOnCommandBar = true;
+            }
         }
         
         // 画布上或者命令栏才处理快捷键或者命令输入
