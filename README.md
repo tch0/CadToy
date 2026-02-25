@@ -12,7 +12,7 @@
 - imgui
 
 Cross Platform:
-- UNIX-like
+- UNIX-like/Linux
 - Apple
 - Windows
 
