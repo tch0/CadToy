@@ -124,6 +124,7 @@ private:
     // 命令历史滚动控制
     static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
+    static bool s_anyCharAddedToCommandInput; // 是否有字符通过直接修改缓冲区加入到命令输入栏
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

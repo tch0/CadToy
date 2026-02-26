@@ -196,7 +196,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
     }
 }
 
-// 处理字符输入
+// 处理字符输入，参数为Unicode码点
 void InputHandler::handleCharInput(unsigned int codepoint) {
     // 只有在按键回调handleKeyPress没有把当前输入作为快捷键拦截掉的情况下才处理字符
     // 字符回调的会自动处理CapsLock和Shift转换后的结果，而不需要也不应该有任何自行检测CapsLock与Shift的操作

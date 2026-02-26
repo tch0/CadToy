@@ -40,6 +40,8 @@ float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令历史滚动到底部
 // 命令输入框焦点控制
 bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设置到命令输入框
+// 是否有字符通过直接修改缓冲区加入到命令输入栏
+bool Renderer::s_anyCharAddedToCommandInput = false;
 
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
@@ -1061,15 +1063,31 @@ void Renderer::drawCommandBar() {
         // 使用PushItemWidth使输入框占满剩余空间
         ImGui::PushItemWidth(-1);
         
-        // 回调函数处理文本选择问题，直接复制到缓冲区中的这个字符在输入时选中状态，所以需要取消其选中状态
+        // 回调函数处理文本选择问题和字符过滤
         auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
-            data->SelectionStart = data->SelectionEnd = data->BufTextLen;
+            // 处理字符过滤逻辑 (只有输入字符时触发)
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
+                if (data->EventChar > 127) {
+                    return 1; // 丢弃非 ASCII 字符
+                }
+            }
+
+            // 通过修改缓冲区加入了字符，那么就解除选中并移动光标到末尾
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways && s_anyCharAddedToCommandInput) {
+                // 直接复制到缓冲区中的这个字符在下一帧总是处于选中状态，所以需要取消其选中状态
+                data->SelectionStart = data->SelectionEnd = data->BufTextLen;
+                // 焦点丢失后，其他位置的输入总是追加到末尾，所以总是移动光标到末尾，不管焦点丢失前光标在什么位置
+                data->CursorPos = data->BufTextLen;
+                // 重置标记
+                s_anyCharAddedToCommandInput = false;
+            }
+
             return 0;
         };
         
         // 如果已经输入了一个字符，则将其拷贝到缓冲区
         if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
-            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, 
+            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter, 
             inputTextCallback, nullptr)) {
             // 当用户按下Enter键时，执行命令并清空缓冲区
             std::string command(s_cmdBuffer.data());
@@ -1284,10 +1302,17 @@ void Renderer::setShouldFocusOnCommandInput(bool shouldFocus) {
 
 // 添加输入字符到命令输入框
 void Renderer::addInputChar(unsigned int codepoint) {
+    // 过滤非ASCII字符
+    if (codepoint > 127) {
+        return; // 丢弃非ASCII字符
+    }
+    
     size_t currentLen = std::strlen(s_cmdBuffer.data());
     if (currentLen < s_cmdBuffer.size() - 1) {
         s_cmdBuffer[currentLen] = static_cast<char>(codepoint);
         s_cmdBuffer[currentLen + 1] = '\0';
+        // 设置标记，表示有字符通过直接缓冲区加入到命令输入栏
+        s_anyCharAddedToCommandInput = true;
     }
 }
 
