@@ -176,9 +176,39 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             }
             
             // 处理特殊的"非字符"输入动作
-            // TODO
+            bool bFocusIsOnCommandInput = Renderer::FocusIsOnCommandInput();
+            // Backsapce
             if (key == GLFW_KEY_BACKSPACE) {
-                s_keyWasConsumedByShortcut = true; // Backspace 也不需要传给 CharCallback
+                if (!bFocusIsOnCommandInput) {
+                    // 焦点不在命令输入框上，从命令输入缓冲区中删除最后一个字符，焦点在时输入框会自行处理不需要手动处理
+                    Renderer::removeLastCharFromCommandInput();
+                    // 通知Renderer将焦点移动到命令输入框
+                    Renderer::setShouldFocusOnCommandInput(true);
+                    s_keyWasConsumedByShortcut = true;
+                }
+            }
+            // Enter
+            else if (key == GLFW_KEY_ENTER) {
+                // 设置执行命令标记
+                Renderer::setShouldExecuteCommand(true);
+                // 通知Renderer将焦点移动到命令输入框
+                Renderer::setShouldFocusOnCommandInput(true);
+                
+                s_keyWasConsumedByShortcut = true;
+            }
+            // Space
+            else if (key == GLFW_KEY_SPACE) {
+                // 设置执行命令标记
+                Renderer::setShouldExecuteCommand(true);
+                // 通知Renderer将焦点移动到命令输入框
+                Renderer::setShouldFocusOnCommandInput(true);
+                s_keyWasConsumedByShortcut = true;
+            }
+            // Esc
+            else if (key == GLFW_KEY_ESCAPE) {
+                Renderer::setShouldCancelCommand(true);
+                Renderer::setShouldFocusOnCommandInput(true);
+                s_keyWasConsumedByShortcut = true;
             }
         }
         

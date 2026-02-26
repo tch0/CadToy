@@ -36,6 +36,7 @@
   "optionsDialog.cancel": "Cancel",
 
   "commandBar.prompt": "Command:",
+  "commandBar.prompt.cancel": "*Cancel*",
   "commandBar.inputPrompt": "Input Command Here",
 
   "propertyBar.title": "Properties"

@@ -36,6 +36,7 @@
   "optionsDialog.cancel": "取消",
 
   "commandBar.prompt": "命令:",
+  "commandBar.prompt.cancel": "*Cancel*",
   "commandBar.inputPrompt": "在此输入命令",
 
   "propertyBar.title": "属性"

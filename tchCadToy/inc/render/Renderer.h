@@ -80,6 +80,9 @@ public:
     static void addCommandToHistory(const std::string& command); // 添加命令到历史记录
     static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
     static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
+    static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符
+    static void setShouldExecuteCommand(bool shouldExecute); // 设置是否应该执行命令
+    static void setShouldCancelCommand(bool shouldCancel); // 设置是否应该取消命令执行
     
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见
@@ -124,7 +127,11 @@ private:
     // 命令历史滚动控制
     static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
-    static bool s_anyCharAddedToCommandInput; // 是否有字符通过直接修改缓冲区加入到命令输入栏
+    static bool s_bCommandBufferModified; // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
+    static bool s_bShouldExecuteCommand; // 是否应该执行命令
+    static bool s_bShouldCancelCommand; // 是否应该取消命令执行
+    static bool s_bNeedClearCommandBuffer; // 是否需要清除命令输入缓冲区
+
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格
