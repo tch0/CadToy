@@ -56,18 +56,17 @@ public:
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
     static void pan(const glm::dvec2& deltaLogic); // 平移功能
+    
+    // 状态栏相关
     static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
     
     // 绘制菜单栏
     static void drawMenuBar(); // 绘制菜单栏
     
-    // 绘制命令栏
-    static void drawCommandBar(); // 绘制命令栏
-    
     // 绘制属性栏
     static void drawPropertyBar(); // 绘制属性栏
     
-    // 绘制文件栏
+    // 文件栏相关
     static void drawFileBar(); // 绘制文件栏
     
     // 更新可绘制区域
@@ -77,7 +76,8 @@ public:
     static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
     
     // 命令栏相关方法
-    static void addCommandToHistory(const std::string& command); // 添加命令到历史记录
+    static void drawCommandBar(); // 绘制命令栏
+    static void addContentToCommandHistory(const std::string& command); // 添加内容到命令历史记录
     static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
     static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
     static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符

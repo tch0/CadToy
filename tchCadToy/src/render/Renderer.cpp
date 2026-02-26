@@ -992,6 +992,132 @@ void Renderer::drawMenuBar() {
     }
 }
 
+// 绘制属性栏
+void Renderer::drawPropertyBar() {
+    if (!s_propertyBarVisible) {
+        return;
+    }
+    
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算属性栏位置和大小
+    float statusBarHeight = s_statusBarHeight;
+    // 计算属性栏高度，从文件栏下方到状态栏上方
+    float propertyBarHeight = height - statusBarHeight - s_menuBarHeight - s_fileBarHeight;
+    // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
+    ImVec2 propertyBarPos(width - s_propertyBarWidth, s_menuBarHeight + s_fileBarHeight);
+    ImVec2 propertyBarSize(s_propertyBarWidth, propertyBarHeight);
+    
+    // 绘制属性栏
+    ImGui::SetNextWindowPos(propertyBarPos);
+    ImGui::SetNextWindowSize(propertyBarSize);
+    
+    // 使用ImGui的原生窗口功能，支持拖动调整大小和关闭按钮
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
+                             ImGuiWindowFlags_NoBringToFrontOnFocus;
+    
+    auto& loc = LocalizationManager::getInstance();
+    // 使用ImGui的命名机制，##前面的内容显示在界面上，##后面的内容作为内部标识符
+    std::string windowName = loc.get("propertyBar.title") + "##PropertyBar";
+    if (ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags)) {
+        // 预留空白区域，等待添加实际属性
+        
+        // 监听属性栏宽度变化
+        ImVec2 currentSize = ImGui::GetWindowSize();
+        s_propertyBarWidth = currentSize.x;
+        
+        ImGui::End();
+    }
+}
+
+// 绘制文件栏
+void Renderer::drawFileBar() {
+    // 获取窗口大小
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 计算文件栏位置和大小
+    ImVec2 fileBarPos(0, s_menuBarHeight);
+    ImVec2 fileBarSize(width, s_fileBarHeight);
+    
+    // 绘制文件栏背景
+    ImGui::SetNextWindowPos(fileBarPos);
+    ImGui::SetNextWindowSize(fileBarSize);
+    ImGui::SetNextWindowBgAlpha(0.9f);
+    
+    // 使用参考实现中的窗口标志
+    ImGuiWindowFlags tabWindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | 
+                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav | 
+                                     ImGuiWindowFlags_NoSavedSettings;
+    
+    if (ImGui::Begin("FileBar", nullptr, tabWindowFlags)) {
+        // 使用参考实现中的TabBar标志
+        ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | 
+                                      ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
+                                      ImGuiTabBarFlags_FittingPolicyScroll;
+        
+        if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
+            // 使用TabItemButton实现+号按钮
+            if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
+                // 创建新文件
+                s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
+                s_fileCounter++;
+                s_currentFileIndex = s_files.size() - 1;
+            }
+            
+            // 遍历文件列表
+            for (size_t i = 0; i < s_files.size(); i++) {
+                // 使用ImGui的TabItem，带有关闭按钮
+                ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
+                
+                bool tabOpen = true;
+                if (ImGui::BeginTabItem(s_files[i].c_str(), &tabOpen, tabItemFlags)) {
+                    // 设置当前文件索引
+                    if (s_currentFileIndex != i) {
+                        s_currentFileIndex = i;
+                    }
+                    ImGui::EndTabItem();
+                }
+                
+                // 添加工具提示
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(s_files[i].c_str());
+                }
+                
+                // 处理标签关闭
+                if (!tabOpen) {
+                    if (s_files.size() > 1) {
+                        s_files.erase(s_files.begin() + i);
+                        if (s_currentFileIndex >= i) {
+                            s_currentFileIndex = std::max(0, s_currentFileIndex - 1);
+                        }
+                    } else {
+                        // 如果只剩最后一个文件，关闭后创建新文件
+                        s_files.clear();
+                        s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
+                        s_fileCounter++;
+                        s_currentFileIndex = 0;
+                    }
+                }
+            }
+            
+            ImGui::EndTabBar();
+        }
+        
+        // 更新文件栏高度
+        s_fileBarHeight = ImGui::GetWindowSize().y;
+        
+        ImGui::End();
+    }
+}
+
+// 获取逻辑视口
+LogicalViewport& Renderer::getLogicalViewport() {
+    return s_logicalViewport;
+}
+
 // 绘制命令栏
 void Renderer::drawCommandBar() {
     if (!s_commandBarVisible) {
@@ -1075,7 +1201,7 @@ void Renderer::drawCommandBar() {
             std::string command(s_cmdBuffer.data());
             // 使用localization资源构建取消命令的历史记录
             std::string promptStr = loc.get("commandBar.prompt") + " " + command + loc.get("commandBar.prompt.cancel");
-            addCommandToHistory(promptStr);
+            addContentToCommandHistory(promptStr);
             s_bShouldCancelCommand = false;
             s_bShouldExecuteCommand = false;
             // 清空缓冲区
@@ -1092,7 +1218,7 @@ void Renderer::drawCommandBar() {
             // 执行命令
             std::string command(s_cmdBuffer.data());
             std::string promptStr = loc.get("commandBar.prompt") + " " + command;
-            addCommandToHistory(promptStr);
+            addContentToCommandHistory(promptStr);
             if (!command.empty()) {
                 CommandParser::parseCommand(command);
             }
@@ -1207,134 +1333,8 @@ void Renderer::drawCommandBar() {
     }
 }
 
-// 绘制属性栏
-void Renderer::drawPropertyBar() {
-    if (!s_propertyBarVisible) {
-        return;
-    }
-    
-    // 获取窗口大小
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    
-    // 计算属性栏位置和大小
-    float statusBarHeight = s_statusBarHeight;
-    // 计算属性栏高度，从文件栏下方到状态栏上方
-    float propertyBarHeight = height - statusBarHeight - s_menuBarHeight - s_fileBarHeight;
-    // 计算属性栏位置，确保右侧与窗口对齐，底部与状态栏顶部对齐
-    ImVec2 propertyBarPos(width - s_propertyBarWidth, s_menuBarHeight + s_fileBarHeight);
-    ImVec2 propertyBarSize(s_propertyBarWidth, propertyBarHeight);
-    
-    // 绘制属性栏
-    ImGui::SetNextWindowPos(propertyBarPos);
-    ImGui::SetNextWindowSize(propertyBarSize);
-    
-    // 使用ImGui的原生窗口功能，支持拖动调整大小和关闭按钮
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
-                             ImGuiWindowFlags_NoBringToFrontOnFocus;
-    
-    auto& loc = LocalizationManager::getInstance();
-    // 使用ImGui的命名机制，##前面的内容显示在界面上，##后面的内容作为内部标识符
-    std::string windowName = loc.get("propertyBar.title") + "##PropertyBar";
-    if (ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags)) {
-        // 预留空白区域，等待添加实际属性
-        
-        // 监听属性栏宽度变化
-        ImVec2 currentSize = ImGui::GetWindowSize();
-        s_propertyBarWidth = currentSize.x;
-        
-        ImGui::End();
-    }
-}
-
-// 绘制文件栏
-void Renderer::drawFileBar() {
-    // 获取窗口大小
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    
-    // 计算文件栏位置和大小
-    ImVec2 fileBarPos(0, s_menuBarHeight);
-    ImVec2 fileBarSize(width, s_fileBarHeight);
-    
-    // 绘制文件栏背景
-    ImGui::SetNextWindowPos(fileBarPos);
-    ImGui::SetNextWindowSize(fileBarSize);
-    ImGui::SetNextWindowBgAlpha(0.9f);
-    
-    // 使用参考实现中的窗口标志
-    ImGuiWindowFlags tabWindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | 
-                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav | 
-                                     ImGuiWindowFlags_NoSavedSettings;
-    
-    if (ImGui::Begin("FileBar", nullptr, tabWindowFlags)) {
-        // 使用参考实现中的TabBar标志
-        ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | 
-                                      ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
-                                      ImGuiTabBarFlags_FittingPolicyScroll;
-        
-        if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
-            // 使用TabItemButton实现+号按钮
-            if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing)) {
-                // 创建新文件
-                s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
-                s_fileCounter++;
-                s_currentFileIndex = s_files.size() - 1;
-            }
-            
-            // 遍历文件列表
-            for (size_t i = 0; i < s_files.size(); i++) {
-                // 使用ImGui的TabItem，带有关闭按钮
-                ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
-                
-                bool tabOpen = true;
-                if (ImGui::BeginTabItem(s_files[i].c_str(), &tabOpen, tabItemFlags)) {
-                    // 设置当前文件索引
-                    if (s_currentFileIndex != i) {
-                        s_currentFileIndex = i;
-                    }
-                    ImGui::EndTabItem();
-                }
-                
-                // 添加工具提示
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(s_files[i].c_str());
-                }
-                
-                // 处理标签关闭
-                if (!tabOpen) {
-                    if (s_files.size() > 1) {
-                        s_files.erase(s_files.begin() + i);
-                        if (s_currentFileIndex >= i) {
-                            s_currentFileIndex = std::max(0, s_currentFileIndex - 1);
-                        }
-                    } else {
-                        // 如果只剩最后一个文件，关闭后创建新文件
-                        s_files.clear();
-                        s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
-                        s_fileCounter++;
-                        s_currentFileIndex = 0;
-                    }
-                }
-            }
-            
-            ImGui::EndTabBar();
-        }
-        
-        // 更新文件栏高度
-        s_fileBarHeight = ImGui::GetWindowSize().y;
-        
-        ImGui::End();
-    }
-}
-
-// 获取逻辑视口
-LogicalViewport& Renderer::getLogicalViewport() {
-    return s_logicalViewport;
-}
-
-// 添加命令到历史记录
-void Renderer::addCommandToHistory(const std::string& command) {
+// 添加内容到命令历史记录
+void Renderer::addContentToCommandHistory(const std::string& command) {
     s_commandHistory.push_back(command);
     // 设置滚动标志为true，确保新命令添加后会滚动到最底部
     s_bScrollCommandHistoryToBottom = true;
