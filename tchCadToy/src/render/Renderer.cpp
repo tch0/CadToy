@@ -1,6 +1,7 @@
 #include "render/Renderer.h"
 #include "Layer.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "sys/Global.h"
@@ -37,11 +38,14 @@ float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 
 // 命令历史滚动控制
 bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令历史滚动到底部
+// 命令输入框焦点控制
+bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设置到命令输入框
 
 // 命令栏相关
 static std::vector<std::string> s_commandHistory; // 命令执行历史
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
+static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
 
 
 // 选项对话框相关
@@ -1025,6 +1029,7 @@ void Renderer::drawCommandBar() {
         //         ImGui::TextUnformatted(s_commandHistory[i].c_str());
         //     }
         // }
+        // clipper.End();
         
         for (std::size_t i = 0; i < s_commandHistory.size(); i++)
         {
@@ -1047,27 +1052,10 @@ void Renderer::drawCommandBar() {
         ImGui::Text(loc.get("commandBar.prompt").c_str());
         ImGui::SameLine();
         
-        // 创建CommandInput子窗口
-        ImGui::BeginChild("CommandInput", ImVec2(0, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        
-        // 检查InputHandler中的命令输入
-        const std::string& cmdInput = InputHandler::getCommandInput();
-
-        // 如果有输入则复制到到文本输入框的缓冲区，缓冲区在帧刷新中保持，必须定义为静态的
-        static std::array<char, 256> cmdBuffer{};
-
-        // TODO:
-        // 这个逻辑对第一个字符是必要的，但是后续焦点移到输入框后，在输入框中输入的所有字符也都会进入这里，每次都会把cmdBuffer用新输入的一个字符覆盖，
-        // 但程序运行结果是正常的，貌似是InputText的内部数据对cmdBuffer进行维护的结果，怎么看都是需要修改的，但目前没有好的方案，暂不修改。
-        if (!cmdInput.empty()) {
-            // 安全地复制字符串，避免越界
-            size_t copySize = std::min(cmdInput.size(), cmdBuffer.size() - 1);
-            std::copy(cmdInput.begin(), cmdInput.begin() + copySize, cmdBuffer.begin());
-            cmdBuffer[copySize] = '\0'; // 确保以空字符结尾
-            // 复制后清空命令输入
-            InputHandler::clearCommandInput();
-            // 设置焦点到输入框
+        // 如果需要设置焦点到命令输入框
+        if (s_bShouldFocusOnCommandInput) {
             ImGui::SetKeyboardFocusHere(0);
+            s_bShouldFocusOnCommandInput = false;
         }
         
         // 使用PushItemWidth使输入框占满剩余空间
@@ -1080,21 +1068,22 @@ void Renderer::drawCommandBar() {
         };
         
         // 如果已经输入了一个字符，则将其拷贝到缓冲区
-        if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), cmdBuffer.data(), cmdBuffer.size(), 
+        if (ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackAlways, 
             inputTextCallback, nullptr)) {
             // 当用户按下Enter键时，执行命令并清空缓冲区
-            std::string command(cmdBuffer.data());
+            std::string command(s_cmdBuffer.data());
             if (!command.empty()) {
                 CommandParser::parseCommand(command);
             }
-            std::fill(cmdBuffer.begin(), cmdBuffer.end(), 0);
+            // 清空缓冲区
+            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+            // 回车强制把焦点拉回来，防止输入框失焦
+            ImGui::SetKeyboardFocusHere(-1); // -1 代表作用于上一个 Item（即当前的 InputText）
         }
         
         // 平衡PushItemWidth调用
         ImGui::PopItemWidth();
-        
-        ImGui::EndChild();
         
         ImGui::End();
     }
@@ -1288,6 +1277,20 @@ void Renderer::addCommandToHistory(const std::string& command) {
     s_bScrollCommandHistoryToBottom = true;
 }
 
+// 设置是否应该将焦点设置到命令输入框
+void Renderer::setShouldFocusOnCommandInput(bool shouldFocus) {
+    s_bShouldFocusOnCommandInput = shouldFocus;
+}
+
+// 添加输入字符到命令输入框
+void Renderer::addInputChar(unsigned int codepoint) {
+    size_t currentLen = std::strlen(s_cmdBuffer.data());
+    if (currentLen < s_cmdBuffer.size() - 1) {
+        s_cmdBuffer[currentLen] = static_cast<char>(codepoint);
+        s_cmdBuffer[currentLen + 1] = '\0';
+    }
+}
+
 // 获取属性栏是否可见
 bool Renderer::isPropertyBarVisible() {
     return s_propertyBarVisible;
@@ -1301,6 +1304,37 @@ void Renderer::setPropertyBarVisible(bool visible) {
 // 显示或隐藏选项对话框
 void Renderer::showOptionsDialog(bool visible) {
     s_optionsDialogVisible = visible;
+}
+
+
+
+// 检查焦点是否位于指定窗口或其子窗口
+bool Renderer::FocusIsOnWindow(const std::string& windowName) {
+    if (ImGuiWindow* targetWindow = ImGui::FindWindowByName(windowName.c_str())) {
+        ImGuiContext* ctx = ImGui::GetCurrentContext();
+        if (ctx && ctx->NavWindow && ctx->NavWindow->RootWindow == targetWindow) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 检查焦点是否在命令输入框上
+bool Renderer::FocusIsOnCommandInput() {
+    // 获取当前活跃控件的ID
+    ImGuiID activeID = ImGui::GetActiveID();
+    
+    // 获取命令输入框所在的窗口
+    ImGuiWindow* window = ImGui::FindWindowByName("CommandBar");
+    if (window) {
+        // 获取命令输入框的ID
+        ImGuiID inputID = window->GetID("##CommandInput");
+        if (activeID == inputID) {
+            // 焦点确实在命令输入框上
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace tch

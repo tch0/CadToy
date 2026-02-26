@@ -43,6 +43,9 @@ public:
     // 处理键盘输入
     static void handleKeyPress(int key, int scancode, int action, int mods);
     
+    // 处理字符输入
+    static void handleCharInput(unsigned int codepoint);
+    
     // 处理鼠标输入
     static void handleMousePress(int button, int action, int mods);
     
@@ -67,11 +70,6 @@ public:
     // 检查键盘按键是否按下
     static bool isKeyPressed(int key);
     
-    // 获取命令输入
-    static const std::string& getCommandInput();
-    
-    // 清除命令输入
-    static void clearCommandInput();
     
     // 注册事件回调
     static void registerCallback(InputEventType eventType, const std::function<void()>& callback);
@@ -111,7 +109,7 @@ private:
     static bool s_mouseMiddleButtonPressedInDrawableArea;          // 鼠标中间按钮是否在可绘制区域内按下
     static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];         // 鼠标按钮状态
     static bool s_keys[GLFW_KEY_LAST + 1];                         // 键盘按键状态
-    static std::string s_commandInput;                             // 命令输入
+    static bool s_keyWasConsumedByShortcut;                       // 标记当前按键是否已被快捷键逻辑消耗
     static std::unordered_map<InputEventType, std::function<void()>> s_callbacks; // 事件回调映射
     static std::vector<ShortcutItem> s_shortcuts;                  // 快捷键列表
 };

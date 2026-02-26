@@ -78,6 +78,8 @@ public:
     
     // 命令栏相关方法
     static void addCommandToHistory(const std::string& command); // 添加命令到历史记录
+    static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
+    static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
     
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见
@@ -86,6 +88,10 @@ public:
     // 选项对话框相关方法
     static void showOptionsDialog(bool visible); // 显示或隐藏选项对话框
     static void drawOptionsDialog(); // 绘制选项对话框
+    
+    // 焦点检查相关方法
+    static bool FocusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口
+    static bool FocusIsOnCommandInput(); // 检查焦点是否在命令输入框上
     
     
 
@@ -117,6 +123,7 @@ private:
     
     // 命令历史滚动控制
     static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
+    static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
 
     // 辅助方法
     static void drawGrid();                     // 绘制栅格

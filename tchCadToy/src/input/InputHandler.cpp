@@ -14,9 +14,13 @@ glm::vec2 InputHandler::s_lastMousePosition(0.0f, 0.0f); // 初始化上一次�
 bool InputHandler::s_mouseMiddleButtonPressedInDrawableArea = false; // 初始化鼠标中间按钮是否在可绘制区域内按下
 bool InputHandler::s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {false};
 bool InputHandler::s_keys[GLFW_KEY_LAST + 1] = {false};
-std::string InputHandler::s_commandInput = "";
+
+// 全局标志：标记当前按键是否已被快捷键逻辑消耗
+bool InputHandler::s_keyWasConsumedByShortcut = false;
 std::unordered_map<InputEventType, std::function<void()>> InputHandler::s_callbacks;
 std::vector<ShortcutItem> InputHandler::s_shortcuts;
+
+
 
 // 注册默认快捷键
 void InputHandler::registerDefaultShortcuts() {
@@ -69,6 +73,11 @@ void InputHandler::initialize(GLFWwindow* window) {
         InputHandler::handleKeyPress(key, scancode, action, mods);
     });
     
+    // 设置字符回调函数
+    glfwSetCharCallback(window, [](GLFWwindow* window, unsigned int codepoint) {
+        InputHandler::handleCharInput(codepoint);
+    });
+    
     glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int mods) {
         InputHandler::handleMousePress(button, action, mods);
     });
@@ -97,19 +106,15 @@ void InputHandler::initialize(GLFWwindow* window) {
 
 // 处理键盘输入
 void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
+    // 仅处理按下和释放，不处理GLFW_REPEAT，快捷键不应该重复执行，而命令输入的重复在第一个字符后会交由命令输入框处理
     if (action == GLFW_PRESS) {
+        // 每按下一个新键，重置状态
+        s_keyWasConsumedByShortcut = false;
+        
         s_keys[key] = true;
         
         // 检查当前焦点是否位于命令栏或其子窗口
-        bool bFocusIsOnCommandBar = false;
-        
-        // 窗口绘制逻辑外的焦点检测标准逻辑，找到命令栏窗口指针之后比较指针，而非获取NavWindow名称来比较字符串
-        if (ImGuiWindow* cmdBarWindow = ImGui::FindWindowByName("CommandBar")) {
-            ImGuiContext* ctx = ImGui::GetCurrentContext();
-            if (ctx->NavWindow && ctx->NavWindow->RootWindow == cmdBarWindow) {
-                bFocusIsOnCommandBar = true;
-            }
-        }
+        bool bFocusIsOnCommandBar = Renderer::FocusIsOnWindow("CommandBar");
         
         // 画布上或者命令栏才处理快捷键或者命令输入
         if (!bFocusIsOnCommandBar && ImGui::GetIO().WantCaptureKeyboard) {
@@ -124,6 +129,8 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
                 if (shortcut.type == ShortcutType::CTRL_SHIFT_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+Shift+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
                     CommandParser::executeCommand(shortcut.commandName, {});
+                    // 标记当前按键已被快捷键消耗
+                    s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
                     if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
                         s_callbacks[InputEventType::KEY_PRESS]();
@@ -140,6 +147,8 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
                 if (shortcut.type == ShortcutType::CTRL_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
                     CommandParser::executeCommand(shortcut.commandName, {});
+                    // 标记当前按键已被快捷键消耗
+                    s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
                     if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
                         s_callbacks[InputEventType::KEY_PRESS]();
@@ -156,6 +165,8 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
                     CommandParser::executeCommand(shortcut.commandName, {});
+                    // 标记当前按键已被快捷键消耗
+                    s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
                     if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
                         s_callbacks[InputEventType::KEY_PRESS]();
@@ -164,12 +175,11 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
                 }
             }
             
-            // 如果没有匹配的单个按键快捷键，处理命令输入
-            if (key >= GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT) {
-                // 命令输入，所有字符都识别为大写，这里并未处理CAPSLOCK/Shift与大小写相关问题
-                s_commandInput += static_cast<char>(key);
+            // 处理特殊的"非字符"输入动作
+            // TODO
+            if (key == GLFW_KEY_BACKSPACE) {
+                s_keyWasConsumedByShortcut = true; // Backspace 也不需要传给 CharCallback
             }
-            // Todo: 处理其他字符，比如空格、回车（执行上一条命令）等
         }
         
         // 触发按键按下回调
@@ -182,6 +192,22 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         // 触发按键释放回调
         if (s_callbacks.contains(InputEventType::KEY_RELEASE)) {
             s_callbacks[InputEventType::KEY_RELEASE]();
+        }
+    }
+}
+
+// 处理字符输入
+void InputHandler::handleCharInput(unsigned int codepoint) {
+    // 只有在按键回调handleKeyPress没有把当前输入作为快捷键拦截掉的情况下才处理字符
+    // 字符回调的会自动处理CapsLock和Shift转换后的结果，而不需要也不应该有任何自行检测CapsLock与Shift的操作
+    if (!s_keyWasConsumedByShortcut) {
+        // 如果焦点不在命令栏输入框上，则将焦点拉回到输入框，并将输入的字符添加到缓冲区
+        // 而焦点在命令输入栏的话，输入控件会自行处理，则不需要做任何多余处理
+        if (!Renderer::FocusIsOnCommandInput()) {
+            // 通知Renderer设置焦点到命令输入框
+            Renderer::setShouldFocusOnCommandInput(true);
+            // 添加字符到命令输入框
+            Renderer::addInputChar(codepoint);
         }
     }
 }
@@ -333,15 +359,6 @@ bool InputHandler::isKeyPressed(int key) {
     return false;
 }
 
-// 获取命令输入
-const std::string& InputHandler::getCommandInput() {
-    return s_commandInput;
-}
-
-// 清除命令输入
-void InputHandler::clearCommandInput() {
-    s_commandInput.clear();
-}
 
 // 注册事件回调
 void InputHandler::registerCallback(InputEventType eventType, const std::function<void()>& callback) {
