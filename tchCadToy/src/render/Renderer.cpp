@@ -51,10 +51,10 @@ bool Renderer::s_bShouldCancelCommand = false;
 bool Renderer::s_bNeedClearCommandBuffer = false;
 
 // 命令栏相关
-static std::vector<std::string> s_commandHistory; // 命令执行历史
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
+static std::size_t s_pendingFileIndex = -1; // 待切换的文件索引
 
 
 // 选项对话框相关
@@ -1029,6 +1029,15 @@ void Renderer::drawPropertyBar() {
 
 // 绘制文件栏
 void Renderer::drawFileBar() {
+    // 处理上一帧的待切换文件，-1表示无待切换文件
+    if (s_pendingFileIndex != static_cast<std::size_t>(-1)) {
+        FileManager::setCurrentFileIndex(s_pendingFileIndex);
+        // 切换文件后，自动滚动命令历史到最底部
+        s_bScrollCommandHistoryToBottom = true;
+        // 重置待切换标记
+        s_pendingFileIndex = static_cast<std::size_t>(-1);
+    }
+    
     // 获取窗口大小
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
@@ -1054,13 +1063,15 @@ void Renderer::drawFileBar() {
                                       ImGuiTabBarFlags_FittingPolicyScroll;
         
         if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
-            // 使用TabItemButton实现+号按钮
+            // 创建新文件
             if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
                 // 创建新文件
-                FileManager::createNewFile();
+                std::size_t newFileIndex = FileManager::createNewFile();
+                // 设置待切换的文件索引，在下一帧执行切换
+                s_pendingFileIndex = newFileIndex;
             }
             
-            // 遍历文件列表
+            // 遍历文件列表，绘制每一个打开文件
             std::size_t fileCount = FileManager::getFileCount();
             for (std::size_t i = 0; i < fileCount; i++) {
                 // 获取文件名
@@ -1074,9 +1085,12 @@ void Renderer::drawFileBar() {
                 
                 bool tabOpen = true;
                 if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
-                    // 设置当前文件索引
+                    // 切换文件时，不能直接切换，命令栏的取消命令执行操作需要在当前文件上下文，所有事情做完后下一帧去切换文件上下文
                     if (FileManager::getCurrentFileIndex() != i) {
-                        FileManager::setCurrentFileIndex(i);
+                        // 切换文件时，取消当前命令执行
+                        s_bShouldCancelCommand = true;
+                        // 设置待切换的文件索引，在下一帧执行切换
+                        s_pendingFileIndex = i;
                     }
                     ImGui::EndTabItem();
                 }
@@ -1090,6 +1104,7 @@ void Renderer::drawFileBar() {
                 
                 // 处理标签关闭
                 if (!tabOpen) {
+                    // TODO: 关闭文件之前应当先取消当前命令执行，然后调用close命令来执行，而不是直接关闭
                     FileManager::closeFile(i);
                 }
             }
@@ -1156,13 +1171,14 @@ void Renderer::drawCommandBar() {
         // }
         // clipper.End();
         
-        for (std::size_t i = 0; i < s_commandHistory.size(); i++)
+        const auto& commandHistory = FileManager::getCurrentFileCommandHistory();
+        for (std::size_t i = 0; i < commandHistory.size(); i++)
         {
-            ImGui::TextUnformatted(s_commandHistory[i].c_str());
+            ImGui::TextUnformatted(commandHistory[i].c_str());
         }
         
         // 根据标志决定是否滚动到最后，在绘制项目之前执行
-        if (!s_commandHistory.empty() && s_bScrollCommandHistoryToBottom) {
+        if (!commandHistory.empty() && s_bScrollCommandHistoryToBottom) {
             ImGui::SetScrollHereY(1.0f);
             s_bScrollCommandHistoryToBottom = false;
         }
@@ -1326,7 +1342,7 @@ void Renderer::drawCommandBar() {
 
 // 添加内容到命令历史记录
 void Renderer::addContentToCommandHistory(const std::string& command) {
-    s_commandHistory.push_back(command);
+    FileManager::addToCurrentFileCommandHistory(command);
     // 设置滚动标志为true，确保新命令添加后会滚动到最底部
     s_bScrollCommandHistoryToBottom = true;
 }

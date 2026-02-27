@@ -101,4 +101,19 @@ void File::markSaved(bool isSaved) {
     }
 }
 
+// 获取命令历史
+const std::vector<std::string>& File::getCommandHistory() const {
+    return m_commandHistory;
+}
+
+// 添加命令到历史
+void File::addToCommandHistory(const std::string& command) {
+    m_commandHistory.push_back(command);
+}
+
+// 清除命令历史
+void File::clearCommandHistory() {
+    m_commandHistory.clear();
+}
+
 } // namespace tch

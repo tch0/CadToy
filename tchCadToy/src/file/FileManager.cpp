@@ -20,10 +20,9 @@ void FileManager::initialize() {
     s_files.clear();
     s_recentFiles.clear();
     s_fileCounter = 0;
-    s_currentFileIndex = 0;
     
     // 创建一个默认的未命名文件
-    createNewFile();
+    s_currentFileIndex = createNewFile();
 }
 
 // 创建新文件，返回文件索引
@@ -33,9 +32,8 @@ std::size_t FileManager::createNewFile() {
     
     File newFile(fileName, "");
     s_files.push_back(newFile);
-    s_currentFileIndex = s_files.size() - 1;
     
-    return s_currentFileIndex;
+    return s_files.size() - 1;
 }
 
 // 打开文件，返回文件索引
@@ -238,6 +236,14 @@ bool FileManager::isFileModified(std::size_t index) {
     return false;
 }
 
+// 检查文件是否已保存
+bool FileManager::isFileSaved(std::size_t index) {
+    if (index < s_files.size()) {
+        return s_files[index].isSaved();
+    }
+    return false;
+}
+
 // 获取文件路径
 const std::string& FileManager::getFilePath(std::size_t index) {
     static std::string emptyString;
@@ -266,6 +272,29 @@ void FileManager::addToRecentFiles(const std::string& filePath) {
     // 限制最近文件数量为10
     if (s_recentFiles.size() > 10) {
         s_recentFiles.resize(10);
+    }
+}
+
+// 获取当前文件的命令历史
+const std::vector<std::string>& FileManager::getCurrentFileCommandHistory() {
+    static std::vector<std::string> emptyHistory;
+    if (s_currentFileIndex < s_files.size()) {
+        return s_files[s_currentFileIndex].getCommandHistory();
+    }
+    return emptyHistory;
+}
+
+// 向当前文件添加命令历史
+void FileManager::addToCurrentFileCommandHistory(const std::string& command) {
+    if (s_currentFileIndex < s_files.size()) {
+        s_files[s_currentFileIndex].addToCommandHistory(command);
+    }
+}
+
+// 清除当前文件的命令历史
+void FileManager::clearCurrentFileCommandHistory() {
+    if (s_currentFileIndex < s_files.size()) {
+        s_files[s_currentFileIndex].clearCommandHistory();
     }
 }
 

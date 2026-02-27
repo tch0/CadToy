@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace tch {
 
@@ -12,6 +13,7 @@ private:
     std::string m_content;       // 文件内容
     bool m_modified;             // 是否被修改
     bool m_saved;                // 是否已保存
+    std::vector<std::string> m_commandHistory; // 命令执行历史
     
 public:
     // 构造函数
@@ -50,6 +52,11 @@ public:
     
     // 标记文件为已保存
     void markSaved(bool isSaved = true);
+    
+    // 命令历史相关方法
+    const std::vector<std::string>& getCommandHistory() const;
+    void addToCommandHistory(const std::string& command);
+    void clearCommandHistory();
 };
 
 } // namespace tch

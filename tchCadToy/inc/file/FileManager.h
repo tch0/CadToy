@@ -50,6 +50,11 @@ public:
     // 最近文件
     static const std::vector<std::string>& getRecentFiles(); // 获取最近打开的文件
     static void addToRecentFiles(const std::string& filePath); // 添加到最近文件
+    
+    // 命令历史相关方法
+    static const std::vector<std::string>& getCurrentFileCommandHistory(); // 获取当前文件的命令历史
+    static void addToCurrentFileCommandHistory(const std::string& command); // 向当前文件添加命令历史
+    static void clearCurrentFileCommandHistory(); // 清除当前文件的命令历史
 };
 
 } // namespace tch
