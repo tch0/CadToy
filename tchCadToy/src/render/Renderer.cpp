@@ -1,4 +1,5 @@
 #include "render/Renderer.h"
+#include "file/FileManager.h"
 #include "Layer.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -67,10 +68,7 @@ static float s_propertyBarWidth = 250.0f;   // 属性栏宽度
 static bool s_demoWindowVisible = false;     // Demo窗口是否可见
 static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可见
 
-// 文件栏相关
-static std::vector<std::string> s_files; // 打开的文件列表
-static int s_currentFileIndex = 0; // 当前文件索引
-static int s_fileCounter = 0; // 用于生成新文件名的计数器
+// 文件栏相关 - 使用FileManager类管理
 
 // 逻辑视口初始化
 LogicalViewport Renderer::s_logicalViewport;
@@ -105,11 +103,8 @@ void Renderer::initialize(GLFWwindow* window) {
     // 初始化本地化管理器
     LocalizationManager::getInstance().initialize();
     
-    // 初始化文件列表，创建一个默认的未命名文件
-    s_files.clear();
-    s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
-    s_fileCounter++;
-    s_currentFileIndex = 0;
+    // 初始化文件管理器
+    FileManager::initialize();
 }
 
 // 清理渲染器
@@ -1062,44 +1057,40 @@ void Renderer::drawFileBar() {
             // 使用TabItemButton实现+号按钮
             if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
                 // 创建新文件
-                s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
-                s_fileCounter++;
-                s_currentFileIndex = s_files.size() - 1;
+                FileManager::createNewFile();
             }
             
             // 遍历文件列表
-            for (size_t i = 0; i < s_files.size(); i++) {
-                // 使用ImGui的TabItem，带有关闭按钮
+            std::size_t fileCount = FileManager::getFileCount();
+            for (std::size_t i = 0; i < fileCount; i++) {
+                // 获取文件名
+                std::string tabText = FileManager::getFileName(i);
+                
+                // 设置标签项标志
                 ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
+                if (FileManager::isFileModified(i)) {
+                    tabItemFlags |= ImGuiTabItemFlags_UnsavedDocument;
+                }
                 
                 bool tabOpen = true;
-                if (ImGui::BeginTabItem(s_files[i].c_str(), &tabOpen, tabItemFlags)) {
+                if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
                     // 设置当前文件索引
-                    if (s_currentFileIndex != i) {
-                        s_currentFileIndex = i;
+                    if (FileManager::getCurrentFileIndex() != i) {
+                        FileManager::setCurrentFileIndex(i);
                     }
                     ImGui::EndTabItem();
                 }
                 
                 // 添加工具提示
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(s_files[i].c_str());
+                    const std::string& fullFileName = FileManager::getFullFileName(i);
+                    const std::string& filePath = FileManager::getFilePath(i);
+                    ImGui::SetTooltip(filePath.empty() ? fullFileName.c_str() : filePath.c_str());
                 }
                 
                 // 处理标签关闭
                 if (!tabOpen) {
-                    if (s_files.size() > 1) {
-                        s_files.erase(s_files.begin() + i);
-                        if (s_currentFileIndex >= i) {
-                            s_currentFileIndex = std::max(0, s_currentFileIndex - 1);
-                        }
-                    } else {
-                        // 如果只剩最后一个文件，关闭后创建新文件
-                        s_files.clear();
-                        s_files.push_back("unnamed-" + std::to_string(s_fileCounter));
-                        s_fileCounter++;
-                        s_currentFileIndex = 0;
-                    }
+                    FileManager::closeFile(i);
                 }
             }
             

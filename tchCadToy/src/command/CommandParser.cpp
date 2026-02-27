@@ -1,4 +1,5 @@
 #include "render/Renderer.h"
+#include "file/FileManager.h"
 #include "command/CommandParser.h"
 #include "Geometry.h"
 #include "Layer.h"
@@ -95,6 +96,16 @@ bool CommandParser::executeCommand(const std::string& commandName, const std::ve
         return executePropertiesCloseCommand(arguments);
     } else if (upperCommandName == "OPTIONS") {
         return executeOptionsCommand(arguments);
+    } else if (upperCommandName == "NEW") {
+        return executeNewCommand(arguments);
+    } else if (upperCommandName == "OPEN") {
+        return executeOpenCommand(arguments);
+    } else if (upperCommandName == "SAVE") {
+        return executeSaveCommand(arguments);
+    } else if (upperCommandName == "SAVEAS") {
+        return executeSaveAsCommand(arguments);
+    } else if (upperCommandName == "CLOSE") {
+        return executeCloseCommand(arguments);
     } else {
         cmdLinePrint("Unknown command: " + commandName);
         return false;
@@ -391,29 +402,6 @@ bool CommandParser::executeRedoCommand(const std::vector<std::string>& arguments
     }
 }
 
-// 执行保存命令
-bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments) {
-    if (arguments.empty()) {
-        cmdLinePrint("Usage: SAVE FILE_PATH");
-        return false;
-    }
-    
-    try {
-        std::string filePath = arguments[0];
-        
-        if (SaveLoad::saveToFile(filePath)) {
-            cmdLinePrint("Saved to file: " + filePath);
-            return true;
-        } else {
-            cmdLinePrint("Failed to save file: " + filePath);
-        }
-    } catch (...) {
-        cmdLinePrint("Invalid arguments for SAVE command");
-    }
-    
-    return false;
-}
-
 // 执行加载命令
 bool CommandParser::executeLoadCommand(const std::vector<std::string>& arguments) {
     if (arguments.empty()) {
@@ -496,13 +484,88 @@ void CommandParser::showHelp() {
     cmdLinePrint("  COLOR R G B             - Set color");
     cmdLinePrint("  UNDO                    - Undo last operation");
     cmdLinePrint("  REDO                    - Redo last operation");
-    cmdLinePrint("  SAVE FILE_PATH          - Save to file");
-    cmdLinePrint("  LOAD FILE_PATH          - Load from file");
+    cmdLinePrint("  NEW                     - Create a new file");
+    cmdLinePrint("  OPEN FILE_PATH          - Open a file");
+    cmdLinePrint("  SAVE                    - Save current file");
+    cmdLinePrint("  SAVEAS FILE_PATH        - Save current file as");
+    cmdLinePrint("  CLOSE                   - Close current file");
     cmdLinePrint("  EXIT                    - Exit the program");
     cmdLinePrint("  HELP                    - Show this help");
     cmdLinePrint("  PROPERTIES              - Open properties bar");
     cmdLinePrint("  PROPERTIESCLOSE         - Close properties bar");
     cmdLinePrint("  OPTIONS                 - Open options dialog");
+}
+
+// 执行新建文件命令
+bool CommandParser::executeNewCommand(const std::vector<std::string>& arguments) {
+    std::size_t index = FileManager::createNewFile();
+    if (index < FileManager::getFileCount()) {
+        cmdLinePrint("New file created: " + FileManager::getFile(index).getFullFileName());
+        return true;
+    } else {
+        cmdLinePrint("Failed to create new file");
+        return false;
+    }
+}
+
+// 执行打开文件命令
+bool CommandParser::executeOpenCommand(const std::vector<std::string>& arguments) {
+    if (arguments.empty()) {
+        cmdLinePrint("Usage: OPEN FILE_PATH");
+        return false;
+    }
+    
+    std::string filePath = arguments[0];
+    std::size_t index = FileManager::openFile(filePath);
+    if (index < FileManager::getFileCount()) {
+        cmdLinePrint("Opened file: " + FileManager::getFile(index).getFullFileName());
+        return true;
+    } else {
+        cmdLinePrint("Failed to open file: " + filePath);
+        return false;
+    }
+}
+
+// 执行保存文件命令
+bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments) {
+    std::size_t currentIndex = FileManager::getCurrentFileIndex();
+    if (FileManager::saveFile(currentIndex)) {
+        cmdLinePrint("Saved file: " + FileManager::getCurrentFile().getFullFileName());
+        return true;
+    } else {
+        cmdLinePrint("Failed to save file. Use SAVEAS to specify a path.");
+        return false;
+    }
+}
+
+// 执行另存为命令
+bool CommandParser::executeSaveAsCommand(const std::vector<std::string>& arguments) {
+    if (arguments.empty()) {
+        cmdLinePrint("Usage: SAVEAS FILE_PATH");
+        return false;
+    }
+    
+    std::string filePath = arguments[0];
+    std::size_t currentIndex = FileManager::getCurrentFileIndex();
+    if (FileManager::saveFileAs(currentIndex, filePath)) {
+        cmdLinePrint("Saved file as: " + FileManager::getCurrentFile().getFullFileName());
+        return true;
+    } else {
+        cmdLinePrint("Failed to save file as: " + filePath);
+        return false;
+    }
+}
+
+// 执行关闭文件命令
+bool CommandParser::executeCloseCommand(const std::vector<std::string>& arguments) {
+    std::size_t currentIndex = FileManager::getCurrentFileIndex();
+    if (FileManager::closeFile(currentIndex)) {
+        cmdLinePrint("Closed file. Current file: " + FileManager::getCurrentFile().getFullFileName());
+        return true;
+    } else {
+        cmdLinePrint("Failed to close file");
+        return false;
+    }
 }
 
 } // namespace tch

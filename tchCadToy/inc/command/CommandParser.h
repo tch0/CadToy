@@ -56,9 +56,6 @@ private:
     // 执行重做命令
     static bool executeRedoCommand(const std::vector<std::string>& arguments);
     
-    // 执行保存命令
-    static bool executeSaveCommand(const std::vector<std::string>& arguments);
-    
     // 执行加载命令
     static bool executeLoadCommand(const std::vector<std::string>& arguments);
     
@@ -76,6 +73,21 @@ private:
     
     // 执行帮助命令
     static bool executeHelpCommand(const std::vector<std::string>& arguments);
+    
+    // 执行新建文件命令
+    static bool executeNewCommand(const std::vector<std::string>& arguments);
+    
+    // 执行打开文件命令
+    static bool executeOpenCommand(const std::vector<std::string>& arguments);
+    
+    // 执行保存文件命令
+    static bool executeSaveCommand(const std::vector<std::string>& arguments);
+    
+    // 执行另存为命令
+    static bool executeSaveAsCommand(const std::vector<std::string>& arguments);
+    
+    // 执行关闭文件命令
+    static bool executeCloseCommand(const std::vector<std::string>& arguments);
 };
 
 } // namespace tch
