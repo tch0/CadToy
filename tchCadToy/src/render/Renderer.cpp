@@ -54,7 +54,7 @@ bool Renderer::s_bNeedClearCommandBuffer = false;
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
-static std::size_t s_pendingFileIndex = -1; // 待切换的文件索引
+static std::string s_commandPendingToBeExecuted; // 待执行的新命令
 
 
 // 选项对话框相关
@@ -1029,7 +1029,10 @@ void Renderer::drawPropertyBar() {
 
 // 绘制文件栏
 void Renderer::drawFileBar() {
-    // 处理上一帧的待切换文件，-1表示无待切换文件
+    // 待切换的文件索引，-1表示无待切换文件
+    static std::size_t s_pendingFileIndex = -1;
+    
+    // 处理上一帧的待切换文件
     if (s_pendingFileIndex != static_cast<std::size_t>(-1)) {
         FileManager::setCurrentFileIndex(s_pendingFileIndex);
         // 切换文件后，自动滚动命令历史到最底部
@@ -1104,8 +1107,7 @@ void Renderer::drawFileBar() {
                 
                 // 处理标签关闭
                 if (!tabOpen) {
-                    // TODO: 关闭文件之前应当先取消当前命令执行，然后调用close命令来执行，而不是直接关闭
-                    FileManager::closeFile(i);
+                    pushCommandToExecute("close");
                 }
             }
             
@@ -1234,6 +1236,19 @@ void Renderer::drawCommandBar() {
             // 设置清除命令输入缓冲区的标记，因为内部ImGui内部会维护InputText的状态，所以回调中还需要再清除一次
             s_bNeedClearCommandBuffer = true;
         }
+
+        // 处理通过pushCommandToExecute推送的命令
+        if (!s_commandPendingToBeExecuted.empty()) {
+            // 执行待执行的命令
+            std::string command = s_commandPendingToBeExecuted;
+            std::string promptStr = loc.get("commandBar.prompt") + " " + command;
+            addContentToCommandHistory(promptStr);
+            if (!command.empty()) {
+                CommandParser::parseCommand(command);
+            }
+            // 清空待执行命令
+            s_commandPendingToBeExecuted.clear();
+        }
         
         // 回调函数处理文本选择问题、字符过滤与清除缓冲区
         auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
@@ -1360,6 +1375,12 @@ void Renderer::setShouldExecuteCommand(bool shouldExecute) {
 // 设置是否应该取消命令执行
 void Renderer::setShouldCancelCommand(bool shouldCancel) {
     s_bShouldCancelCommand = shouldCancel;
+}
+
+// 推送命令到执行队列
+void Renderer::pushCommandToExecute(const std::string& command) {
+    s_commandPendingToBeExecuted = command;
+    s_bShouldCancelCommand = true;
 }
 
 // 从命令输入缓冲区中删除最后一个字符
