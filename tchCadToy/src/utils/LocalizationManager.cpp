@@ -2,6 +2,7 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 #include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include <fstream>
 #include <sstream>
@@ -88,6 +89,22 @@ bool LocalizationManager::loadLanguage(const std::string& langCode, const std::s
     rapidjson::ParseResult result = doc.Parse(content.c_str());
     if (!result) {
         LOG_ERROR("Failed to parse language file: {}", filePath);
+        LOG_ERROR("Error Info: {}", rapidjson::GetParseError_En(result.Code()));
+        
+        // 尝试计算错误发生的行号和列号
+        size_t offset = result.Offset();
+        size_t line = 1;
+        size_t column = 1;
+        for (size_t i = 0; i < offset && i < content.length(); ++i) {
+            if (content[i] == '\n') {
+                line++;
+                column = 1;
+            } else {
+                column++;
+            }
+        }
+        LOG_ERROR("Error location: Line {}, Column {}", line, column);
+        
         return false;
     }
     

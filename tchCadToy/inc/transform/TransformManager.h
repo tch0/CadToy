@@ -23,6 +23,7 @@ public:
     
     // 视图操作
     void setViewport(int left, int top, int right, int bottom);
+    void zoom(const glm::vec2& screenPos, double factor);
     void zoomIn(const glm::vec2& screenPos, double factor = 1.25);
     void zoomOut(const glm::vec2& screenPos, double factor = 0.8);
     void pan(const glm::vec2& deltaScreen);
@@ -35,8 +36,6 @@ public:
 private:
     Viewport m_viewport;
     Camera m_camera;
-    mutable glm::dmat4 m_projectionMatrix;
-    mutable bool m_projectionMatrixDirty;
 };
 
 } // namespace tch

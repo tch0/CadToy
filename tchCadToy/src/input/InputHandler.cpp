@@ -255,8 +255,8 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
         // 当鼠标中间按钮被按下时，记录当前鼠标位置作为上一次位置
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
             s_lastMousePosition = s_mousePosition;
-            // 假设鼠标总是在可绘制区域内，因为TransformManager没有提供isPointInDrawableArea方法
-            s_mouseMiddleButtonPressedInDrawableArea = true;
+            // 检查鼠标是否在视口内
+            s_mouseMiddleButtonPressedInDrawableArea = Renderer::isPointInViewport(s_mousePosition);
         }
         
         // 触发鼠标按下回调
@@ -294,14 +294,8 @@ void InputHandler::handleMouseMove(double xpos, double ypos) {
         glm::vec2 deltaScreen = newMousePosition - s_lastMousePosition;
         
         // 即使鼠标不在可绘制区域内，只要按下时在可绘制区域内，就继续平移
-        // 将屏幕位移转换为逻辑坐标
-        // 计算位移的逻辑坐标：通过计算两个点的逻辑坐标之差
-        glm::dvec3 logicPosNew = Renderer::getTransformManager().screenToWorld(newMousePosition);
-        glm::dvec3 logicPosLast = Renderer::getTransformManager().screenToWorld(s_lastMousePosition);
-        glm::dvec2 deltaLogic = glm::dvec2(logicPosNew.x - logicPosLast.x, logicPosNew.y - logicPosLast.y);
-        
         // 调用Renderer的pan方法进行平移
-        Renderer::pan(deltaLogic);
+        Renderer::pan(deltaScreen);
         
         // 更新上一次鼠标位置
         s_lastMousePosition = newMousePosition;
@@ -326,8 +320,8 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
     // 获取当前鼠标位置
     glm::vec2 mousePos = getMousePosition();
     
-    // 假设鼠标总是在可绘制区域内，因为TransformManager没有提供isPointInDrawableArea方法
-    if (true) {
+    // 检查鼠标是否在视口内
+    if (Renderer::isPointInViewport(s_mousePosition)) {
         // 根据滚轮方向进行缩放
         if (yoffset > 0) {
             // 滚轮向前，放大图形

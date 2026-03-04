@@ -55,7 +55,7 @@ public:
     static void zoomOut();                       // 缩小图形
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
-    static void pan(const glm::dvec2& deltaLogic); // 平移功能
+    static void pan(const glm::vec2& deltaScreen); // 平移功能
     
     // 状态栏相关
     static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
@@ -89,8 +89,11 @@ public:
     static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口
     
     // 窗口绘制相关方法
-    static void drawModalDialogs(); // 绘制所有模态对话框
-    static void drawNonModalWindows(); // 绘制所有非模态窗口
+    static void drawModalDialogs(); // 绘制模态对话框
+    static void drawNonModalWindows(); // 绘制非模态窗口
+    
+    // 视口相关方法
+    static bool isPointInViewport(const glm::vec2& screenPos); // 判断点是否在视口内
     
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见

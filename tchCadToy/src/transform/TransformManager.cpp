@@ -4,7 +4,6 @@ namespace tch {
 
 void TransformManager::initialize(int windowWidth, int windowHeight) {
     m_viewport.initialize(windowWidth, windowHeight);
-    m_projectionMatrixDirty = true;
 }
 
 glm::dvec3 TransformManager::screenToWorld(const glm::vec2& screenPos) const {
@@ -70,46 +69,47 @@ void TransformManager::setViewport(int left, int top, int right, int bottom) {
     m_viewport.setViewport(left, top, right, bottom);
 }
 
-void TransformManager::zoomIn(const glm::vec2& screenPos, double factor) {
+void TransformManager::zoom(const glm::vec2& screenPos, double factor) {
+    // 处理无效因子
+    if (factor <= 0.0 || factor == 1.0) {
+        return;
+    }
+    
     // 获取当前鼠标位置的世界坐标
     glm::dvec3 worldPos = screenToWorld(screenPos);
     
-    // 缩放相机
-    m_camera.zoom(factor);
+    // 获取当前相机位置和缩放因子
+    glm::dvec3 cameraPos = m_camera.getPosition();
+    double currentScale = m_camera.getScale();
     
-    // 重新计算鼠标位置的屏幕坐标
-    glm::vec2 newScreenPos = worldToScreen(worldPos);
+    // 计算新的缩放因子（无限制）
+    double newScale = currentScale * factor;
+    // 计算新的相机位置
+    // 公式：newCameraPos = cameraPos + (worldPos - cameraPos) * (1 - currentScale/newScale)
+    double t = 1.0 - currentScale / newScale;
+    glm::dvec3 newCameraPos = cameraPos + (worldPos - cameraPos) * t;
     
-    // 计算位移并调整相机位置，保持鼠标位置对应相同的世界坐标
-    glm::vec2 deltaScreen = screenPos - newScreenPos;
-    glm::dvec3 deltaWorld = screenToWorld(screenPos + deltaScreen) - worldPos;
-    m_camera.move(deltaWorld);
+    // 应用新状态
+    m_camera.setScale(newScale);
+    m_camera.setPosition(newCameraPos);
+}
+
+void TransformManager::zoomIn(const glm::vec2& screenPos, double factor) {
+    zoom(screenPos, factor);
 }
 
 void TransformManager::zoomOut(const glm::vec2& screenPos, double factor) {
-    // 获取当前鼠标位置的世界坐标
-    glm::dvec3 worldPos = screenToWorld(screenPos);
-    
-    // 缩放相机
-    m_camera.zoom(factor);
-    
-    // 重新计算鼠标位置的屏幕坐标
-    glm::vec2 newScreenPos = worldToScreen(worldPos);
-    
-    // 计算位移并调整相机位置，保持鼠标位置对应相同的世界坐标
-    glm::vec2 deltaScreen = screenPos - newScreenPos;
-    glm::dvec3 deltaWorld = screenToWorld(screenPos + deltaScreen) - worldPos;
-    m_camera.move(deltaWorld);
+    zoom(screenPos, factor);
 }
 
 void TransformManager::pan(const glm::vec2& deltaScreen) {
     // 计算屏幕位移对应的世界位移
     glm::dvec3 worldPos1 = screenToWorld(glm::vec2(0, 0));
     glm::dvec3 worldPos2 = screenToWorld(deltaScreen);
-    glm::dvec3 deltaWorld = worldPos1 - worldPos2;
+    glm::dvec3 deltaWorld = worldPos2 - worldPos1;
     
-    // 移动相机
-    m_camera.move(deltaWorld);
+    // 移动相机（相机移动方向与画布是相反的）
+    m_camera.move(-deltaWorld);
 }
 
 const Viewport& TransformManager::getViewport() const {

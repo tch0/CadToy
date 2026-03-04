@@ -369,24 +369,27 @@ void Renderer::drawGrid() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 由于TransformManager没有直接提供逻辑视口边界的方法，我们使用屏幕坐标转换来计算
-    // 视口大小为100x100，考虑屏幕坐标系y轴向下
-    // 左下角屏幕坐标(0, 100)，右上角屏幕坐标(100, 0)
-    glm::dvec3 logicMin = s_transformManager.screenToWorld(glm::vec2(0, 100));
-    glm::dvec3 logicMax = s_transformManager.screenToWorld(glm::vec2(100, 0));
+    // 获取实际的视口边界
+    int viewportLeft, viewportTop, viewportRight, viewportBottom;
+    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
-    // 计算逻辑视口的宽度和高度
-    double logicWidth = logicMax.x - logicMin.x;
-    double logicHeight = logicMax.y - logicMin.y;
+    // 计算视口大小
+    int viewportWidth = viewportRight - viewportLeft;
+    int viewportHeight = viewportBottom - viewportTop;
     
-    // 获取可绘制区域大小
-    int drawableWidth = 100;
-    int drawableHeight = 100;
+    // 使用视口边界计算世界视口范围
+    // 考虑屏幕坐标系y轴向下
+    glm::dvec3 worldMin = s_transformManager.screenToWorld(glm::vec2(viewportLeft, viewportBottom));
+    glm::dvec3 worldMax = s_transformManager.screenToWorld(glm::vec2(viewportRight, viewportTop));
+    
+    // 计算世界视口的宽度和高度
+    double worldWidth = worldMax.x - worldMin.x;
+    double worldHeight = worldMax.y - worldMin.y;
     
     // 基础栅格间距（逻辑坐标）
     const double baseGridSize = 10.0;
     
-    // 计算当前有效的栅格间距（考虑可绘制区域大小）
+    // 计算当前有效的栅格间距
     double currentEffectiveSize = baseGridSize;
     
     // 确定栅格级别
@@ -394,8 +397,8 @@ void Renderer::drawGrid() {
     double mainGridSize, subGridSize;
     
     // 计算当前栅格在屏幕上的大小（水平和垂直方向）
-    double gridScreenSizeX = (baseGridSize / logicWidth) * drawableWidth;
-    double gridScreenSizeY = (baseGridSize / logicHeight) * drawableHeight;
+    double gridScreenSizeX = (baseGridSize / worldWidth) * viewportWidth;
+    double gridScreenSizeY = (baseGridSize / worldHeight) * viewportHeight;
     
     // 取较小的值，确保栅格单元格在屏幕上保持正方形
     double gridScreenSize = std::min(gridScreenSizeX, gridScreenSizeY);
@@ -443,22 +446,22 @@ void Renderer::drawGrid() {
     glColor3fv(s_subGridColor);
     
     // 计算起始位置，确保栅格线与原点对齐
-    double startX = floor(logicMin.x / subGridSize) * subGridSize;
-    double startY = floor(logicMin.y / subGridSize) * subGridSize;
+    double startX = floor(worldMin.x / subGridSize) * subGridSize;
+    double startY = floor(worldMin.y / subGridSize) * subGridSize;
     
     // 绘制垂直线
-    for (double x = startX; x <= logicMax.x; x += subGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMin.y, 0.0));
+    for (double x = startX; x <= worldMax.x; x += subGridSize) {
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
-    for (double y = startY; y <= logicMax.y; y += subGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMin.x, y, 0.0));
+    for (double y = startY; y <= worldMax.y; y += subGridSize) {
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -468,22 +471,22 @@ void Renderer::drawGrid() {
     glColor3fv(s_mainGridColor);
     
     // 计算起始位置，确保栅格线与原点对齐
-    double mainStartX = floor(logicMin.x / mainGridSize) * mainGridSize;
-    double mainStartY = floor(logicMin.y / mainGridSize) * mainGridSize;
+    double mainStartX = floor(worldMin.x / mainGridSize) * mainGridSize;
+    double mainStartY = floor(worldMin.y / mainGridSize) * mainGridSize;
     
     // 绘制垂直线
-    for (double x = mainStartX; x <= logicMax.x; x += mainGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMin.y, 0.0));
+    for (double x = mainStartX; x <= worldMax.x; x += mainGridSize) {
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
-    for (double y = mainStartY; y <= logicMax.y; y += mainGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMin.x, y, 0.0));
+    for (double y = mainStartY; y <= worldMax.y; y += mainGridSize) {
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -524,25 +527,23 @@ void Renderer::drawAxes() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 计算逻辑原点在屏幕上的位置
+    // 计算世界原点在屏幕上的位置
     glm::vec2 originScreenPos = s_transformManager.worldToScreen(glm::dvec3(0.0, 0.0, 0.0));
     float originScreenX = originScreenPos.x;
     float originScreenY = originScreenPos.y;
     
-    // 假设可绘制区域为整个窗口
-    int drawableLeft = 0;
-    int drawableTop = 0;
-    int drawableRight = 800; // 默认宽度
-    int drawableBottom = 600; // 默认高度
+    // 获取实际的视口边界
+    int viewportLeft, viewportTop, viewportRight, viewportBottom;
+    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
     // 绘制X轴（正半轴）
     glBegin(GL_LINES);
     glColor3fv(s_xAxisColor);
     
-    // 只绘制在可绘制区域范围内的部分
-    if (originScreenX >= drawableLeft && originScreenX <= drawableRight && originScreenY >= drawableTop && originScreenY <= drawableBottom) {
+    // 只绘制在视口范围内的部分
+    if (originScreenX >= viewportLeft && originScreenX <= viewportRight && originScreenY >= viewportTop && originScreenY <= viewportBottom) {
         glVertex2f(originScreenX, originScreenY);
-        glVertex2f(drawableRight, originScreenY);
+        glVertex2f(viewportRight * 1.0f, originScreenY);
     }
     glEnd();
     
@@ -550,10 +551,10 @@ void Renderer::drawAxes() {
     glBegin(GL_LINES);
     glColor3fv(s_yAxisColor);
     
-    // 只绘制在可绘制区域范围内的部分
-    if (originScreenX >= drawableLeft && originScreenX <= drawableRight && originScreenY >= drawableTop && originScreenY <= drawableBottom) {
+    // 只绘制在视口范围内的部分
+    if (originScreenX >= viewportLeft && originScreenX <= viewportRight && originScreenY >= viewportTop && originScreenY <= viewportBottom) {
         glVertex2f(originScreenX, originScreenY);
-        glVertex2f(originScreenX, drawableTop);
+        glVertex2f(originScreenX, viewportTop * 1.0f);
     }
     glEnd();
     
@@ -612,9 +613,9 @@ void Renderer::zoomOut(const glm::vec2& mousePos) {
 }
 
 // 平移功能
-void Renderer::pan(const glm::dvec2& deltaLogic) {
+void Renderer::pan(const glm::vec2& deltaScreen) {
     // 使用变换管理器进行平移
-    s_transformManager.pan(glm::vec2(deltaLogic.x, deltaLogic.y));
+    s_transformManager.pan(deltaScreen);
 }
 
 // 初始化ImGui
@@ -1142,38 +1143,49 @@ void Renderer::drawRenderingInfoWindow() {
     glm::dvec3 worldMax = s_transformManager.screenToWorld(glm::vec2(viewportRight, viewportTop));
     
     // 显示视口信息
-    ImGui::Text(loc.get("window.renderingInfo.viewport").c_str());
-    ImGui::Text("%s: %d x %d", loc.get("window.renderingInfo.viewportSize").c_str(), viewportWidth, viewportHeight);
+    ImGui::Text(loc.get("window.renderingInfo.viewport.title").c_str());
+    ImGui::Text("  %s: %d x %d", loc.get("window.renderingInfo.viewport.size").c_str(), viewportWidth, viewportHeight);
+    ImGui::Text("  %s: Left=%d, Top=%d, Right=%d, Bottom=%d", loc.get("window.renderingInfo.viewport.bounds").c_str(), viewportLeft, viewportTop, viewportRight, viewportBottom);
+    ImGui::Separator();
     
     // 显示世界坐标系信息
-    ImGui::Text(loc.get("window.renderingInfo.worldCoords").c_str());
-    ImGui::Text("  %s: (%.2f, %.2f)", loc.get("window.renderingInfo.bottomLeft").c_str(), worldMin.x, worldMin.y);
-    ImGui::Text("  %s: (%.2f, %.2f)", loc.get("window.renderingInfo.topRight").c_str(), worldMax.x, worldMax.y);
+    ImGui::Text(loc.get("window.renderingInfo.world.title").c_str());
+    ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.world.bottomLeft").c_str(), worldMin.x, worldMin.y);
+    ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.world.topRight").c_str(), worldMax.x, worldMax.y);
     
     // 计算并显示世界坐标系宽高
     double worldWidth = worldMax.x - worldMin.x;
     double worldHeight = worldMax.y - worldMin.y;
-    ImGui::Text("  %s: %.2f x %.2f", loc.get("window.renderingInfo.worldSize").c_str(), worldWidth, worldHeight);
+    ImGui::Text("  %s: %.4f x %.4f", loc.get("window.renderingInfo.world.size").c_str(), worldWidth, worldHeight);
     
     ImGui::Separator();
     
     // 显示相机信息
-    ImGui::Text(loc.get("window.renderingInfo.camera").c_str());
+    ImGui::Text(loc.get("window.renderingInfo.camera.title").c_str());
     // 根据缩放因子大小决定输出格式
     if (cameraScale < 0.01 || cameraScale >= 1e8) {
-        ImGui::Text("%s: %.8e", loc.get("window.renderingInfo.zoom").c_str(), cameraScale);
+        ImGui::Text("  %s: %.8e", loc.get("window.renderingInfo.camera.zoom").c_str(), cameraScale);
     } else {
-        ImGui::Text("%s: %.8f", loc.get("window.renderingInfo.zoom").c_str(), cameraScale);
+        ImGui::Text("  %s: %.8f", loc.get("window.renderingInfo.camera.zoom").c_str(), cameraScale);
     }
-    ImGui::Text("%s: (%.2f, %.2f, %.2f) degrees", loc.get("window.renderingInfo.rotation").c_str(), cameraRot.x, cameraRot.y, cameraRot.z);
-    ImGui::Text("%s: (%.2f, %.2f)", loc.get("window.renderingInfo.center").c_str(), cameraPos.x, cameraPos.y);
+    ImGui::Text("  %s: (%.2f, %.2f, %.2f) degrees", loc.get("window.renderingInfo.camera.rotation").c_str(), cameraRot.x, cameraRot.y, cameraRot.z);
+    ImGui::Text("  %s: (%.4f, %.4f, %.4f)", loc.get("window.renderingInfo.camera.position").c_str(), cameraPos.x, cameraPos.y, cameraPos.z);
+    
+    ImGui::Separator();
+    
+    // 显示光标信息
+    ImGui::Text(loc.get("window.renderingInfo.cursor.title").c_str());
+    glm::vec2 cursorScreenPos = InputHandler::getMousePosition();
+    glm::dvec3 cursorWorldPos = s_transformManager.screenToWorld(cursorScreenPos);
+    ImGui::Text("  %s: (%.1f, %.1f)", loc.get("window.renderingInfo.cursor.screenPosition").c_str(), cursorScreenPos.x, cursorScreenPos.y);
+    ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.cursor.worldPosition").c_str(), cursorWorldPos.x, cursorWorldPos.y);
     
     ImGui::Separator();
     
     // 显示其他相关信息
-    ImGui::Text(loc.get("window.renderingInfo.other").c_str());
-    ImGui::Text("%s: %d", loc.get("window.renderingInfo.frame").c_str(), ImGui::GetFrameCount());
-    ImGui::Text("%s: %.1f", loc.get("window.renderingInfo.fps").c_str(), ImGui::GetIO().Framerate);
+    ImGui::Text(loc.get("window.renderingInfo.other.title").c_str());
+    ImGui::Text("  %s: %d", loc.get("window.renderingInfo.other.frame").c_str(), ImGui::GetFrameCount());
+    ImGui::Text("  %s: %.1f", loc.get("window.renderingInfo.other.fps").c_str(), ImGui::GetIO().Framerate);
     
     ImGui::End();
 }
@@ -1198,6 +1210,22 @@ void Renderer::drawNonModalWindows() {
     
     // 绘制实时渲染信息窗口
     drawRenderingInfoWindow();
+}
+
+// 判断点是否在视口内
+bool Renderer::isPointInViewport(const glm::vec2& screenPos) {
+    // 获取视口边界
+    int viewportLeft, viewportTop, viewportRight, viewportBottom;
+    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    
+    // 计算视口大小
+    int viewportWidth = viewportRight - viewportLeft;
+    int viewportHeight = viewportBottom - viewportTop;
+    
+    // 检查屏幕坐标是否在视口范围内
+    return !(screenPos.x < viewportLeft || screenPos.x > viewportRight || 
+             screenPos.y < viewportTop || screenPos.y > viewportBottom || 
+             viewportWidth <= 0 || viewportHeight <= 0);
 }
 
 // 绘制命令栏
