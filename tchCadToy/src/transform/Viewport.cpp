@@ -3,18 +3,10 @@
 namespace tch {
 
 void Viewport::initialize(int width, int height) {
-    m_windowWidth = width;
-    m_windowHeight = height;
     m_viewportLeft = 0;
     m_viewportTop = 0;
     m_viewportRight = width;
     m_viewportBottom = height;
-    m_projectionMatrixDirty = true;
-}
-
-void Viewport::setWindowSize(int width, int height) {
-    m_windowWidth = width;
-    m_windowHeight = height;
     m_projectionMatrixDirty = true;
 }
 
@@ -34,10 +26,6 @@ void Viewport::setViewport(int left, int top, int right, int bottom) {
     m_viewportRight = right;
     m_viewportBottom = bottom;
     m_projectionMatrixDirty = true;
-}
-
-glm::ivec2 Viewport::getWindowSize() const {
-    return glm::ivec2(m_windowWidth, m_windowHeight);
 }
 
 void Viewport::getViewport(int& left, int& top, int& right, int& bottom) const {

@@ -2,8 +2,8 @@
 
 namespace tch {
 
-void TransformManager::initialize(int windowWidth, int windowHeight) {
-    m_viewport.initialize(windowWidth, windowHeight);
+void TransformManager::initialize(int width, int height) {
+    m_viewport.initialize(width, height);
 }
 
 glm::dvec3 TransformManager::screenToWorld(const glm::vec2& screenPos) const {

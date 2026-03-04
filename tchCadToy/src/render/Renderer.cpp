@@ -28,12 +28,10 @@ float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f};
 float Renderer::s_subGridColor[3] = {38.0f/255.0f, 45.0f/255.0f, 55.0f/255.0f};  // 子栅格颜色 RGB: 38,45,55
 float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};    // X轴颜色 RGB: 97,37,39
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
-float Renderer::s_originX = 0.0f;          // 坐标原点X位置
-float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
 glm::dvec3 Renderer::s_cursorPosWorld = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置的世界坐标
 
 // UI组件高度
-float Renderer::s_menuBarHeight = 0.0f;              // 菜单栏高度
+float Renderer::s_menuBarHeight = 30.0f;              // 菜单栏高度
 float Renderer::s_fileBarHeight = 30.0f;              // 文件栏高度
 float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 
@@ -87,14 +85,10 @@ void Renderer::initialize(GLFWwindow* window) {
     // 获取窗口尺寸并设置视口
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    setViewport(width, height);
+    glViewport(0, 0, width, height);
     
     // 初始化变换管理器
     s_transformManager.initialize(width, height);
-    
-    // 设置坐标原点为窗口中心
-    s_originX = width / 2.0f;
-    s_originY = height / 2.0f;
     
     // 启用混合
     glEnable(GL_BLEND);
@@ -119,16 +113,16 @@ void Renderer::cleanup() {
     s_window = nullptr;
 }
 
-// 更新可绘制区域
-void Renderer::updateDrawableArea() {
+// 计算布局并更新视口
+void Renderer::calculateLayoutAndUpdateViewport() {
     // 获取窗口大小
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
-    
-    // 状态栏高度
-    float statusBarHeight = s_statusBarHeight;
-    
-    // 计算可绘制区域的边界
+
+    // 设置OpenGL视口
+    glViewport(0, 0, width, height);
+
+    // 计算视口边界
     // 左侧：0
     // 顶部：菜单栏高度 + 文件栏高度
     // 右侧：窗口宽度 - (属性栏宽度 if 可见)
@@ -136,9 +130,9 @@ void Renderer::updateDrawableArea() {
     int left = 0;
     int top = static_cast<int>(s_menuBarHeight + s_fileBarHeight);
     int right = width - (s_propertyBarVisible ? static_cast<int>(s_propertyBarWidth) : 0);
-    int bottom = height - static_cast<int>(statusBarHeight) - (s_commandBarVisible ? static_cast<int>(s_commandBarHeight) : 0);
+    int bottom = height - static_cast<int>(s_statusBarHeight) - (s_commandBarVisible ? static_cast<int>(s_commandBarHeight) : 0);
     
-    // 确保可绘制区域有效
+    // 确保视口有效
     // 确保顶部边界小于底部边界
     if (top >= bottom) {
         // 如果顶部边界大于或等于底部边界，调整底部边界为顶部边界 + 1
@@ -174,22 +168,16 @@ void Renderer::beginRender() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    
-    // 绘制菜单栏
-    drawMenuBar();
-    
-    // 绘制文件栏
-    drawFileBar();
-    
-    // 更新可绘制区域
-    updateDrawableArea();
-    
+
     // 使用ImGui的原生API来控制光标显示
     ImGuiIO& io = ImGui::GetIO();
     if (!io.WantCaptureMouse) {
         // 当ImGui不想要捕获鼠标时，设置鼠标光标为None
         ImGui::SetMouseCursor(ImGuiMouseCursor_None);
     }
+
+    // 每一帧开头重算布局更新视口
+    Renderer::calculateLayoutAndUpdateViewport();
 }
 
 // 结束渲染
@@ -209,20 +197,6 @@ void Renderer::endRender() {
 // 设置背景颜色
 void Renderer::setBackgroundColor(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
-}
-
-// 设置视口
-void Renderer::setViewport(int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-// 更新视口大小（窗口大小变化时调用）
-void Renderer::updateViewport(int width, int height) {
-    // 直接调用setViewport方法更新视口大小
-    setViewport(width, height);
-    
-    // 重新初始化变换管理器以适应新窗口大小
-    s_transformManager.initialize(width, height);
 }
 
 // 绘制所有图形
@@ -570,31 +544,6 @@ void Renderer::setShowGrid(bool show) {
 
 void Renderer::setShowAxes(bool show) {
     s_showAxes = show;
-}
-
-
-
-void Renderer::setOrigin(float x, float y) {
-    s_originX = x;
-    s_originY = y;
-}
-
-glm::vec2 Renderer::getOrigin() {
-    return glm::vec2(s_originX, s_originY);
-}
-
-void Renderer::zoomIn() {
-    // 使用变换管理器进行缩放，以屏幕中心为中心
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    s_transformManager.zoomIn(glm::vec2(width / 2, height / 2));
-}
-
-void Renderer::zoomOut() {
-    // 使用变换管理器进行缩放，以屏幕中心为中心
-    int width, height;
-    glfwGetFramebufferSize(s_window, &width, &height);
-    s_transformManager.zoomOut(glm::vec2(width / 2, height / 2));
 }
 
 void Renderer::zoomIn(const glm::vec2& cursorPos) {
@@ -1520,7 +1469,6 @@ void Renderer::setPropertyBarVisible(bool visible) {
 void Renderer::showOptionsDialog(bool visible) {
     s_optionsDialogVisible = visible;
 }
-
 
 
 // 检查焦点是否位于指定窗口或其子窗口

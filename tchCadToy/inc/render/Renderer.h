@@ -16,6 +16,9 @@ public:
     // 清理渲染器
     static void cleanup();
     
+    // 重算布局、更新视口
+    static void calculateLayoutAndUpdateViewport(); // 重算布局、更新视口
+    
     // 开始渲染
     static void beginRender();
     
@@ -25,14 +28,8 @@ public:
     // 设置背景颜色
     static void setBackgroundColor(float r, float g, float b, float a = 1.0f);
     
-    // 设置视口
-    static void setViewport(int width, int height);
-    
     // 绘制所有图形
     static void drawAll();
-    
-    // 更新视口大小（窗口大小变化时调用）
-    static void updateViewport(int width, int height);
     
     // 绘制十字光标
     static void drawCursor();
@@ -49,11 +46,7 @@ public:
     // 栅格和坐标轴控制方法
     static void setShowGrid(bool show);         // 设置是否显示栅格
     static void setShowAxes(bool show);         // 设置是否显示XY轴
-    static void setOrigin(float x, float y);     // 设置坐标原点位置
-    static glm::vec2 getOrigin();                // 获取坐标原点位置
-    static void zoomIn();                        // 放大图形
-    static void zoomOut();                       // 缩小图形
-    static void zoomIn(const glm::vec2& cursorPos); // 以光标位置为中心放大
+    static void zoomIn(const glm::vec2& cursorPos);  // 以光标位置为中心放大
     static void zoomOut(const glm::vec2& cursorPos); // 以光标位置为中心缩小
     static void pan(const glm::vec2& deltaScreen); // 平移功能
     
@@ -68,9 +61,6 @@ public:
     
     // 文件栏相关
     static void drawFileBar(); // 绘制文件栏
-    
-    // 更新可绘制区域
-    static void updateDrawableArea(); // 更新可绘制区域
     
     // 变换管理器相关方法
     static TransformManager& getTransformManager(); // 获取变换管理器
@@ -123,8 +113,6 @@ private:
     static float s_subGridColor[3];             // 子栅格颜色 RGB: 38,45,55
     static float s_xAxisColor[3];               // X轴颜色 RGB: 97,37,39
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
-    static float s_originX;                     // 坐标原点X位置
-    static float s_originY;                     // 坐标原点Y位置
     static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
     
     // 变换管理器

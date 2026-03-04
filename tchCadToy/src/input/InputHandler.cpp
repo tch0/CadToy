@@ -353,15 +353,7 @@ void InputHandler::handleMouseEnter(int entered) {
 
 // 处理窗口大小变化
 void InputHandler::handleWindowSize(int width, int height) {
-    // 当窗口大小变化时，更新渲染器的视口大小
-    Renderer::updateViewport(width, height);
-    
-    // 计算窗口中心坐标
-    float centerX = width / 2.0f;
-    float centerY = height / 2.0f;
-    
-    // 更新坐标原点为窗口中心
-    Renderer::setOrigin(centerX, centerY);
+    // 每一帧开头都会重算布局并计算与更新视口，这里不需要做任何事情
 }
 
 // 获取光标位置
