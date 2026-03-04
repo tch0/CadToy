@@ -51,8 +51,8 @@ public:
     static void setShowAxes(bool show);         // 设置是否显示XY轴
     static void setOrigin(float x, float y);     // 设置坐标原点位置
     static glm::vec2 getOrigin();                // 获取坐标原点位置
-    static void zoomIn();                        // 放大栅格
-    static void zoomOut();                       // 缩小栅格
+    static void zoomIn();                        // 放大图形
+    static void zoomOut();                       // 缩小图形
     static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
     static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
     static void pan(const glm::dvec2& deltaLogic); // 平移功能
@@ -84,6 +84,13 @@ public:
     static void setShouldExecuteCommand(bool shouldExecute); // 设置是否应该执行命令
     static void setShouldCancelCommand(bool shouldCancel); // 设置是否应该取消命令执行
     static void pushCommandToExecute(const std::string& command); // 推送命令到执行队列
+    
+    // 实时渲染信息窗口相关方法
+    static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口
+    
+    // 窗口绘制相关方法
+    static void drawModalDialogs(); // 绘制所有模态对话框
+    static void drawNonModalWindows(); // 绘制所有非模态窗口
     
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见

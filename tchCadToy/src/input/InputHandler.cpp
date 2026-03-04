@@ -328,13 +328,13 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
     
     // 假设鼠标总是在可绘制区域内，因为TransformManager没有提供isPointInDrawableArea方法
     if (true) {
-        // 根据滚轮方向进行缩放（反转方向：向上滚放大，向下滚缩小）
+        // 根据滚轮方向进行缩放
         if (yoffset > 0) {
-            // 滚轮向上，缩小栅格
-            Renderer::zoomOut(mousePos);
-        } else if (yoffset < 0) {
-            // 滚轮向下，放大栅格
+            // 滚轮向前，放大图形
             Renderer::zoomIn(mousePos);
+        } else if (yoffset < 0) {
+            // 滚轮向后，缩小图形
+            Renderer::zoomOut(mousePos);
         }
         
         // 触发鼠标滚轮回调

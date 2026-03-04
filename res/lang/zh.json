@@ -20,6 +20,7 @@
   "menu.tools.properties": "属性",
   "menu.tools.demo": "Dear ImGui 示例窗口",
   "menu.tools.metrics": "Dear ImGui 调试窗口",
+  "menu.tools.renderingInfo": "实时渲染信息",
   "menu.language": "语言",
 
   "optionsDialog.title": "选项",
@@ -39,5 +40,20 @@
   "commandBar.prompt.cancel": "*取消*",
   "commandBar.inputPrompt": "在此输入命令",
 
-  "propertyBar.title": "属性"
+  "propertyBar.title": "属性",
+
+  "window.renderingInfo.title": "实时渲染信息",
+  "window.renderingInfo.viewport": "视口信息",
+  "window.renderingInfo.viewportSize": "视口大小",
+  "window.renderingInfo.worldCoords": "世界坐标系",
+  "window.renderingInfo.worldSize": "世界大小",
+  "window.renderingInfo.bottomLeft": "左下角",
+  "window.renderingInfo.topRight": "右上角",
+  "window.renderingInfo.camera": "相机信息",
+  "window.renderingInfo.zoom": "缩放因子",
+  "window.renderingInfo.rotation": "旋转角度",
+  "window.renderingInfo.center": "中心点",
+  "window.renderingInfo.other": "其他信息",
+  "window.renderingInfo.frame": "当前帧数",
+  "window.renderingInfo.fps": "帧率"
 }

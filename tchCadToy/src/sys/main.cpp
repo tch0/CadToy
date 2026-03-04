@@ -114,6 +114,12 @@ int main(int argc, char* argv[])
         // 绘制状态栏
         Renderer::drawStatusBar(mousePos);
         
+        // 绘制模态对话框
+        Renderer::drawModalDialogs();
+        
+        // 绘制非模态窗口
+        Renderer::drawNonModalWindows();
+        
         // 结束渲染
         Renderer::endRender();
     }

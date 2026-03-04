@@ -68,6 +68,9 @@ static float s_propertyBarWidth = 250.0f;   // 属性栏宽度
 static bool s_demoWindowVisible = false;     // Demo窗口是否可见
 static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可见
 
+// 实时渲染信息窗口相关
+static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否可见
+
 // 文件栏相关 - 使用FileManager类管理
 
 // 变换管理器初始化
@@ -193,19 +196,6 @@ void Renderer::beginRender() {
 void Renderer::endRender() {
     if (!s_initialized || !s_window) {
         return;
-    }
-    
-    // 绘制选项对话框
-    drawOptionsDialog();
-    
-    // 绘制Demo窗口
-    if (s_demoWindowVisible) {
-        ImGui::ShowDemoWindow(&s_demoWindowVisible);
-    }
-    
-    // 绘制Metrics窗口
-    if (s_metricsWindowVisible) {
-        ImGui::ShowMetricsWindow(&s_metricsWindowVisible);
     }
     
     // 渲染ImGui
@@ -963,6 +953,7 @@ void Renderer::drawMenuBar() {
             ImGui::Separator();
             ImGui::MenuItem(loc.get("menu.tools.demo").c_str(), nullptr, &s_demoWindowVisible);
             ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
+            ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
             ImGui::EndMenu();
         }
         
@@ -1121,6 +1112,92 @@ void Renderer::drawFileBar() {
 // 获取变换管理器
 TransformManager& Renderer::getTransformManager() {
     return s_transformManager;
+}
+
+// 绘制实时渲染信息窗口
+void Renderer::drawRenderingInfoWindow() {
+    if (!s_renderingInfoVisible) {
+        return;
+    }
+    
+    LocalizationManager& loc = LocalizationManager::getInstance();
+    ImGui::Begin(loc.get("window.renderingInfo.title").c_str(), &s_renderingInfoVisible);
+    
+    // 获取视口信息
+    int viewportLeft, viewportTop, viewportRight, viewportBottom;
+    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    
+    // 计算视口大小
+    int viewportWidth = viewportRight - viewportLeft;
+    int viewportHeight = viewportBottom - viewportTop;
+    
+    // 获取相机信息
+    const Camera& camera = s_transformManager.getCamera();
+    glm::dvec3 cameraPos = camera.getPosition();
+    glm::dvec3 cameraRot = camera.getRotation();
+    double cameraScale = camera.getScale();
+    
+    // 计算视口的世界坐标系范围
+    glm::dvec3 worldMin = s_transformManager.screenToWorld(glm::vec2(viewportLeft, viewportBottom));
+    glm::dvec3 worldMax = s_transformManager.screenToWorld(glm::vec2(viewportRight, viewportTop));
+    
+    // 显示视口信息
+    ImGui::Text(loc.get("window.renderingInfo.viewport").c_str());
+    ImGui::Text("%s: %d x %d", loc.get("window.renderingInfo.viewportSize").c_str(), viewportWidth, viewportHeight);
+    
+    // 显示世界坐标系信息
+    ImGui::Text(loc.get("window.renderingInfo.worldCoords").c_str());
+    ImGui::Text("  %s: (%.2f, %.2f)", loc.get("window.renderingInfo.bottomLeft").c_str(), worldMin.x, worldMin.y);
+    ImGui::Text("  %s: (%.2f, %.2f)", loc.get("window.renderingInfo.topRight").c_str(), worldMax.x, worldMax.y);
+    
+    // 计算并显示世界坐标系宽高
+    double worldWidth = worldMax.x - worldMin.x;
+    double worldHeight = worldMax.y - worldMin.y;
+    ImGui::Text("  %s: %.2f x %.2f", loc.get("window.renderingInfo.worldSize").c_str(), worldWidth, worldHeight);
+    
+    ImGui::Separator();
+    
+    // 显示相机信息
+    ImGui::Text(loc.get("window.renderingInfo.camera").c_str());
+    // 根据缩放因子大小决定输出格式
+    if (cameraScale < 0.01 || cameraScale >= 1e8) {
+        ImGui::Text("%s: %.8e", loc.get("window.renderingInfo.zoom").c_str(), cameraScale);
+    } else {
+        ImGui::Text("%s: %.8f", loc.get("window.renderingInfo.zoom").c_str(), cameraScale);
+    }
+    ImGui::Text("%s: (%.2f, %.2f, %.2f) degrees", loc.get("window.renderingInfo.rotation").c_str(), cameraRot.x, cameraRot.y, cameraRot.z);
+    ImGui::Text("%s: (%.2f, %.2f)", loc.get("window.renderingInfo.center").c_str(), cameraPos.x, cameraPos.y);
+    
+    ImGui::Separator();
+    
+    // 显示其他相关信息
+    ImGui::Text(loc.get("window.renderingInfo.other").c_str());
+    ImGui::Text("%s: %d", loc.get("window.renderingInfo.frame").c_str(), ImGui::GetFrameCount());
+    ImGui::Text("%s: %.1f", loc.get("window.renderingInfo.fps").c_str(), ImGui::GetIO().Framerate);
+    
+    ImGui::End();
+}
+
+// 绘制模态对话框
+void Renderer::drawModalDialogs() {
+    // 绘制选项对话框
+    drawOptionsDialog();
+}
+
+// 绘制非模态窗口
+void Renderer::drawNonModalWindows() {
+    // 绘制Demo窗口
+    if (s_demoWindowVisible) {
+        ImGui::ShowDemoWindow(&s_demoWindowVisible);
+    }
+    
+    // 绘制Metrics窗口
+    if (s_metricsWindowVisible) {
+        ImGui::ShowMetricsWindow(&s_metricsWindowVisible);
+    }
+    
+    // 绘制实时渲染信息窗口
+    drawRenderingInfoWindow();
 }
 
 // 绘制命令栏

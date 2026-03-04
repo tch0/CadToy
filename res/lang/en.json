@@ -20,6 +20,7 @@
   "menu.tools.properties": "Properties",
   "menu.tools.demo": "Dear ImGui Demo Window",
   "menu.tools.metrics": "Dear ImGui Metrics/Debugger",
+  "menu.tools.renderingInfo": "Real Time Rendering Info",
   "menu.language": "Language",
   
   "optionsDialog.title": "Options",
@@ -39,5 +40,20 @@
   "commandBar.prompt.cancel": "*Cancel*",
   "commandBar.inputPrompt": "Input Command Here",
 
-  "propertyBar.title": "Properties"
+  "propertyBar.title": "Properties",
+
+  "window.renderingInfo.title": "Real Time Rendering Info",
+  "window.renderingInfo.viewport": "Viewport Information",
+  "window.renderingInfo.viewportSize": "Viewport Size",
+  "window.renderingInfo.worldCoords": "World Coordinates",
+  "window.renderingInfo.worldSize": "World Size",
+  "window.renderingInfo.bottomLeft": "Bottom Left",
+  "window.renderingInfo.topRight": "Top Right",
+  "window.renderingInfo.camera": "Camera Information",
+  "window.renderingInfo.zoom": "Zoom Factor",
+  "window.renderingInfo.rotation": "Rotation",
+  "window.renderingInfo.center": "Center Point",
+  "window.renderingInfo.other": "Other Information",
+  "window.renderingInfo.frame": "Current Frame",
+  "window.renderingInfo.fps": "FPS"
 }
