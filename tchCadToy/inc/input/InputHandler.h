@@ -61,8 +61,8 @@ public:
     // 处理窗口大小变化
     static void handleWindowSize(int width, int height);
     
-    // 获取鼠标位置
-    static glm::vec2 getMousePosition();
+    // 获取光标位置
+    static glm::vec2 getCursorPosition();
     
     // 检查鼠标按钮是否按下
     static bool isMouseButtonPressed(int button);
@@ -104,14 +104,14 @@ private:
     static GLFWwindow* s_window;
     
     // 静态成员变量
-    static glm::vec2 s_mousePosition;                              // 鼠标位置
-    static glm::vec2 s_lastMousePosition;                          // 上一次鼠标位置（用于拖动计算）
-    static bool s_mouseMiddleButtonPressedInDrawableArea;          // 鼠标中间按钮是否在可绘制区域内按下
+    static glm::vec2 s_cursorPosition;                              // 光标位置
+    static glm::vec2 s_lastCursorPosition;                          // 上一次光标位置（用于拖动计算）
+    static bool s_mouseMiddleButtonPressedInViewport;               // 鼠标中键是否在视口内按下
     static bool s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1];         // 鼠标按钮状态
-    static bool s_keys[GLFW_KEY_LAST + 1];                         // 键盘按键状态
-    static bool s_keyWasConsumedByShortcut;                       // 标记当前按键是否已被快捷键逻辑消耗
+    static bool s_keys[GLFW_KEY_LAST + 1];                          // 键盘按键状态
+    static bool s_keyWasConsumedByShortcut;                         // 标记当前按键是否已被快捷键逻辑消耗
     static std::unordered_map<InputEventType, std::function<void()>> s_callbacks; // 事件回调映射
-    static std::vector<ShortcutItem> s_shortcuts;                  // 快捷键列表
+    static std::vector<ShortcutItem> s_shortcuts;                   // 快捷键列表
 };
 
 } // namespace tch

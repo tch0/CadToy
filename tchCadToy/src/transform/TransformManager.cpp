@@ -75,7 +75,7 @@ void TransformManager::zoom(const glm::vec2& screenPos, double factor) {
         return;
     }
     
-    // 获取当前鼠标位置的世界坐标
+    // 获取当前光标位置的世界坐标
     glm::dvec3 worldPos = screenToWorld(screenPos);
     
     // 获取当前相机位置和缩放因子

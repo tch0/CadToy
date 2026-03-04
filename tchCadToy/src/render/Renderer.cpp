@@ -30,7 +30,7 @@ float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};   
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
 float Renderer::s_originX = 0.0f;          // 坐标原点X位置
 float Renderer::s_originY = 0.0f;          // 坐标原点Y位置
-glm::dvec3 Renderer::s_cursorPosition = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置（以窗口中央为原点）
+glm::dvec3 Renderer::s_cursorPosWorld = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置的世界坐标
 
 // UI组件高度
 float Renderer::s_menuBarHeight = 0.0f;              // 菜单栏高度
@@ -251,17 +251,16 @@ bool Renderer::isInitialized() {
 }
 
 // 绘制光标
-void Renderer::drawCursor(const glm::vec2& position) {
+void Renderer::drawCursor() {
     if (!s_initialized || !s_window) {
         return;
     }
     
     // 计算光标在屏幕上的位置
-    glm::vec2 cursorScreenPos = position;
+    glm::vec2 cursorScreenPos = InputHandler::getCursorPosition();
     
     // 更新当前光标位置（使用变换管理器转换）
-    glm::dvec3 logicPos = s_transformManager.screenToWorld(position);
-    s_cursorPosition = logicPos;
+    s_cursorPosWorld = s_transformManager.screenToWorld(cursorScreenPos);
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -282,10 +281,6 @@ void Renderer::drawCursor(const glm::vec2& position) {
     
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
-    
-    // 计算光标在屏幕上的位置
-    // 由于我们已经有了屏幕坐标position，直接使用它
-    cursorScreenPos = position;
     
     // 绘制拾取框
     glBegin(GL_LINE_LOOP);
@@ -602,14 +597,14 @@ void Renderer::zoomOut() {
     s_transformManager.zoomOut(glm::vec2(width / 2, height / 2));
 }
 
-void Renderer::zoomIn(const glm::vec2& mousePos) {
-    // 使用变换管理器进行缩放，以鼠标位置为中心
-    s_transformManager.zoomIn(mousePos);
+void Renderer::zoomIn(const glm::vec2& cursorPos) {
+    // 使用变换管理器进行缩放，以光标位置为中心
+    s_transformManager.zoomIn(cursorPos);
 }
 
-void Renderer::zoomOut(const glm::vec2& mousePos) {
-    // 使用变换管理器进行缩放，以鼠标位置为中心
-    s_transformManager.zoomOut(mousePos);
+void Renderer::zoomOut(const glm::vec2& cursorPos) {
+    // 使用变换管理器进行缩放，以光标位置为中心
+    s_transformManager.zoomOut(cursorPos);
 }
 
 // 平移功能
@@ -691,7 +686,7 @@ void Renderer::cleanupImGui() {
 }
 
 // 绘制状态栏
-void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
+void Renderer::drawStatusBar() {
     // 获取窗口大小
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
@@ -699,7 +694,7 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
     // 计算状态栏位置和大小
     float statusBarHeight = s_statusBarHeight;
     ImVec2 statusBarPos(0, height - statusBarHeight);
-    ImVec2 statusBarSize(width, statusBarHeight);
+    ImVec2 statusBarSize(width*1.0f, statusBarHeight);
     
     // 绘制状态栏
     ImGui::SetNextWindowPos(statusBarPos);
@@ -712,8 +707,8 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
                              ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     
     ImGui::Begin("StatusBar", nullptr, flags);
-    // 直接使用已保存的光标位置（以窗口中央为原点的坐标系）
-    ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosition.x, s_cursorPosition.y, s_cursorPosition.z);
+    // 直接使用已保存的光标位置的世界坐标
+    ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosWorld.x, s_cursorPosWorld.y, s_cursorPosWorld.z);
     ImGui::End();
 }
 
@@ -1036,7 +1031,7 @@ void Renderer::drawFileBar() {
     
     // 计算文件栏位置和大小
     ImVec2 fileBarPos(0, s_menuBarHeight);
-    ImVec2 fileBarSize(width, s_fileBarHeight);
+    ImVec2 fileBarSize(width*1.0f, s_fileBarHeight);
     
     // 绘制文件栏背景
     ImGui::SetNextWindowPos(fileBarPos);
@@ -1150,8 +1145,8 @@ void Renderer::drawRenderingInfoWindow() {
     
     // 显示世界坐标系信息
     ImGui::Text(loc.get("window.renderingInfo.world.title").c_str());
-    ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.world.bottomLeft").c_str(), worldMin.x, worldMin.y);
-    ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.world.topRight").c_str(), worldMax.x, worldMax.y);
+    ImGui::Text("  %s: (%.4f, %.4f, %.4f)", loc.get("window.renderingInfo.world.bottomLeft").c_str(), worldMin.x, worldMin.y, worldMin.z);
+    ImGui::Text("  %s: (%.4f, %.4f, %.4f)", loc.get("window.renderingInfo.world.topRight").c_str(), worldMax.x, worldMax.y, worldMax.z);
     
     // 计算并显示世界坐标系宽高
     double worldWidth = worldMax.x - worldMin.x;
@@ -1175,7 +1170,7 @@ void Renderer::drawRenderingInfoWindow() {
     
     // 显示光标信息
     ImGui::Text(loc.get("window.renderingInfo.cursor.title").c_str());
-    glm::vec2 cursorScreenPos = InputHandler::getMousePosition();
+    glm::vec2 cursorScreenPos = InputHandler::getCursorPosition();
     glm::dvec3 cursorWorldPos = s_transformManager.screenToWorld(cursorScreenPos);
     ImGui::Text("  %s: (%.1f, %.1f)", loc.get("window.renderingInfo.cursor.screenPosition").c_str(), cursorScreenPos.x, cursorScreenPos.y);
     ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.cursor.worldPosition").c_str(), cursorWorldPos.x, cursorWorldPos.y);

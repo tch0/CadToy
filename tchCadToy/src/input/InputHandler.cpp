@@ -9,9 +9,9 @@ namespace tch {
 
 // 静态成员初始化
 GLFWwindow* InputHandler::s_window = nullptr;
-glm::vec2 InputHandler::s_mousePosition(0.0f, 0.0f);
-glm::vec2 InputHandler::s_lastMousePosition(0.0f, 0.0f); // 初始化上一次鼠标位置
-bool InputHandler::s_mouseMiddleButtonPressedInDrawableArea = false; // 初始化鼠标中间按钮是否在可绘制区域内按下
+glm::vec2 InputHandler::s_cursorPosition(0.0f, 0.0f);
+glm::vec2 InputHandler::s_lastCursorPosition(0.0f, 0.0f); // 初始化上一次光标位置
+bool InputHandler::s_mouseMiddleButtonPressedInViewport = false; // 初始化鼠标中键是否在视口内按下
 bool InputHandler::s_mouseButtons[GLFW_MOUSE_BUTTON_LAST + 1] = {false};
 bool InputHandler::s_keys[GLFW_KEY_LAST + 1] = {false};
 
@@ -230,7 +230,9 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
 void InputHandler::handleCharInput(unsigned int codepoint) {
     // 只有在按键回调handleKeyPress没有把当前输入作为快捷键拦截掉的情况下才处理字符
     // 字符回调的会自动处理CapsLock和Shift转换后的结果，而不需要也不应该有任何自行检测CapsLock与Shift的操作
-    if (!s_keyWasConsumedByShortcut) {
+    // 仅处理焦点位于命令栏或者画布上(此时焦点为空)时的字符输入
+    if ((Renderer::FocusIsOnWindow("CommandBar") || !ImGui::GetIO().WantCaptureKeyboard)
+        && !s_keyWasConsumedByShortcut) {
         // 如果焦点不在命令栏输入框上，则将焦点拉回到输入框，并将输入的字符添加到缓冲区
         // 而焦点在命令输入栏的话，输入控件会自行处理，则不需要做任何多余处理
         if (!Renderer::FocusIsOnCommandInput()) {
@@ -252,11 +254,11 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
     if (action == GLFW_PRESS) {
         s_mouseButtons[button] = true;
         
-        // 当鼠标中间按钮被按下时，记录当前鼠标位置作为上一次位置
+        // 当鼠标中键被按下时，记录当前光标位置作为上一次位置
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-            s_lastMousePosition = s_mousePosition;
+            s_lastCursorPosition = s_cursorPosition;
             // 检查鼠标是否在视口内
-            s_mouseMiddleButtonPressedInDrawableArea = Renderer::isPointInViewport(s_mousePosition);
+            s_mouseMiddleButtonPressedInViewport = Renderer::isPointInViewport(s_cursorPosition);
         }
         
         // 触发鼠标按下回调
@@ -264,9 +266,9 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
             s_callbacks[InputEventType::MOUSE_PRESS]();
         }
     } else if (action == GLFW_RELEASE) {
-        // 当鼠标中间按钮被释放时，重置标志
+        // 当鼠标中键被释放时，重置标志
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
-            s_mouseMiddleButtonPressedInDrawableArea = false;
+            s_mouseMiddleButtonPressedInViewport = false;
         }
         
         s_mouseButtons[button] = false;
@@ -280,29 +282,29 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
 
 // 处理鼠标移动
 void InputHandler::handleMouseMove(double xpos, double ypos) {
-    // 如果ImGui需要鼠标，就不处理鼠标移动，也不更新鼠标位置
+    // 如果ImGui需要鼠标，就不处理鼠标移动，也不更新光标位置
     if (ImGui::GetIO().WantCaptureMouse) {
         return;
     }
     
-    // 使用标准鼠标坐标系（Y轴向下，左上角为原点）
-    glm::vec2 newMousePosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+    // 使用标准屏幕坐标系（Y轴向下，左上角为原点）
+    glm::vec2 newCursorPosition = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
     
-    // 检查鼠标中间按钮是否被按下且按下时位于可绘制区域
-    if (s_mouseButtons[GLFW_MOUSE_BUTTON_MIDDLE] && s_mouseMiddleButtonPressedInDrawableArea) {
-        // 计算鼠标位移
-        glm::vec2 deltaScreen = newMousePosition - s_lastMousePosition;
+    // 检查鼠标中键是否被按下且按下时光标位于视口内
+    if (s_mouseButtons[GLFW_MOUSE_BUTTON_MIDDLE] && s_mouseMiddleButtonPressedInViewport) {
+        // 计算光标位移
+        glm::vec2 deltaScreen = newCursorPosition - s_lastCursorPosition;
         
-        // 即使鼠标不在可绘制区域内，只要按下时在可绘制区域内，就继续平移
+        // 即使光标当前不在视口内，只要按下时在视口内，就继续平移
         // 调用Renderer的pan方法进行平移
         Renderer::pan(deltaScreen);
         
-        // 更新上一次鼠标位置
-        s_lastMousePosition = newMousePosition;
+        // 更新上一次光标位置
+        s_lastCursorPosition = newCursorPosition;
     }
     
-    // 更新当前鼠标位置
-    s_mousePosition = newMousePosition;
+    // 更新当前光标位置
+    s_cursorPosition = newCursorPosition;
     
     // 触发鼠标移动回调
     if (s_callbacks.contains(InputEventType::MOUSE_MOVE)) {
@@ -317,11 +319,11 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
         return;
     }
     
-    // 获取当前鼠标位置
-    glm::vec2 mousePos = getMousePosition();
+    // 获取当前光标位置
+    glm::vec2 mousePos = s_cursorPosition;
     
-    // 检查鼠标是否在视口内
-    if (Renderer::isPointInViewport(s_mousePosition)) {
+    // 检查光标是否在视口内
+    if (Renderer::isPointInViewport(s_cursorPosition)) {
         // 根据滚轮方向进行缩放
         if (yoffset > 0) {
             // 滚轮向前，放大图形
@@ -362,9 +364,9 @@ void InputHandler::handleWindowSize(int width, int height) {
     Renderer::setOrigin(centerX, centerY);
 }
 
-// 获取鼠标位置
-glm::vec2 InputHandler::getMousePosition() {
-    return s_mousePosition;
+// 获取光标位置
+glm::vec2 InputHandler::getCursorPosition() {
+    return s_cursorPosition;
 }
 
 // 检查鼠标按钮是否按下

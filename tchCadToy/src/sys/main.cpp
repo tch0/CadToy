@@ -102,8 +102,7 @@ int main(int argc, char* argv[])
         Renderer::drawAll();
         
         // 绘制光标
-        glm::vec2 mousePos = InputHandler::getMousePosition();
-        Renderer::drawCursor(mousePos);
+        Renderer::drawCursor();
         
         // 绘制命令栏
         Renderer::drawCommandBar();
@@ -112,7 +111,7 @@ int main(int argc, char* argv[])
         Renderer::drawPropertyBar();
         
         // 绘制状态栏
-        Renderer::drawStatusBar(mousePos);
+        Renderer::drawStatusBar();
         
         // 绘制模态对话框
         Renderer::drawModalDialogs();

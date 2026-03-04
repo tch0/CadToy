@@ -35,7 +35,7 @@ public:
     static void updateViewport(int width, int height);
     
     // 绘制十字光标
-    static void drawCursor(const glm::vec2& position);
+    static void drawCursor();
     
     // 设置十字光标大小
     static void setCrossCursorSize(float size);
@@ -53,12 +53,12 @@ public:
     static glm::vec2 getOrigin();                // 获取坐标原点位置
     static void zoomIn();                        // 放大图形
     static void zoomOut();                       // 缩小图形
-    static void zoomIn(const glm::vec2& mousePos); // 以鼠标位置为中心放大
-    static void zoomOut(const glm::vec2& mousePos); // 以鼠标位置为中心缩小
+    static void zoomIn(const glm::vec2& cursorPos); // 以光标位置为中心放大
+    static void zoomOut(const glm::vec2& cursorPos); // 以光标位置为中心缩小
     static void pan(const glm::vec2& deltaScreen); // 平移功能
     
     // 状态栏相关
-    static void drawStatusBar(const glm::vec2& cursorPos); // 绘制状态栏
+    static void drawStatusBar(); // 绘制状态栏
     
     // 绘制菜单栏
     static void drawMenuBar(); // 绘制菜单栏
@@ -125,7 +125,7 @@ private:
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
     static float s_originX;                     // 坐标原点X位置
     static float s_originY;                     // 坐标原点Y位置
-    static glm::dvec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
+    static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
     
     // 变换管理器
     static TransformManager s_transformManager; // 变换管理器
