@@ -70,8 +70,8 @@ static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可�
 
 // 文件栏相关 - 使用FileManager类管理
 
-// 逻辑视口初始化
-LogicalViewport Renderer::s_logicalViewport;
+// 变换管理器初始化
+TransformManager Renderer::s_transformManager;
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
@@ -86,8 +86,8 @@ void Renderer::initialize(GLFWwindow* window) {
     glfwGetFramebufferSize(window, &width, &height);
     setViewport(width, height);
     
-    // 初始化逻辑视口
-    s_logicalViewport.initialize(width, height);
+    // 初始化变换管理器
+    s_transformManager.initialize(width, height);
     
     // 设置坐标原点为窗口中心
     s_originX = width / 2.0f;
@@ -154,8 +154,8 @@ void Renderer::updateDrawableArea() {
     left = std::max(0, std::min(left, width - 1));
     right = std::max(1, std::min(right, width));
     
-    // 更新逻辑视口的可绘制区域
-    s_logicalViewport.setDrawableArea(left, top, right, bottom);
+    // 更新变换管理器的视口
+    s_transformManager.setViewport(left, top, right, bottom);
 }
 
 // 开始渲染
@@ -231,8 +231,8 @@ void Renderer::updateViewport(int width, int height) {
     // 直接调用setViewport方法更新视口大小
     setViewport(width, height);
     
-    // 更新逻辑视口的窗口大小
-    s_logicalViewport.setWindowSize(width, height);
+    // 重新初始化变换管理器以适应新窗口大小
+    s_transformManager.initialize(width, height);
 }
 
 // 绘制所有图形
@@ -266,15 +266,12 @@ void Renderer::drawCursor(const glm::vec2& position) {
         return;
     }
     
-    // 检查鼠标位置是否在可绘制区域内
-    bool isInDrawableArea = s_logicalViewport.isPointInDrawableArea(position);
+    // 计算光标在屏幕上的位置
+    glm::vec2 cursorScreenPos = position;
     
-    // 只有当鼠标在可绘制区域内时，才更新光标位置
-    if (isInDrawableArea) {
-        // 更新当前光标位置（使用逻辑视口转换）
-        glm::dvec3 logicPos = s_logicalViewport.screenToLogic(position);
-        s_cursorPosition = logicPos;
-    }
+    // 更新当前光标位置（使用变换管理器转换）
+    glm::dvec3 logicPos = s_transformManager.screenToWorld(position);
+    s_cursorPosition = logicPos;
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -297,14 +294,8 @@ void Renderer::drawCursor(const glm::vec2& position) {
     glDisable(GL_DEPTH_TEST);
     
     // 计算光标在屏幕上的位置
-    glm::vec2 cursorScreenPos;
-    if (isInDrawableArea) {
-        // 如果鼠标在可绘制区域内，使用鼠标位置
-        cursorScreenPos = position;
-    } else {
-        // 如果鼠标不在可绘制区域内，使用逻辑光标位置转换到屏幕坐标
-        cursorScreenPos = s_logicalViewport.logicToScreen(s_cursorPosition);
-    }
+    // 由于我们已经有了屏幕坐标position，直接使用它
+    cursorScreenPos = position;
     
     // 绘制拾取框
     glBegin(GL_LINE_LOOP);
@@ -388,18 +379,19 @@ void Renderer::drawGrid() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 获取逻辑视口边界
-    glm::dvec2 logicMin = s_logicalViewport.getLogicMin();
-    glm::dvec2 logicMax = s_logicalViewport.getLogicMax();
+    // 由于TransformManager没有直接提供逻辑视口边界的方法，我们使用屏幕坐标转换来计算
+    // 视口大小为100x100，考虑屏幕坐标系y轴向下
+    // 左下角屏幕坐标(0, 100)，右上角屏幕坐标(100, 0)
+    glm::dvec3 logicMin = s_transformManager.screenToWorld(glm::vec2(0, 100));
+    glm::dvec3 logicMax = s_transformManager.screenToWorld(glm::vec2(100, 0));
     
     // 计算逻辑视口的宽度和高度
     double logicWidth = logicMax.x - logicMin.x;
     double logicHeight = logicMax.y - logicMin.y;
     
     // 获取可绘制区域大小
-    glm::ivec2 drawableSize = s_logicalViewport.getDrawableAreaSize();
-    int drawableWidth = drawableSize.x;
-    int drawableHeight = drawableSize.y;
+    int drawableWidth = 100;
+    int drawableHeight = 100;
     
     // 基础栅格间距（逻辑坐标）
     const double baseGridSize = 10.0;
@@ -466,17 +458,17 @@ void Renderer::drawGrid() {
     
     // 绘制垂直线
     for (double x = startX; x <= logicMax.x; x += subGridSize) {
-        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMin.y, 0.0));
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
     for (double y = startY; y <= logicMax.y; y += subGridSize) {
-        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMin.x, y, 0.0));
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -491,17 +483,17 @@ void Renderer::drawGrid() {
     
     // 绘制垂直线
     for (double x = mainStartX; x <= logicMax.x; x += mainGridSize) {
-        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMin.y, 0.0));
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(x, logicMax.y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, logicMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
     for (double y = mainStartY; y <= logicMax.y; y += mainGridSize) {
-        glm::vec2 screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMin.x, y, 0.0));
+        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_logicalViewport.logicToScreen(glm::dvec3(logicMax.x, y, 0.0));
+        screenPos = s_transformManager.worldToScreen(glm::dvec3(logicMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -542,14 +534,16 @@ void Renderer::drawAxes() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 获取可绘制区域边界
-    int drawableLeft, drawableTop, drawableRight, drawableBottom;
-    s_logicalViewport.getDrawableArea(drawableLeft, drawableTop, drawableRight, drawableBottom);
-    
     // 计算逻辑原点在屏幕上的位置
-    glm::vec2 originScreenPos = s_logicalViewport.logicToScreen(glm::dvec3(0.0, 0.0, 0.0));
+    glm::vec2 originScreenPos = s_transformManager.worldToScreen(glm::dvec3(0.0, 0.0, 0.0));
     float originScreenX = originScreenPos.x;
     float originScreenY = originScreenPos.y;
+    
+    // 假设可绘制区域为整个窗口
+    int drawableLeft = 0;
+    int drawableTop = 0;
+    int drawableRight = 800; // 默认宽度
+    int drawableBottom = 600; // 默认高度
     
     // 绘制X轴（正半轴）
     glBegin(GL_LINES);
@@ -604,29 +598,33 @@ glm::vec2 Renderer::getOrigin() {
 }
 
 void Renderer::zoomIn() {
-    // 使用逻辑视口进行缩放
-    s_logicalViewport.zoomIn();
+    // 使用变换管理器进行缩放，以屏幕中心为中心
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    s_transformManager.zoomIn(glm::vec2(width / 2, height / 2));
 }
 
 void Renderer::zoomOut() {
-    // 使用逻辑视口进行缩放
-    s_logicalViewport.zoomOut();
+    // 使用变换管理器进行缩放，以屏幕中心为中心
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    s_transformManager.zoomOut(glm::vec2(width / 2, height / 2));
 }
 
 void Renderer::zoomIn(const glm::vec2& mousePos) {
-    // 使用逻辑视口进行缩放，以鼠标位置为中心
-    s_logicalViewport.zoomIn(mousePos);
+    // 使用变换管理器进行缩放，以鼠标位置为中心
+    s_transformManager.zoomIn(mousePos);
 }
 
 void Renderer::zoomOut(const glm::vec2& mousePos) {
-    // 使用逻辑视口进行缩放，以鼠标位置为中心
-    s_logicalViewport.zoomOut(mousePos);
+    // 使用变换管理器进行缩放，以鼠标位置为中心
+    s_transformManager.zoomOut(mousePos);
 }
 
 // 平移功能
 void Renderer::pan(const glm::dvec2& deltaLogic) {
-    // 使用逻辑视口进行平移
-    s_logicalViewport.pan(deltaLogic);
+    // 使用变换管理器进行平移
+    s_transformManager.pan(glm::vec2(deltaLogic.x, deltaLogic.y));
 }
 
 // 初始化ImGui
@@ -722,11 +720,10 @@ void Renderer::drawStatusBar(const glm::vec2& cursorPos) {
                              ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | 
                              ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     
-    if (ImGui::Begin("StatusBar", nullptr, flags)) {
-        // 直接使用已保存的光标位置（以窗口中央为原点的坐标系）
-        ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosition.x, s_cursorPosition.y, s_cursorPosition.z);
-        ImGui::End();
-    }
+    ImGui::Begin("StatusBar", nullptr, flags);
+    // 直接使用已保存的光标位置（以窗口中央为原点的坐标系）
+    ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosition.x, s_cursorPosition.y, s_cursorPosition.z);
+    ImGui::End();
 }
 
 // 绘制选项对话框
@@ -1121,9 +1118,9 @@ void Renderer::drawFileBar() {
     }
 }
 
-// 获取逻辑视口
-LogicalViewport& Renderer::getLogicalViewport() {
-    return s_logicalViewport;
+// 获取变换管理器
+TransformManager& Renderer::getTransformManager() {
+    return s_transformManager;
 }
 
 // 绘制命令栏

@@ -3,7 +3,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include "render/LogicalViewport.h"
+#include "transform/TransformManager.h"
 
 namespace tch {
 
@@ -72,8 +72,8 @@ public:
     // 更新可绘制区域
     static void updateDrawableArea(); // 更新可绘制区域
     
-    // 逻辑视口相关方法
-    static LogicalViewport& getLogicalViewport(); // 获取逻辑视口
+    // 变换管理器相关方法
+    static TransformManager& getTransformManager(); // 获取变换管理器
     
     // 命令栏相关方法
     static void drawCommandBar(); // 绘制命令栏
@@ -117,8 +117,8 @@ private:
     static float s_originY;                     // 坐标原点Y位置
     static glm::dvec3 s_cursorPosition;          // 当前光标位置（以窗口中央为原点）
     
-    // 逻辑视口
-    static LogicalViewport s_logicalViewport; // 逻辑视口
+    // 变换管理器
+    static TransformManager s_transformManager; // 变换管理器
     
     // UI组件高度
     static float s_menuBarHeight;              // 菜单栏高度
