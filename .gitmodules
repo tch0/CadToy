@@ -36,5 +36,5 @@
 	branch = master
 [submodule "3rdparty/minicoro"]
 	path = 3rdparty/minicoro
-	url = https://github.com/edubart/minicoro.git
+	url = https://github.com/edubart/minicoro
 	branch = main
