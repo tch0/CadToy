@@ -83,6 +83,7 @@ public:
     static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符
     static void setShouldExecuteCommand(bool shouldExecute); // 设置是否应该执行命令
     static void setShouldCancelCommand(bool shouldCancel); // 设置是否应该取消命令执行
+    static void pushCommandToExecute(const std::string& command); // 推送命令到执行队列
     
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见
