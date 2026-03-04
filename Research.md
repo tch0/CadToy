@@ -4,6 +4,7 @@
 
 - 文件管理实现、文件格式使用json
 - 各种坐标变换研究与封装：世界坐标系到屏幕、屏幕到世界、视口裁剪等
+- 命令简写、快捷键等实现，命令框架中引入命令映射表，命令补全，通过命令映射表来查找执行命令而非通过硬编码
 - 实体实现，以Line为例
 - 坐标拾取器实现（通过屏幕点击或者坐标输入）
 - drag过程实现，以Line为例
@@ -17,7 +18,86 @@
 - 选择集研究与实现
 - 研究几何库、封装几何操作
 - 几何编辑框架与相关命令研究与实现
-- 命令简写、快捷键等实现，命令框架中引入命令映射表，命令补全
+
+
+## 非模态命令交互
+
+在命令的交互过程中，核心交互是拾取点、获取关键字、获取整数浮点数字符串这类非模态交互：
+- 获取输入过程中，每一帧的绘图不会停止，命令却是停止运行的。
+- 获取到输入后，绘图同样继续进行，命令继续执行。
+
+实现方案1：
+- 将命令实现为状态机，将命令分割为一系列由交互隔离的状态：
+```C++
+class LineCommand : public IncrementalCommand {
+    int stage = 0;
+    Vec2 p1, p2;
+
+    void OnUpdate(InputContext& ictx) override {
+        switch (stage) {
+            case 0:
+                ictx.SetPrompt("指定第一点:");
+                if (ictx.GetPickedPoint(p1)) stage = 1;
+                break;
+            case 1:
+                ictx.SetPrompt("指定下一点:");
+                ictx.DrawRubberBand(p1); // 在渲染层画预览线
+                if (ictx.GetPickedPoint(p2)) {
+                    SubmitLine(p1, p2);
+                    p1 = p2; // 循环
+                }
+                break;
+        }
+    }
+};
+```
+- 在主循环中，每一帧都会调用命令的update，去检测输入转态并更新状态。
+
+实现方案2：
+- 使用C++20的无栈协程来完成异步逻辑，将命令逻辑和获取输入的逻辑置于不同协程内。
+```C++
+Task Command_Line(CadContext& ctx) {
+    // 挂起并等待输入，主循环每帧会 Check 状态
+    Vec2 p1 = co_await ctx.GetPoint("指定第一点");
+    
+    while (true) {
+        // 这里的 p2 在用户移动鼠标时会提供“预览点”
+        Vec2 p2 = co_await ctx.GetPoint("指定下一点", p1); // 传入 p1 用于画橡皮筋预览线
+        ctx.Database.AddLine(p1, p2);
+        p1 = p2; // 连续画线逻辑
+    }
+}
+```
+- 问题：C++20有栈协程是侵入式的，具有传染性。
+
+实现方案3：
+- 使用有栈协程，比如Windows的Fiber、Boost.context等。
+```C++
+Vec2 GetPoint(const char* prompt) {
+    g_CommandContext.SetPrompt(prompt);
+    
+    // 关键：挂起当前命令协程，回到主线程渲染
+    g_CommandContext.YieldToMain(); 
+    
+    // 当主线程检测到输入并 Resume 后，代码从这里继续执行
+    return g_CommandContext.GetLastPickedPoint();
+}
+
+void LineCommand::Execute() {
+    Vec2 p1 = GetPoint("指定第一点:");
+    while(true) {
+        // 第二次调用 GetPoint 时，主线程会不断更新“预览线”
+        Vec2 p2 = GetPoint("指定下一点:"); 
+        AddLineToDatabase(p1, p2);
+        p1 = p2;
+    }
+}
+```
+- 优点：非侵入式、和旧标准代码完美协作。
+
+实现考虑：
+- C++20无栈协程侵入性和传染性太强，对架构影响非常大，这里暂时不考虑。
+- 先实现为状态机，后续如果合适可以切换为有栈协程。
 
 ## 功能实现顺序
 
