@@ -34,3 +34,7 @@
 	path = 3rdparty/imgui
 	url = https://github.com/ocornut/imgui
 	branch = master
+[submodule "3rdparty/minicoro"]
+	path = 3rdparty/minicoro
+	url = https://github.com/edubart/minicoro.git
+	branch = main

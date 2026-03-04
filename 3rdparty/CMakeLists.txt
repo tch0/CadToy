@@ -15,6 +15,8 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/rapidjson DESTIN
 # install magic_enum headers manually
 file(GLOB magic_enum_headers ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/*.hpp)
 install(FILES ${magic_enum_headers} DESTINATION include/magic_enum)
+# install minicoro header
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/minicoro/minicoro.h DESTINATION include/minicoro)
 
 # install GLFW headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include/GLFW DESTINATION include)
