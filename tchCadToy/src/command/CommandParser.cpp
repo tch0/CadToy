@@ -1,5 +1,5 @@
 #include "render/Renderer.h"
-#include "file/FileManager.h"
+#include "document/DocManager.h"
 #include "command/CommandParser.h"
 #include "Geometry.h"
 #include "Layer.h"
@@ -496,14 +496,14 @@ void CommandParser::showHelp() {
     cmdLinePrint("  OPTIONS                 - Open options dialog");
 }
 
-// 执行新建文件命令
+// 执行新建文档命令
 bool CommandParser::executeNewCommand(const std::vector<std::string>& arguments) {
-    std::size_t index = FileManager::createNewFile();
-    if (index < FileManager::getFileCount()) {
-        cmdLinePrint("New file created: " + FileManager::getFile(index).getFullFileName());
+    std::size_t index = DocManager::createNewDocument();
+    if (index < DocManager::getDocumentCount()) {
+        cmdLinePrint("New document created: " + DocManager::getDocument(index).getFullFileName());
         return true;
     } else {
-        cmdLinePrint("Failed to create new file");
+        cmdLinePrint("Failed to create new document");
         return false;
     }
 }
@@ -516,9 +516,9 @@ bool CommandParser::executeOpenCommand(const std::vector<std::string>& arguments
     }
     
     std::string filePath = arguments[0];
-    std::size_t index = FileManager::openFile(filePath);
-    if (index < FileManager::getFileCount()) {
-        cmdLinePrint("Opened file: " + FileManager::getFile(index).getFullFileName());
+    std::size_t index = DocManager::openFile(filePath);
+    if (index < DocManager::getDocumentCount()) {
+        cmdLinePrint("Opened file: " + DocManager::getDocument(index).getFullFileName());
         return true;
     } else {
         cmdLinePrint("Failed to open file: " + filePath);
@@ -526,14 +526,14 @@ bool CommandParser::executeOpenCommand(const std::vector<std::string>& arguments
     }
 }
 
-// 执行保存文件命令
+// 执行保存文档命令
 bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments) {
-    std::size_t currentIndex = FileManager::getCurrentFileIndex();
-    if (FileManager::saveFile(currentIndex)) {
-        cmdLinePrint("Saved file: " + FileManager::getCurrentFile().getFullFileName());
+    std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
+    if (DocManager::saveFile(currentIndex)) {
+        cmdLinePrint("Saved document: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
     } else {
-        cmdLinePrint("Failed to save file. Use SAVEAS to specify a path.");
+        cmdLinePrint("Failed to save document. Use SAVEAS to specify a path.");
         return false;
     }
 }
@@ -546,24 +546,24 @@ bool CommandParser::executeSaveAsCommand(const std::vector<std::string>& argumen
     }
     
     std::string filePath = arguments[0];
-    std::size_t currentIndex = FileManager::getCurrentFileIndex();
-    if (FileManager::saveFileAs(currentIndex, filePath)) {
-        cmdLinePrint("Saved file as: " + FileManager::getCurrentFile().getFullFileName());
+    std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
+    if (DocManager::saveFileAs(currentIndex, filePath)) {
+        cmdLinePrint("Saved document as: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
     } else {
-        cmdLinePrint("Failed to save file as: " + filePath);
+        cmdLinePrint("Failed to save document as: " + filePath);
         return false;
     }
 }
 
-// 执行关闭文件命令
+// 执行关闭文档命令
 bool CommandParser::executeCloseCommand(const std::vector<std::string>& arguments) {
-    std::size_t currentIndex = FileManager::getCurrentFileIndex();
-    if (FileManager::closeFile(currentIndex)) {
-        cmdLinePrint("Closed file. Current file: " + FileManager::getCurrentFile().getFullFileName());
+    std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
+    if (DocManager::closeDocument(currentIndex)) {
+        cmdLinePrint("Closed document. Current document: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
     } else {
-        cmdLinePrint("Failed to close file");
+        cmdLinePrint("Failed to close document");
         return false;
     }
 }

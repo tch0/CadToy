@@ -6,6 +6,7 @@
 #include <source_location>
 #include <format>
 #include <mutex>
+#include <condition_variable>
 #include <memory>
 #include <vector>
 #include <chrono>
@@ -33,6 +34,7 @@ public:
 
     struct LogConfig
     {
+        LogConfig() {}
         LogLevel lowestLevel = Trace;
         bool coloredOutput = true;
         bool asyncLogging = false;

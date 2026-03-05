@@ -1,5 +1,5 @@
 #include "render/Renderer.h"
-#include "file/FileManager.h"
+#include "document/DocManager.h"
 #include "Layer.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -12,6 +12,7 @@
 #include "input/InputHandler.h"
 #include <algorithm>
 #include <array>
+#include <cstring>
 
 namespace tch {
 
@@ -101,7 +102,7 @@ void Renderer::initialize(GLFWwindow* window) {
     LocalizationManager::getInstance().initialize();
     
     // 初始化文件管理器
-    FileManager::initialize();
+    DocManager::initialize();
 }
 
 // 清理渲染器
@@ -965,10 +966,10 @@ void Renderer::drawFileBar() {
     // 待切换的文件索引，-1表示无待切换文件
     static std::size_t s_pendingFileIndex = -1;
     
-    // 处理上一帧的待切换文件
+    // 处理上一帧的待切换文档
     if (s_pendingFileIndex != static_cast<std::size_t>(-1)) {
-        FileManager::setCurrentFileIndex(s_pendingFileIndex);
-        // 切换文件后，自动滚动命令历史到最底部
+        DocManager::setCurrentDocumentIndex(s_pendingFileIndex);
+        // 切换文档后，自动滚动命令历史到最底部
         s_bScrollCommandHistoryToBottom = true;
         // 重置待切换标记
         s_pendingFileIndex = static_cast<std::size_t>(-1);
@@ -999,33 +1000,33 @@ void Renderer::drawFileBar() {
                                       ImGuiTabBarFlags_FittingPolicyScroll;
         
         if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
-            // 创建新文件
+            // 创建新文档
             if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
-                // 创建新文件
-                std::size_t newFileIndex = FileManager::createNewFile();
+                // 创建新文档
+                std::size_t newFileIndex = DocManager::createNewDocument();
                 // 设置待切换的文件索引，在下一帧执行切换
                 s_pendingFileIndex = newFileIndex;
             }
             
-            // 遍历文件列表，绘制每一个打开文件
-            std::size_t fileCount = FileManager::getFileCount();
-            for (std::size_t i = 0; i < fileCount; i++) {
+            // 遍历文档列表，绘制每一个打开文档
+            std::size_t documentCount = DocManager::getDocumentCount();
+            for (std::size_t i = 0; i < documentCount; i++) {
                 // 获取文件名
-                std::string tabText = FileManager::getFileName(i);
+                std::string tabText = DocManager::getFileName(i);
                 
                 // 设置标签项标志
                 ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
-                if (FileManager::isFileModified(i)) {
+                if (DocManager::isDocumentModified(i)) {
                     tabItemFlags |= ImGuiTabItemFlags_UnsavedDocument;
                 }
                 
                 bool tabOpen = true;
                 if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
-                    // 切换文件时，不能直接切换，命令栏的取消命令执行操作需要在当前文件上下文，所有事情做完后下一帧去切换文件上下文
-                    if (FileManager::getCurrentFileIndex() != i) {
-                        // 切换文件时，取消当前命令执行
+                    // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
+                    if (DocManager::getCurrentDocumentIndex() != i) {
+                        // 切换文档时，取消当前命令执行
                         s_bShouldCancelCommand = true;
-                        // 设置待切换的文件索引，在下一帧执行切换
+                        // 设置待切换的文档索引，在下一帧执行切换
                         s_pendingFileIndex = i;
                     }
                     ImGui::EndTabItem();
@@ -1033,8 +1034,8 @@ void Renderer::drawFileBar() {
                 
                 // 添加工具提示
                 if (ImGui::IsItemHovered()) {
-                    const std::string& fullFileName = FileManager::getFullFileName(i);
-                    const std::string& filePath = FileManager::getFilePath(i);
+                    const std::string& fullFileName = DocManager::getFullFileName(i);
+                    const std::string& filePath = DocManager::getFilePath(i);
                     ImGui::SetTooltip(filePath.empty() ? fullFileName.c_str() : filePath.c_str());
                 }
                 
@@ -1219,7 +1220,7 @@ void Renderer::drawCommandBar() {
         // }
         // clipper.End();
         
-        const auto& commandHistory = FileManager::getCurrentFileCommandHistory();
+        const auto& commandHistory = DocManager::getCurrentDocumentCommandHistory();
         for (std::size_t i = 0; i < commandHistory.size(); i++)
         {
             ImGui::TextUnformatted(commandHistory[i].c_str());
@@ -1403,7 +1404,7 @@ void Renderer::drawCommandBar() {
 
 // 添加内容到命令历史记录
 void Renderer::addContentToCommandHistory(const std::string& command) {
-    FileManager::addToCurrentFileCommandHistory(command);
+    DocManager::addToCurrentDocumentCommandHistory(command);
     // 设置滚动标志为true，确保新命令添加后会滚动到最底部
     s_bScrollCommandHistoryToBottom = true;
 }

@@ -1,13 +1,13 @@
-#include "file/File.h"
+#include "document/Document.h"
 #include <filesystem>
 
 namespace tch {
 
 // 构造函数
-File::File() : m_fileExtension(".cad.json"), m_modified(false), m_saved(false) {
+Document::Document() : m_fileExtension(".cad.json"), m_modified(false), m_saved(false) {
 }
 
-File::File(const std::string& name, const std::string& path) 
+Document::Document(const std::string& name, const std::string& path) 
     : m_fileExtension(".cad.json"), m_modified(false), m_saved(false) {
     // 解析文件名和路径
     std::filesystem::path filePath(path);
@@ -30,27 +30,27 @@ File::File(const std::string& name, const std::string& path)
 }
 
 // 获取文件名（不含后缀）
-const std::string& File::getFileName() const {
+const std::string& Document::getFileName() const {
     return m_fileName;
 }
 
 // 获取文件后缀
-const std::string& File::getFileExtension() const {
+const std::string& Document::getFileExtension() const {
     return m_fileExtension;
 }
 
 // 获取完整文件名（含后缀）
-std::string File::getFullFileName() const {
+std::string Document::getFullFileName() const {
     return m_fileName + m_fileExtension;
 }
 
 // 获取文件完整路径
-const std::string& File::getFullPath() const {
+const std::string& Document::getFullPath() const {
     return m_fullPath;
 }
 
 // 设置文件完整路径
-void File::setFullPath(const std::string& path) {
+void Document::setFullPath(const std::string& path) {
     m_fullPath = path;
     // 从路径中提取文件名和后缀
     std::filesystem::path filePath(path);
@@ -65,28 +65,28 @@ void File::setFullPath(const std::string& path) {
 }
 
 // 获取文件内容
-const std::string& File::getContent() const {
+const std::string& Document::getContent() const {
     return m_content;
 }
 
 // 设置文件内容
-void File::setContent(const std::string& content) {
+void Document::setContent(const std::string& content) {
     this->m_content = content;
     m_modified = true;
 }
 
 // 检查文件是否被修改
-bool File::isModified() const {
+bool Document::isModified() const {
     return m_modified;
 }
 
 // 检查文件是否已保存
-bool File::isSaved() const {
+bool Document::isSaved() const {
     return m_saved;
 }
 
 // 标记文件为已修改
-void File::markModified(bool isModified) {
+void Document::markModified(bool isModified) {
     m_modified = isModified;
     if (isModified) {
         m_saved = false;
@@ -94,7 +94,7 @@ void File::markModified(bool isModified) {
 }
 
 // 标记文件为已保存
-void File::markSaved(bool isSaved) {
+void Document::markSaved(bool isSaved) {
     m_saved = isSaved;
     if (isSaved) {
         m_modified = false;
@@ -102,17 +102,17 @@ void File::markSaved(bool isSaved) {
 }
 
 // 获取命令历史
-const std::vector<std::string>& File::getCommandHistory() const {
+const std::vector<std::string>& Document::getCommandHistory() const {
     return m_commandHistory;
 }
 
 // 添加命令到历史
-void File::addToCommandHistory(const std::string& command) {
+void Document::addToCommandHistory(const std::string& command) {
     m_commandHistory.push_back(command);
 }
 
 // 清除命令历史
-void File::clearCommandHistory() {
+void Document::clearCommandHistory() {
     m_commandHistory.clear();
 }
 

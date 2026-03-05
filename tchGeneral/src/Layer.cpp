@@ -1,4 +1,5 @@
 #include "Layer.h"
+#include <algorithm>
 
 namespace tch {
 
