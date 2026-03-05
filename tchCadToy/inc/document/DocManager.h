@@ -32,8 +32,8 @@ public:
     static void setCurrentDocumentIndex(std::size_t index);         // 设置当前文档索引
     static std::size_t getCurrentDocumentIndex();                   // 获取当前文档索引
     static std::size_t getDocumentCount();                          // 获取文档数量
-    static const Document& getCurrentDocument();                    // 获取当前文档
-    static const Document& getDocument(std::size_t index);          // 获取指定索引的文档
+    static Document& getCurrentDocument();                          // 获取当前文档
+    static Document& getDocument(std::size_t index);                // 获取指定索引的文档
     
     // 文档内容操作
     static void setDocumentContent(std::size_t index, const std::string& content); // 设置文档内容
@@ -43,9 +43,9 @@ public:
     static const std::string& getFileName(std::size_t index);           // 获取文件名（不含后缀）
     static const std::string& getFileExtension(std::size_t index);      // 获取文件后缀
     static std::string getFullFileName(std::size_t index);              // 获取完整文件名（含后缀）
-    static bool isDocumentModified(std::size_t index);                 // 检查文档是否被修改
-    static bool isDocumentSaved(std::size_t index);                    // 检查文档是否已保存
-    static const std::string& getFilePath(std::size_t index);          // 获取文件路径
+    static bool isDocumentModified(std::size_t index);                  // 检查文档是否被修改
+    static bool isDocumentSaved(std::size_t index);                     // 检查文档是否已保存
+    static const std::string& getFilePath(std::size_t index);           // 获取文件路径
     
     // 最近文件
     static const std::vector<std::string>& getRecentFiles();        // 获取最近打开的文件

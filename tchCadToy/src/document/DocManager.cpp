@@ -1,6 +1,5 @@
 #include "document/DocManager.h"
 #include "document/Document.h"
-#include "render/Renderer.h"
 #include "imgui.h"
 #include "utils/LocalizationManager.h"
 #include "debug/Logger.h"
@@ -168,7 +167,7 @@ std::size_t DocManager::getDocumentCount() {
 }
 
 // 获取当前文档
-const Document& DocManager::getCurrentDocument() {
+Document& DocManager::getCurrentDocument() {
     static Document emptyDocument;
     if (s_currentDocIndex < s_documents.size()) {
         return s_documents[s_currentDocIndex];
@@ -177,7 +176,7 @@ const Document& DocManager::getCurrentDocument() {
 }
 
 // 获取指定索引的文档
-const Document& DocManager::getDocument(std::size_t index) {
+Document& DocManager::getDocument(std::size_t index) {
     static Document emptyDocument;
     if (index < s_documents.size()) {
         return s_documents[index];

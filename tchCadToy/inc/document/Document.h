@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include "transform/TransformManager.h"
 
 namespace tch {
 
@@ -14,7 +15,10 @@ private:
     std::string m_content;          // 文档内容
     bool m_modified;                // 是否已修改
     bool m_saved;                   // 是否已保存
-    std::vector<std::string> m_commandHistory; // 命令执行历史
+    std::vector<std::string> m_commandHistory;  // 命令执行历史
+    TransformManager m_transformManager;        // 文档专属变换管理器
+    bool m_showGrid;                            // 是否显示栅格
+    bool m_showAxes;                            // 是否显示坐标轴
     
 public:
     // 构造函数
@@ -58,6 +62,16 @@ public:
     const std::vector<std::string>& getCommandHistory() const;
     void addToCommandHistory(const std::string& command);
     void clearCommandHistory();
+    
+    // 变换管理器相关方法
+    TransformManager& getTransformManager();
+    const TransformManager& getTransformManager() const;
+    
+    // 栅格和坐标轴相关方法
+    bool isShowGrid() const;
+    void setShowGrid(bool show);
+    bool isShowAxes() const;
+    void setShowAxes(bool show);
 };
 
 } // namespace tch

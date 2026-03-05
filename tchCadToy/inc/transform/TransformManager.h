@@ -8,9 +8,6 @@ namespace tch {
 
 class TransformManager : public CoordinateSystem {
 public:
-    // 初始化
-    void initialize(int width, int height);
-    
     // 坐标转换
     glm::dvec3 screenToWorld(const glm::vec2& screenPos) const override;
     glm::vec2 worldToScreen(const glm::dvec3& worldPos) const override;

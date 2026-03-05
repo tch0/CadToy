@@ -6,8 +6,8 @@ namespace tch {
 
 class Viewport {
 public:
-    // 初始化
-    void initialize(int width, int height);
+    // 默认构造函数
+    Viewport();
     
     // 设置参数
     void setViewport(int left, int top, int right, int bottom);

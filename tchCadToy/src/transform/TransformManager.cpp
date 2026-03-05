@@ -2,10 +2,6 @@
 
 namespace tch {
 
-void TransformManager::initialize(int width, int height) {
-    m_viewport.initialize(width, height);
-}
-
 glm::dvec3 TransformManager::screenToWorld(const glm::vec2& screenPos) const {
     // 获取视口大小
     int viewportLeft, viewportTop, viewportRight, viewportBottom;

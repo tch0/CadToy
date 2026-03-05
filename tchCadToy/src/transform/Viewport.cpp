@@ -4,12 +4,12 @@
 
 namespace tch {
 
-void Viewport::initialize(int width, int height) {
-    m_viewportLeft = 0;
-    m_viewportTop = 0;
-    m_viewportRight = width;
-    m_viewportBottom = height;
-    m_projectionMatrixDirty = true;
+Viewport::Viewport() :
+    m_viewportLeft(0),
+    m_viewportTop(0),
+    m_viewportRight(800),
+    m_viewportBottom(600),
+    m_projectionMatrixDirty(true) {
 }
 
 void Viewport::setViewport(int left, int top, int right, int bottom) {
@@ -23,11 +23,14 @@ void Viewport::setViewport(int left, int top, int right, int bottom) {
         std::swap(top, bottom);
     }
     
-    m_viewportLeft = left;
-    m_viewportTop = top;
-    m_viewportRight = right;
-    m_viewportBottom = bottom;
-    m_projectionMatrixDirty = true;
+    // 只有当视口参数发生变化时才更新并设置脏标记
+    if (left != m_viewportLeft || top != m_viewportTop || right != m_viewportRight || bottom != m_viewportBottom) {
+        m_viewportLeft = left;
+        m_viewportTop = top;
+        m_viewportRight = right;
+        m_viewportBottom = bottom;
+        m_projectionMatrixDirty = true;
+    }
 }
 
 void Viewport::getViewport(int& left, int& top, int& right, int& bottom) const {

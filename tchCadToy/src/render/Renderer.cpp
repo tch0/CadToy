@@ -22,14 +22,14 @@ GLFWwindow* Renderer::s_window = nullptr;
 float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 
-// 栅格和坐标轴相关初始化
-bool Renderer::s_showGrid = true;         // 默认显示栅格
-bool Renderer::s_showAxes = true;         // 默认显示XY轴
+// 栅格和坐标轴颜色初始化
 float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f}; // 主栅格颜色 RGB: 54,61,78
 float Renderer::s_subGridColor[3] = {38.0f/255.0f, 45.0f/255.0f, 55.0f/255.0f};  // 子栅格颜色 RGB: 38,45,55
 float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};    // X轴颜色 RGB: 97,37,39
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
-glm::dvec3 Renderer::s_cursorPosWorld = glm::dvec3(0.0, 0.0, 0.0); // 当前光标位置的世界坐标
+
+// 当前光标位置的世界坐标
+glm::dvec3 Renderer::s_cursorPosWorld = glm::dvec3(0.0, 0.0, 0.0);
 
 // UI组件高度
 float Renderer::s_menuBarHeight = 30.0f;              // 菜单栏高度
@@ -72,8 +72,7 @@ static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否�
 
 // 文件栏相关 - 使用FileManager类管理
 
-// 变换管理器初始化
-TransformManager Renderer::s_transformManager;
+
 
 // 初始化渲染器
 void Renderer::initialize(GLFWwindow* window) {
@@ -88,8 +87,7 @@ void Renderer::initialize(GLFWwindow* window) {
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
     
-    // 初始化变换管理器
-    s_transformManager.initialize(width, height);
+
     
     // 启用混合
     glEnable(GL_BLEND);
@@ -153,7 +151,7 @@ void Renderer::calculateLayoutAndUpdateViewport() {
     right = std::max(1, std::min(right, width));
     
     // 更新变换管理器的视口
-    s_transformManager.setViewport(left, top, right, bottom);
+    getTransformManager().setViewport(left, top, right, bottom);
 }
 
 // 开始渲染
@@ -207,14 +205,10 @@ void Renderer::drawAll() {
     }
     
     // 绘制栅格
-    if (s_showGrid) {
-        drawGrid();
-    }
+    drawGrid();
     
     // 绘制XY轴
-    if (s_showAxes) {
-        drawAxes();
-    }
+    drawAxes();
     
     // 绘制所有图层
     LayerManager::getInstance().draw();
@@ -235,7 +229,7 @@ void Renderer::drawCursor() {
     glm::vec2 cursorScreenPos = InputHandler::getCursorPosition();
     
     // 更新当前光标位置（使用变换管理器转换）
-    s_cursorPosWorld = s_transformManager.screenToWorld(cursorScreenPos);
+    s_cursorPosWorld = getTransformManager().screenToWorld(cursorScreenPos);
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -315,7 +309,7 @@ float Renderer::getCrossCursorSize() {
 
 // 绘制栅格
 void Renderer::drawGrid() {
-    if (!s_initialized || !s_window) {
+    if (!s_initialized || !s_window || !DocManager::getCurrentDocument().isShowGrid()) {
         return;
     }
     
@@ -341,7 +335,7 @@ void Renderer::drawGrid() {
     
     // 获取实际的视口边界
     int viewportLeft, viewportTop, viewportRight, viewportBottom;
-    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    getTransformManager().getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
     // 计算视口大小
     int viewportWidth = viewportRight - viewportLeft;
@@ -349,8 +343,8 @@ void Renderer::drawGrid() {
     
     // 使用视口边界计算世界视口范围
     // 考虑屏幕坐标系y轴向下
-    glm::dvec3 worldMin = s_transformManager.screenToWorld(glm::vec2(viewportLeft, viewportBottom));
-    glm::dvec3 worldMax = s_transformManager.screenToWorld(glm::vec2(viewportRight, viewportTop));
+    glm::dvec3 worldMin = getTransformManager().screenToWorld(glm::vec2(viewportLeft, viewportBottom));
+    glm::dvec3 worldMax = getTransformManager().screenToWorld(glm::vec2(viewportRight, viewportTop));
     
     // 计算世界视口的宽度和高度
     double worldWidth = worldMax.x - worldMin.x;
@@ -421,17 +415,17 @@ void Renderer::drawGrid() {
     
     // 绘制垂直线
     for (double x = startX; x <= worldMax.x; x += subGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
+        glm::vec2 screenPos = getTransformManager().worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
+        screenPos = getTransformManager().worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
     for (double y = startY; y <= worldMax.y; y += subGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
+        glm::vec2 screenPos = getTransformManager().worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
+        screenPos = getTransformManager().worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -446,17 +440,17 @@ void Renderer::drawGrid() {
     
     // 绘制垂直线
     for (double x = mainStartX; x <= worldMax.x; x += mainGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
+        glm::vec2 screenPos = getTransformManager().worldToScreen(glm::dvec3(x, worldMin.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
+        screenPos = getTransformManager().worldToScreen(glm::dvec3(x, worldMax.y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     
     // 绘制水平线
     for (double y = mainStartY; y <= worldMax.y; y += mainGridSize) {
-        glm::vec2 screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
+        glm::vec2 screenPos = getTransformManager().worldToScreen(glm::dvec3(worldMin.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
-        screenPos = s_transformManager.worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
+        screenPos = getTransformManager().worldToScreen(glm::dvec3(worldMax.x, y, 0.0));
         glVertex2f(screenPos.x, screenPos.y);
     }
     glEnd();
@@ -473,7 +467,7 @@ void Renderer::drawGrid() {
 
 // 绘制XY轴
 void Renderer::drawAxes() {
-    if (!s_initialized || !s_window) {
+    if (!s_initialized || !s_window || !DocManager::getCurrentDocument().isShowAxes()) {
         return;
     }
     
@@ -498,13 +492,13 @@ void Renderer::drawAxes() {
     glDisable(GL_DEPTH_TEST);
     
     // 计算世界原点在屏幕上的位置
-    glm::vec2 originScreenPos = s_transformManager.worldToScreen(glm::dvec3(0.0, 0.0, 0.0));
+    glm::vec2 originScreenPos = getTransformManager().worldToScreen(glm::dvec3(0.0, 0.0, 0.0));
     float originScreenX = originScreenPos.x;
     float originScreenY = originScreenPos.y;
     
     // 获取实际的视口边界
     int viewportLeft, viewportTop, viewportRight, viewportBottom;
-    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    getTransformManager().getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
     // 绘制X轴（正半轴）
     glBegin(GL_LINES);
@@ -538,29 +532,20 @@ void Renderer::drawAxes() {
     glEnable(GL_DEPTH_TEST);
 }
 
-// 栅格和坐标轴控制方法
-void Renderer::setShowGrid(bool show) {
-    s_showGrid = show;
-}
-
-void Renderer::setShowAxes(bool show) {
-    s_showAxes = show;
-}
-
 void Renderer::zoomIn(const glm::vec2& cursorPos) {
     // 使用变换管理器进行缩放，以光标位置为中心
-    s_transformManager.zoomIn(cursorPos);
+    getTransformManager().zoomIn(cursorPos);
 }
 
 void Renderer::zoomOut(const glm::vec2& cursorPos) {
     // 使用变换管理器进行缩放，以光标位置为中心
-    s_transformManager.zoomOut(cursorPos);
+    getTransformManager().zoomOut(cursorPos);
 }
 
 // 平移功能
 void Renderer::pan(const glm::vec2& deltaScreen) {
     // 使用变换管理器进行平移
-    s_transformManager.pan(deltaScreen);
+    getTransformManager().pan(deltaScreen);
 }
 
 // 初始化ImGui
@@ -685,8 +670,8 @@ void Renderer::drawOptionsDialog() {
             ImGui::Separator();
             
             // 对话框内容
-            static bool showGrid = s_showGrid;
-            static bool showAxes = s_showAxes;
+            static bool showGrid = DocManager::getCurrentDocument().isShowGrid();
+            static bool showAxes = DocManager::getCurrentDocument().isShowAxes();
             static int crossCursorSize = static_cast<int>(s_crossCursorSize);
             static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
             
@@ -812,8 +797,8 @@ void Renderer::drawOptionsDialog() {
             // 确定按钮
             if (ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(80, 30))) {
                 // 应用设置
-                s_showGrid = showGrid;
-                s_showAxes = showAxes;
+                DocManager::getCurrentDocument().setShowGrid(showGrid);
+                DocManager::getCurrentDocument().setShowAxes(showAxes);
                 s_crossCursorSize = static_cast<float>(crossCursorSize);
                 s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
                 ImGui::CloseCurrentPopup();
@@ -1057,7 +1042,7 @@ void Renderer::drawFileBar() {
 
 // 获取变换管理器
 TransformManager& Renderer::getTransformManager() {
-    return s_transformManager;
+    return DocManager::getCurrentDocument().getTransformManager();
 }
 
 // 绘制实时渲染信息窗口
@@ -1071,21 +1056,21 @@ void Renderer::drawRenderingInfoWindow() {
     
     // 获取视口信息
     int viewportLeft, viewportTop, viewportRight, viewportBottom;
-    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    getTransformManager().getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
     // 计算视口大小
     int viewportWidth = viewportRight - viewportLeft;
     int viewportHeight = viewportBottom - viewportTop;
     
     // 获取相机信息
-    const Camera& camera = s_transformManager.getCamera();
+    const Camera& camera = getTransformManager().getCamera();
     glm::dvec3 cameraPos = camera.getPosition();
     glm::dvec3 cameraRot = camera.getRotation();
     double cameraScale = camera.getScale();
     
     // 计算视口的世界坐标系范围
-    glm::dvec3 worldMin = s_transformManager.screenToWorld(glm::vec2(viewportLeft, viewportBottom));
-    glm::dvec3 worldMax = s_transformManager.screenToWorld(glm::vec2(viewportRight, viewportTop));
+    glm::dvec3 worldMin = getTransformManager().screenToWorld(glm::vec2(viewportLeft, viewportBottom));
+    glm::dvec3 worldMax = getTransformManager().screenToWorld(glm::vec2(viewportRight, viewportTop));
     
     // 显示视口信息
     ImGui::Text(loc.get("window.renderingInfo.viewport.title").c_str());
@@ -1121,7 +1106,7 @@ void Renderer::drawRenderingInfoWindow() {
     // 显示光标信息
     ImGui::Text(loc.get("window.renderingInfo.cursor.title").c_str());
     glm::vec2 cursorScreenPos = InputHandler::getCursorPosition();
-    glm::dvec3 cursorWorldPos = s_transformManager.screenToWorld(cursorScreenPos);
+    glm::dvec3 cursorWorldPos = getTransformManager().screenToWorld(cursorScreenPos);
     ImGui::Text("  %s: (%.1f, %.1f)", loc.get("window.renderingInfo.cursor.screenPosition").c_str(), cursorScreenPos.x, cursorScreenPos.y);
     ImGui::Text("  %s: (%.4f, %.4f)", loc.get("window.renderingInfo.cursor.worldPosition").c_str(), cursorWorldPos.x, cursorWorldPos.y);
     
@@ -1161,7 +1146,7 @@ void Renderer::drawNonModalWindows() {
 bool Renderer::isPointInViewport(const glm::vec2& screenPos) {
     // 获取视口边界
     int viewportLeft, viewportTop, viewportRight, viewportBottom;
-    s_transformManager.getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
+    getTransformManager().getViewport().getViewport(viewportLeft, viewportTop, viewportRight, viewportBottom);
     
     // 计算视口大小
     int viewportWidth = viewportRight - viewportLeft;

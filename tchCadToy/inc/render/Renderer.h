@@ -43,9 +43,7 @@ public:
     // 获取渲染器状态
     static bool isInitialized();
 
-    // 栅格和坐标轴控制方法
-    static void setShowGrid(bool show);         // 设置是否显示栅格
-    static void setShowAxes(bool show);         // 设置是否显示XY轴
+    // 视图操作方法
     static void zoomIn(const glm::vec2& cursorPos);  // 以光标位置为中心放大
     static void zoomOut(const glm::vec2& cursorPos); // 以光标位置为中心缩小
     static void pan(const glm::vec2& deltaScreen); // 平移功能
@@ -106,17 +104,13 @@ private:
     static float s_crossCursorSize;            // 十字光标大小（包含选择框的总大小，线段长度为十字光标大小减去选择框大小）
     static float s_pickBoxSize;                // 拾取框大小
     
-    // 栅格和坐标轴相关
-    static bool s_showGrid;                     // 是否显示栅格
-    static bool s_showAxes;                     // 是否显示XY轴
+    // 栅格和坐标轴颜色
     static float s_mainGridColor[3];            // 主栅格颜色 RGB: 54,61,78
     static float s_subGridColor[3];             // 子栅格颜色 RGB: 38,45,55
     static float s_xAxisColor[3];               // X轴颜色 RGB: 97,37,39
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
     static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
     
-    // 变换管理器
-    static TransformManager s_transformManager; // 变换管理器
     
     // UI组件高度
     static float s_menuBarHeight;              // 菜单栏高度

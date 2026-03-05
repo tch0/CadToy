@@ -4,11 +4,20 @@
 namespace tch {
 
 // 构造函数
-Document::Document() : m_fileExtension(".cad.json"), m_modified(false), m_saved(false) {
+Document::Document() :
+    m_fileExtension(".cad.json"),
+    m_modified(false),
+    m_saved(false),
+    m_showGrid(true),
+    m_showAxes(true) {
 }
 
-Document::Document(const std::string& name, const std::string& path) 
-    : m_fileExtension(".cad.json"), m_modified(false), m_saved(false) {
+Document::Document(const std::string& name, const std::string& path) :
+    m_fileExtension(".cad.json"),
+    m_modified(false),
+    m_saved(false),
+    m_showGrid(true),
+    m_showAxes(true) {
     // 解析文件名和路径
     std::filesystem::path filePath(path);
     if (!path.empty()) {
@@ -114,6 +123,36 @@ void Document::addToCommandHistory(const std::string& command) {
 // 清除命令历史
 void Document::clearCommandHistory() {
     m_commandHistory.clear();
+}
+
+// 获取变换管理器
+TransformManager& Document::getTransformManager() {
+    return m_transformManager;
+}
+
+// 获取变换管理器（const版本）
+const TransformManager& Document::getTransformManager() const {
+    return m_transformManager;
+}
+
+// 检查是否显示栅格
+bool Document::isShowGrid() const {
+    return m_showGrid;
+}
+
+// 设置是否显示栅格
+void Document::setShowGrid(bool show) {
+    m_showGrid = show;
+}
+
+// 检查是否显示坐标轴
+bool Document::isShowAxes() const {
+    return m_showAxes;
+}
+
+// 设置是否显示坐标轴
+void Document::setShowAxes(bool show) {
+    m_showAxes = show;
 }
 
 } // namespace tch
