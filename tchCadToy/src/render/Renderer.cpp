@@ -9,7 +9,9 @@
 #include "debug/Logger.h"
 #include "utils/LocalizationManager.h"
 #include "command/CommandParser.h"
+#include "command/CommandManager.h"
 #include "input/InputHandler.h"
+#include "input/InputContext.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -1224,7 +1226,19 @@ void Renderer::drawCommandBar() {
         
         // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
         ImGui::AlignTextToFramePadding();
-        ImGui::Text(loc.get("commandBar.prompt").c_str());
+        
+        // 显示命令提示信息
+        if (InputContext::getInstance().isInCommandExecution()) {
+            const std::string& prompt = InputContext::getInstance().getPrompt();
+            if (!prompt.empty()) {
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
+            } else {
+                ImGui::Text(loc.get("commandBar.prompt").c_str());
+            }
+        } else {
+            ImGui::Text(loc.get("commandBar.prompt").c_str());
+        }
+        
         ImGui::SameLine();
         
         // 如果需要设置焦点到命令输入框
@@ -1261,6 +1275,9 @@ void Renderer::drawCommandBar() {
             std::string promptStr = loc.get("commandBar.prompt") + " " + command;
             addContentToCommandHistory(promptStr);
             if (!command.empty()) {
+                // 解析输入并设置到输入上下文
+                InputContext::getInstance().parseInput(command);
+                // 执行命令
                 CommandParser::parseCommand(command);
             }
             // 清空缓冲区
@@ -1276,6 +1293,9 @@ void Renderer::drawCommandBar() {
             std::string promptStr = loc.get("commandBar.prompt") + " " + command;
             addContentToCommandHistory(promptStr);
             if (!command.empty()) {
+                // 解析输入并设置到输入上下文
+                InputContext::getInstance().parseInput(command);
+                // 执行命令
                 CommandParser::parseCommand(command);
             }
             // 清空待执行命令

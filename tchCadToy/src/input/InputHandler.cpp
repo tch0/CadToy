@@ -1,5 +1,6 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
+#include "input/InputContext.h"
 #include "debug/Logger.h"
 #include "command/CommandParser.h"
 #include "imgui.h"
@@ -259,6 +260,13 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
             s_lastCursorPosition = s_cursorPosition;
             // 检查鼠标是否在视口内
             s_mouseMiddleButtonPressedInViewport = Renderer::isPointInViewport(s_cursorPosition);
+        }
+        
+        // 将鼠标按钮事件传递给输入上下文处理
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            InputContext::getInstance().handleLeftMouseClick(s_cursorPosition);
+        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            InputContext::getInstance().handleRightMouseClick(s_cursorPosition);
         }
         
         // 触发鼠标按下回调

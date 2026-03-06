@@ -4,6 +4,7 @@
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
 #include "command/CommandParser.h"
+#include "command/CommandManager.h"
 #include "debug/Logger.h"
 #include "sys/Global.h"
 #include <iostream>
@@ -125,6 +126,9 @@ int main(int argc, char* argv[])
         
         // 结束渲染
         Renderer::endRender();
+        
+        // 运行命令循环
+        CommandManager::getInstance().runCommandLoop();
     }
     
     // 清理资源
