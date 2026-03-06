@@ -1,14 +1,15 @@
 #include "input/InputContext.h"
 #include "render/Renderer.h"
+#include "command/CommandManager.h"
 #include <glm/glm.hpp>
 #include <memory>
 
 namespace tch {
 
 // 静态实例
-std::unique_ptr<InputContext> InputContext::s_instance = nullptr;
+std::shared_ptr<InputContext> InputContext::s_instance = nullptr;
 
-// 私有构造函数
+// 构造函数
 InputContext::InputContext() :
     m_inCommandExecution(false),
     m_shouldAbortCommand(false),
@@ -26,7 +27,7 @@ InputContext::InputContext() :
 // 获取单例实例
 InputContext& InputContext::getInstance() {
     if (s_instance == nullptr) {
-        s_instance = std::make_unique<InputContext>();
+        s_instance = std::make_shared<InputContext>();
     }
     return *s_instance;
 }
@@ -265,6 +266,17 @@ bool InputContext::shouldAbortCommand() const {
 // 预览功能（暂时空实现）
 void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
     // 暂时空实现
+}
+
+// 处理命令输入
+void InputContext::handleCommandInput(const std::string& input) {
+    if (m_inCommandExecution) {
+        // 如果处于命令执行中，将输入作为命令参数解析
+        parseInput(input);
+    } else {
+        // 如果不处于命令执行中，解析为新命令
+        CommandManager::getInstance().parseCommand(input);
+    }
 }
 
 } // namespace tch

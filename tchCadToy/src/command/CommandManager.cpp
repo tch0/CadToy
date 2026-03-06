@@ -1,31 +1,33 @@
 #include "command/CommandManager.h"
 #include "input/InputContext.h"
+#include "command/CommandLine.h"
 
 namespace tch {
 
 // 静态成员初始化
-std::unique_ptr<CommandManager> CommandManager::s_instance = nullptr;
+std::shared_ptr<CommandManager> CommandManager::s_instance = nullptr;
 
-// 私有构造函数
+// 构造函数
 CommandManager::CommandManager() :
-    m_activeCommand(nullptr) {
+    m_activeCommand(nullptr),
+    m_pendingCommands() {
 }
 
 // 获取单例实例
 CommandManager& CommandManager::getInstance() {
     if (s_instance == nullptr) {
-        s_instance = std::make_unique<CommandManager>();
+        s_instance = std::make_shared<CommandManager>();
     }
     return *s_instance;
 }
 
 // 执行命令
-void CommandManager::executeCommand(std::unique_ptr<Command> command) {
+void CommandManager::executeCommand(std::shared_ptr<Command> command) {
     // 取消当前命令（如果有）
     cancelCurrentCommand();
     
     // 设置新命令
-    m_activeCommand = std::move(command);
+    m_activeCommand = command;
     
     // 设置输入上下文为命令执行状态
     InputContext::getInstance().setInCommandExecution(true);
@@ -35,7 +37,7 @@ void CommandManager::executeCommand(std::unique_ptr<Command> command) {
 void CommandManager::cancelCurrentCommand() {
     if (m_activeCommand) {
         m_activeCommand->cancel();
-        m_activeCommand.reset();
+        m_activeCommand = nullptr;
         
         // 重置输入上下文
         InputContext::getInstance().setInCommandExecution(false);
@@ -48,8 +50,31 @@ bool CommandManager::hasActiveCommand() {
     return m_activeCommand != nullptr;
 }
 
-// 更新活动命令
-void CommandManager::updateActiveCommand() {
+// 获取活动命令（用于预览）
+std::shared_ptr<Command> CommandManager::getActiveCommand() {
+    return m_activeCommand;
+}
+
+// 解析命令
+void CommandManager::parseCommand(const std::string& command) {
+    // 简单的命令解析
+    if (command == "line" || command == "l") {
+        // 创建线段命令并添加到待执行列表
+        m_pendingCommands.push_back(std::make_shared<CommandLine>());
+    }
+    // 其他命令的解析...
+}
+
+// 运行命令循环
+void CommandManager::runCommandLoop() {
+    // 检查是否有待执行的命令
+    if (!m_pendingCommands.empty() && !m_activeCommand) {
+        // 执行第一个待执行的命令
+        executeCommand(m_pendingCommands.front());
+        m_pendingCommands.erase(m_pendingCommands.begin());
+    }
+    
+    // 更新活动命令
     if (m_activeCommand) {
         // 检查是否需要强制中止命令
         if (InputContext::getInstance().shouldAbortCommand()) {
@@ -61,18 +86,11 @@ void CommandManager::updateActiveCommand() {
         
         // 检查命令是否完成
         if (m_activeCommand->isCompleted()) {
-            m_activeCommand.reset();
+            m_activeCommand = nullptr;
             
             // 重置输入上下文
             InputContext::getInstance().setInCommandExecution(false);
         }
-    }
-}
-
-// 运行命令循环
-void CommandManager::runCommandLoop() {
-    if (hasActiveCommand()) {
-        updateActiveCommand();
     }
 }
 

@@ -80,6 +80,9 @@ public:
     static void drawModalDialogs(); // 绘制模态对话框
     static void drawNonModalWindows(); // 绘制非模态窗口
     
+    // 获取当前光标世界坐标
+    static glm::dvec3 getCursorPosWorld();
+    
     // 视口相关方法
     static bool isPointInViewport(const glm::vec2& screenPos); // 判断点是否在视口内
     

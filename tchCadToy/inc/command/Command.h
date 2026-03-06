@@ -15,6 +15,9 @@ public:
     
     // 取消命令
     virtual void cancel() = 0;
+    
+    // 绘制预览（基类方法，派生类可重写）
+    virtual void drawPreview() {}
 };
 
 } // namespace tch

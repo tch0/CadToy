@@ -214,6 +214,14 @@ void Renderer::drawAll() {
     
     // 绘制所有图层
     LayerManager::getInstance().draw();
+    
+    // 绘制活动命令的预览
+    if (CommandManager::getInstance().hasActiveCommand()) {
+        auto activeCommand = CommandManager::getInstance().getActiveCommand();
+        if (activeCommand) {
+            activeCommand->drawPreview();
+        }
+    }
 }
 
 // 获取渲染器状态
@@ -1144,6 +1152,11 @@ void Renderer::drawNonModalWindows() {
     drawRenderingInfoWindow();
 }
 
+// 获取当前光标世界坐标
+glm::dvec3 Renderer::getCursorPosWorld() {
+    return s_cursorPosWorld;
+}
+
 // 判断点是否在视口内
 bool Renderer::isPointInViewport(const glm::vec2& screenPos) {
     // 获取视口边界
@@ -1259,6 +1272,8 @@ void Renderer::drawCommandBar() {
             addContentToCommandHistory(promptStr);
             s_bShouldCancelCommand = false;
             s_bShouldExecuteCommand = false;
+            // 通知InputContext取消命令
+            InputContext::getInstance().cancel();
             // 清空缓冲区
             std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
             // 设置清除命令输入缓冲区的标记，因为内部ImGui内部会维护InputText的状态，所以回调中还需要再清除一次
@@ -1275,10 +1290,8 @@ void Renderer::drawCommandBar() {
             std::string promptStr = loc.get("commandBar.prompt") + " " + command;
             addContentToCommandHistory(promptStr);
             if (!command.empty()) {
-                // 解析输入并设置到输入上下文
-                InputContext::getInstance().parseInput(command);
-                // 执行命令
-                CommandParser::parseCommand(command);
+                // 处理命令输入
+                InputContext::getInstance().handleCommandInput(command);
             }
             // 清空缓冲区
             std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
@@ -1293,10 +1306,8 @@ void Renderer::drawCommandBar() {
             std::string promptStr = loc.get("commandBar.prompt") + " " + command;
             addContentToCommandHistory(promptStr);
             if (!command.empty()) {
-                // 解析输入并设置到输入上下文
-                InputContext::getInstance().parseInput(command);
-                // 执行命令
-                CommandParser::parseCommand(command);
+                // 处理命令输入
+                InputContext::getInstance().handleCommandInput(command);
             }
             // 清空待执行命令
             s_commandPendingToBeExecuted.clear();

@@ -31,7 +31,7 @@ enum class InputType {
 class InputContext {
 private:
     // 静态实例
-    static std::unique_ptr<InputContext> s_instance;
+    static std::shared_ptr<InputContext> s_instance;
     
 public:
     // 构造函数
@@ -127,6 +127,9 @@ public:
     
     // 预览功能（暂时空实现）
     void drawRubberBand(const glm::dvec3& startPoint);
+    
+    // 处理命令输入
+    void handleCommandInput(const std::string& input);
 };
 
 } // namespace tch

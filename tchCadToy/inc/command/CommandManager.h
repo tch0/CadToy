@@ -1,22 +1,24 @@
 #pragma once
 
 #include <memory>
+#include <vector>
+#include <string>
 #include "command/Command.h"
 
 namespace tch {
-
-// 命令基类
-class Command;
 
 // 命令管理器类
 class CommandManager {
 private:
     // 静态实例
-    static std::unique_ptr<CommandManager> s_instance;
+    static std::shared_ptr<CommandManager> s_instance;
     
     // 活动命令
-    std::unique_ptr<Command> m_activeCommand;
+    std::shared_ptr<Command> m_activeCommand;
     
+    // 待执行的命令列表
+    std::vector<std::shared_ptr<Command>> m_pendingCommands;
+
 public:
     // 构造函数
     CommandManager();
@@ -25,7 +27,7 @@ public:
     static CommandManager& getInstance();
     
     // 执行命令
-    void executeCommand(std::unique_ptr<Command> command);
+    void executeCommand(std::shared_ptr<Command> command);
     
     // 取消当前命令
     void cancelCurrentCommand();
@@ -33,8 +35,11 @@ public:
     // 检查是否有活动命令
     bool hasActiveCommand();
     
-    // 更新活动命令
-    void updateActiveCommand();
+    // 获取活动命令（用于预览）
+    std::shared_ptr<Command> getActiveCommand();
+    
+    // 解析命令
+    void parseCommand(const std::string& command);
     
     // 运行命令循环
     void runCommandLoop();
