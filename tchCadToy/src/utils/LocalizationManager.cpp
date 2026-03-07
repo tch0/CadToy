@@ -146,16 +146,16 @@ std::string LocalizationManager::getCurrentLanguage() {
 }
 
 // 获取本地化文本
-std::string LocalizationManager::get(const std::string& key) {
+std::string LocalizationManager::get(const std::string& key, const std::string& fallback) {
     // 检查当前语言是否存在
     if (m_languages.find(m_currentLanguage) == m_languages.end()) {
-        return key;
+        return !fallback.empty() ? fallback : key;
     }
     
     // 检查键是否存在
     const auto& langMap = m_languages[m_currentLanguage];
     if (langMap.find(key) == langMap.end()) {
-        return key;
+        return !fallback.empty() ? fallback : key;
     }
     
     // 返回本地化文本

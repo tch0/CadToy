@@ -69,9 +69,6 @@ public:
     static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
     static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
     static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符
-    static void setShouldExecuteCommand(bool shouldExecute); // 设置是否应该执行命令
-    static void setShouldCancelCommand(bool shouldCancel); // 设置是否应该取消命令执行
-    static void pushCommandToExecute(const std::string& command); // 推送命令到执行队列
     
     // 实时渲染信息窗口相关方法
     static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口
@@ -124,8 +121,6 @@ private:
     static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
     static bool s_bCommandBufferModified; // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
-    static bool s_bShouldExecuteCommand; // 是否应该执行命令
-    static bool s_bShouldCancelCommand; // 是否应该取消命令执行
     static bool s_bNeedClearCommandBuffer; // 是否需要清除命令输入缓冲区
 
 

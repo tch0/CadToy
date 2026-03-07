@@ -24,7 +24,13 @@ CommandManager& CommandManager::getInstance() {
 // 执行命令
 void CommandManager::executeCommand(std::shared_ptr<Command> command) {
     // 取消当前命令（如果有）
-    cancelCurrentCommand();
+    if (m_activeCommand) {
+        m_activeCommand = nullptr;
+        
+        // 重置输入上下文
+        InputContext::getInstance().setInCommandExecution(false);
+        InputContext::getInstance().resetStatus();
+    }
     
     // 设置新命令
     m_activeCommand = command;
@@ -33,17 +39,7 @@ void CommandManager::executeCommand(std::shared_ptr<Command> command) {
     InputContext::getInstance().setInCommandExecution(true);
 }
 
-// 取消当前命令
-void CommandManager::cancelCurrentCommand() {
-    if (m_activeCommand) {
-        m_activeCommand->cancel();
-        m_activeCommand = nullptr;
-        
-        // 重置输入上下文
-        InputContext::getInstance().setInCommandExecution(false);
-        InputContext::getInstance().resetStatus();
-    }
-}
+
 
 // 检查是否有活动命令
 bool CommandManager::hasActiveCommand() {
@@ -78,7 +74,11 @@ void CommandManager::runCommandLoop() {
     if (m_activeCommand) {
         // 检查是否需要强制中止命令
         if (InputContext::getInstance().shouldAbortCommand()) {
-            cancelCurrentCommand();
+            m_activeCommand = nullptr;
+            
+            // 重置输入上下文
+            InputContext::getInstance().setInCommandExecution(false);
+            InputContext::getInstance().resetStatus();
             return;
         }
         

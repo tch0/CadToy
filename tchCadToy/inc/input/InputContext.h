@@ -9,22 +9,33 @@ namespace tch {
 
 // 输入状态枚举
 enum class InputStatus {
-    kNone,          // 无输入
-    kCanceled,      // 取消输入（Esc键）
-    kIntegerInput,  // 整数输入
-    kFloatInput,    // 浮点数输入
-    kStringInput,   // 字符串输入
-    kKeywordInput,  // 关键字输入
-    kPointInput     // 点坐标输入
+    kNone,              // 无输入
+    kCanceled,          // 取消输入（Esc键）
+    kEnterInput,        // 回车输入
+    kIntegerInput,      // 整数输入
+    kFloatInput,        // 浮点数输入
+    kStringInput,       // 字符串输入
+    kKeywordInput,      // 关键字输入
+    kPointInput,        // 点坐标输入
+    kEntitySelection    // 实体选择输入
 };
 
 // 输入类型枚举
 enum class InputType {
-    kInteger,   // 整数输入
-    kFloat,     // 浮点数输入
-    kString,    // 字符串输入
-    kKeyword,   // 关键字输入
-    kPoint      // 点坐标输入
+    kInteger,           // 整数输入
+    kFloat,             // 浮点数输入
+    kString,            // 字符串输入
+    kKeyword,           // 关键字输入
+    kPoint,             // 点坐标输入
+    kEntitySelection    // 实体选择输入
+};
+
+// 特殊按键事件类型枚举
+enum class SpecialKeyEventType {
+    kNone,              // 无事件
+    kEnterPressed,      // 回车键按下
+    kSpacePressed,      // 空格键按下
+    kEscPressed         // Esc键按下
 };
 
 // 输入上下文类，用于命令状态机模式的输入管理
@@ -70,6 +81,18 @@ private:
     
     // 关键字选项列表
     std::vector<std::string> m_keywordOptions;
+    
+    // 选择的实体
+    std::vector<void*> m_selectedEntities;
+    
+    // 最后一次特殊按键事件
+    SpecialKeyEventType m_lastSpecialKeyEvent;
+    // 输入字符串
+    std::string m_input;
+    // 错误提示
+    std::string m_errorPrompt;
+    
+
 
 public:
     // 获取单例实例
@@ -114,12 +137,12 @@ public:
     const std::vector<std::string>& getKeywordOptions() const;
     bool getKeyword(std::string& keyword);
     
+    // 实体选择相关
+    void setSelectedEntities(const std::vector<void*>& entities);
+    bool getSelectedEntities(std::vector<void*>& entities);
+    
     // 输入解析
     void parseInput(const std::string& input);
-    
-    // 取消操作
-    void cancel();
-    bool isCanceled() const;
     
     // 中止操作（强制取消整个命令）
     void abort();
@@ -128,8 +151,47 @@ public:
     // 预览功能（暂时空实现）
     void drawRubberBand(const glm::dvec3& startPoint);
     
-    // 处理命令输入
-    void handleCommandInput(const std::string& input);
+    // 特殊按键事件管理
+    void setSpecialKeyEvent(SpecialKeyEventType event);
+    SpecialKeyEventType getLastSpecialKeyEvent() const;
+    void clearSpecialKeyEvent();
+    
+    // 输入管理
+    void setInput(const std::string& input);
+    const std::string& getInput() const;
+    
+    // 处理Enter/Space输入
+    void handleEnterSpace(const std::string& input);
+    // 处理Escape输入
+    void handleEscape(const std::string& input);
+    
+    // 等待点输入（带基点）
+    void waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords = {});
+    
+    // 等待点输入（无基点）
+    void waitForPoint(const std::string& prompt, const std::vector<std::string>& keywords = {});
+    
+    // 等待数值输入
+    void waitForNumber(const std::string& prompt, double min = -DBL_MAX, double max = DBL_MAX);
+    
+    // 等待整数输入
+    void waitForInteger(const std::string& prompt, int min = INT_MIN, int max = INT_MAX);
+    
+    // 等待浮点数输入
+    void waitForFloat(const std::string& prompt, double min = -DBL_MAX, double max = DBL_MAX);
+    
+    // 等待字符串输入
+    void waitForString(const std::string& prompt);
+    
+    // 等待关键字输入
+    void waitForKeyword(const std::string& prompt, const std::vector<std::string>& options);
+    
+    // 等待回车输入
+    void waitForEnter(const std::string& prompt);
+    
+    // 等待实体选择输入
+    void waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities = {},
+        const std::vector<std::string>& keywords = {});
 };
 
 } // namespace tch

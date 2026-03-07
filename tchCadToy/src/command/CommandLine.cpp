@@ -12,58 +12,91 @@ CommandLine::CommandLine() :
     m_state(CommandLineState::kWaitForStartPoint),
     m_startPoint(glm::dvec3(0, 0, 0)),
     m_currentPoint(glm::dvec3(0, 0, 0)),
-    m_points(),
-    m_completed(false),
-    m_canceled(false) {
+    m_points() {
 }
 
 void CommandLine::onUpdate() {
     auto& ctx = InputContext::getInstance();
     
-    // 检查是否取消
-    if (ctx.isCanceled()) {
-        // 无论当前状态如何，按Esc键都直接终止命令
-        m_canceled = true;
-        ctx.resetStatus();
+    // 检查是否已经完成
+    if (isCompleted()) {
         return;
     }
     
     switch (m_state) {
         case CommandLineState::kWaitForStartPoint:
-            // 等待起点
-            ctx.setPrompt("指定起点:");
-            ctx.setAllowedTypes({InputType::kPoint});
+        {
+            // 等待起点输入
+            std::vector<std::string> keywords = {"end", "cancel"};
+            ctx.waitForPoint("指定起点:", keywords);
+            m_state = CommandLineState::kWaitForStartPointInput;
+            break;
+        }
             
-            if (ctx.getPickedPoint(m_startPoint)) {
-                m_currentPoint = m_startPoint;
-                m_points.push_back(m_startPoint); // 保存起点
-                m_state = CommandLineState::kWaitForNextPoint;
-                ctx.resetStatus();
+        case CommandLineState::kWaitForStartPointInput:
+        {
+            // 检查输入状态
+            InputStatus status = ctx.getCurrentStatus();
+            
+            // 无输入，直接返回
+            if (status == InputStatus::kNone) {
+                return;
+            }
+            // Esc、Enter和关键字，结束命令
+            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
+                m_state = CommandLineState::kFinishing;
+            }
+            // 获取第一点输入
+            else if (status == InputStatus::kPointInput) {
+                if (ctx.getPickedPoint(m_startPoint)) {
+                    m_currentPoint = m_startPoint;
+                    m_points.push_back(m_startPoint); // 保存起点
+                    m_state = CommandLineState::kWaitForNextPoint;
+                }
             }
             break;
+        }
             
         case CommandLineState::kWaitForNextPoint:
-            // 等待下一点
-            ctx.setPrompt("指定下一点 (按Esc取消):");
-            ctx.setAllowedTypes({InputType::kPoint});
+        {
+            // 等待下一点输入
+            std::vector<std::string> keywords = {"end", "cancel"};
+            ctx.waitForPoint("指定下一点 (按Enter结束，按Esc取消):", m_startPoint, keywords);
+            m_state = CommandLineState::kWaitForNextPointInput;
+            break;
+        }
             
-            if (ctx.getPickedPoint(m_currentPoint)) {
-                // 保存点
-                m_points.push_back(m_currentPoint);
-                m_startPoint = m_currentPoint;
-                ctx.resetStatus();
+        case CommandLineState::kWaitForNextPointInput:
+        {
+            // 检查输入状态
+            InputStatus status = ctx.getCurrentStatus();
+            
+            // 无输入，直接返回
+            if (status == InputStatus::kNone) {
+                return;
+            }
+            // Esc、Enter和关键字，进入结束状态
+            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
+                m_state = CommandLineState::kFinishing;
+            }
+            // 获取点输入
+            else if (status == InputStatus::kPointInput) {
+                if (ctx.getPickedPoint(m_currentPoint)) {
+                    m_points.push_back(m_currentPoint); // 保存下一点
+                    m_startPoint = m_currentPoint;
+                    m_state = CommandLineState::kWaitForNextPoint;
+                }
             }
             break;
+        }
+        
+        case CommandLineState::kFinishing:
+        {
+            // 执行统一的结束操作
+            finish();
+            break;
+        }
     }
-}
-
-bool CommandLine::isCompleted() const {
-    return m_completed || m_canceled;
-}
-
-void CommandLine::cancel() {
-    m_canceled = true;
-    InputContext::getInstance().cancel();
 }
 
 void CommandLine::drawPreview() {

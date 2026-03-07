@@ -2,7 +2,7 @@
 #include "render/Renderer.h"
 #include "input/InputContext.h"
 #include "debug/Logger.h"
-#include "command/CommandParser.h"
+#include "command/CommandManager.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 
@@ -129,7 +129,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_SHIFT_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+Shift+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandParser::executeCommand(shortcut.commandName, {});
+                    CommandManager::getInstance().parseCommand(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -147,7 +147,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandParser::executeCommand(shortcut.commandName, {});
+                    CommandManager::getInstance().parseCommand(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -165,7 +165,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandParser::executeCommand(shortcut.commandName, {});
+                    CommandManager::getInstance().parseCommand(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -190,8 +190,8 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             }
             // Enter
             else if (key == GLFW_KEY_ENTER) {
-                // 设置执行命令标记
-                Renderer::setShouldExecuteCommand(true);
+                // 传递事件给InputContext
+                InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEnterPressed);
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 
@@ -199,15 +199,17 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             }
             // Space
             else if (key == GLFW_KEY_SPACE) {
-                // 设置执行命令标记
-                Renderer::setShouldExecuteCommand(true);
+                // 传递事件给InputContext
+                InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kSpacePressed);
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
             }
             // Esc
             else if (key == GLFW_KEY_ESCAPE) {
-                Renderer::setShouldCancelCommand(true);
+                // 传递事件给InputContext
+                InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEscPressed);
+                // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
             }

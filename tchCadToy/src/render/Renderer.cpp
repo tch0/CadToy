@@ -8,7 +8,6 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 #include "utils/LocalizationManager.h"
-#include "command/CommandParser.h"
 #include "command/CommandManager.h"
 #include "input/InputHandler.h"
 #include "input/InputContext.h"
@@ -44,10 +43,7 @@ bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令
 bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设置到命令输入框
 // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
 bool Renderer::s_bCommandBufferModified = false;
-// 是否应该执行命令
-bool Renderer::s_bShouldExecuteCommand = false;
-// 是否应该取消命令执行
-bool Renderer::s_bShouldCancelCommand = false;
+
 // 是否需要清除命令输入缓冲区
 bool Renderer::s_bNeedClearCommandBuffer = false;
 
@@ -55,7 +51,6 @@ bool Renderer::s_bNeedClearCommandBuffer = false;
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
-static std::string s_commandPendingToBeExecuted; // 待执行的新命令
 
 
 // 选项对话框相关
@@ -835,24 +830,24 @@ void Renderer::drawMenuBar() {
         // File菜单
         if (ImGui::BeginMenu(loc.get("menu.file").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.file.new").c_str(), "Ctrl+N")) {
-                CommandParser::executeCommand("new", {});
+                CommandManager::getInstance().parseCommand("new");
             }
             if (ImGui::MenuItem(loc.get("menu.file.open").c_str(), "Ctrl+O")) {
-                CommandParser::executeCommand("open", {});
+                CommandManager::getInstance().parseCommand("open");
             }
             ImGui::MenuItem(loc.get("menu.file.openRecent").c_str());
             if (ImGui::MenuItem(loc.get("menu.file.save").c_str(), "Ctrl+S")) {
-                CommandParser::executeCommand("save", {});
+                CommandManager::getInstance().parseCommand("save");
             }
             if (ImGui::MenuItem(loc.get("menu.file.saveAs").c_str(), "Ctrl+Shift+S")) {
-                CommandParser::executeCommand("saveas", {});
+                CommandManager::getInstance().parseCommand("saveas");
             }
             if (ImGui::MenuItem(loc.get("menu.file.close").c_str(), "Ctrl+W")) {
-                CommandParser::executeCommand("close", {});
+                CommandManager::getInstance().parseCommand("close");
             }
             ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q")) {
-                CommandParser::executeCommand("quit", {});
+                CommandManager::getInstance().parseCommand("quit");
             }
             ImGui::EndMenu();
         }
@@ -860,26 +855,26 @@ void Renderer::drawMenuBar() {
         // Edit菜单
         if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z")) {
-                CommandParser::executeCommand("undo", {});
+                CommandManager::getInstance().parseCommand("undo");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y")) {
-                CommandParser::executeCommand("redo", {});
+                CommandManager::getInstance().parseCommand("redo");
             }
             ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.edit.cut").c_str(), "Ctrl+X")) {
-                CommandParser::executeCommand("cut", {});
+                CommandManager::getInstance().parseCommand("cut");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.copy").c_str(), "Ctrl+C")) {
-                CommandParser::executeCommand("copy", {});
+                CommandManager::getInstance().parseCommand("copy");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V")) {
-                CommandParser::executeCommand("paste", {});
+                CommandManager::getInstance().parseCommand("paste");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A")) {
-                CommandParser::executeCommand("selectall", {});
+                CommandManager::getInstance().parseCommand("selectall");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.erase").c_str(), "Del")) {
-                CommandParser::executeCommand("erase", {});
+                CommandManager::getInstance().parseCommand("erase");
             }
             ImGui::EndMenu();
         }
@@ -1020,7 +1015,7 @@ void Renderer::drawFileBar() {
                     // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
                     if (DocManager::getCurrentDocumentIndex() != i) {
                         // 切换文档时，取消当前命令执行
-                        s_bShouldCancelCommand = true;
+                        InputContext::getInstance().abort();
                         // 设置待切换的文档索引，在下一帧执行切换
                         s_pendingFileIndex = i;
                     }
@@ -1036,7 +1031,7 @@ void Renderer::drawFileBar() {
                 
                 // 处理标签关闭
                 if (!tabOpen) {
-                    pushCommandToExecute("close");
+                    CommandManager::getInstance().parseCommand("close");
                 }
             }
             
@@ -1262,55 +1257,33 @@ void Renderer::drawCommandBar() {
         
         // 使用PushItemWidth使输入框占满剩余空间
         ImGui::PushItemWidth(-1);
-        
-        // 检查是否需要取消命令
-        if (s_bShouldCancelCommand) {
-            // 取消命令执行，在命令历史中添加取消标记
-            std::string command(s_cmdBuffer.data());
-            // 使用localization资源构建取消命令的历史记录
-            std::string promptStr = loc.get("commandBar.prompt") + " " + command + loc.get("commandBar.prompt.cancel");
-            addContentToCommandHistory(promptStr);
-            s_bShouldCancelCommand = false;
-            s_bShouldExecuteCommand = false;
-            // 通知InputContext取消命令
-            InputContext::getInstance().cancel();
-            // 清空缓冲区
-            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-            // 设置清除命令输入缓冲区的标记，因为内部ImGui内部会维护InputText的状态，所以回调中还需要再清除一次
-            s_bNeedClearCommandBuffer = true;
-        }
-        
-        // 按下Enter/Space时执行命令，手动拦截执行，不再依赖ImGui的控件返回值
-        bool bShouldExecute = s_bShouldExecuteCommand;
-        // 执行命令
-        if (bShouldExecute) {
-            s_bShouldExecuteCommand = false;
-            // 执行命令
-            std::string command(s_cmdBuffer.data());
-            std::string promptStr = loc.get("commandBar.prompt") + " " + command;
-            addContentToCommandHistory(promptStr);
-            if (!command.empty()) {
-                // 处理命令输入
-                InputContext::getInstance().handleCommandInput(command);
-            }
-            // 清空缓冲区
-            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-            // 设置清除命令输入缓冲区的标记，因为内部ImGui内部会维护InputText的状态，所以回调中还需要再清除一次
-            s_bNeedClearCommandBuffer = true;
-        }
 
-        // 处理通过pushCommandToExecute推送的命令
-        if (!s_commandPendingToBeExecuted.empty()) {
-            // 执行待执行的命令
-            std::string command = s_commandPendingToBeExecuted;
-            std::string promptStr = loc.get("commandBar.prompt") + " " + command;
-            addContentToCommandHistory(promptStr);
-            if (!command.empty()) {
-                // 处理命令输入
-                InputContext::getInstance().handleCommandInput(command);
-            }
-            // 清空待执行命令
-            s_commandPendingToBeExecuted.clear();
+        // 检查InputContext的特殊按键事件
+        auto& inputContext = InputContext::getInstance();
+        SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
+        // Enter/Space 提交输入框输入到输入上下文中进行处理
+        if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
+            // 获取输入
+            std::string input(s_cmdBuffer.data());
+            // 处理输入
+            inputContext.handleEnterSpace(input);
+            // 清空缓冲区
+            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+            s_bNeedClearCommandBuffer = true;
+            // 清除特殊按键事件
+            inputContext.clearSpecialKeyEvent();
+        }
+        // Esc 同样提交输入到输入上下文进行处理
+        else if (inputEvent == SpecialKeyEventType::kEscPressed) {
+            // 获取输入
+            std::string input(s_cmdBuffer.data());
+            // 处理输入
+            inputContext.handleEscape(input);
+            // 清空缓冲区
+            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+            s_bNeedClearCommandBuffer = true;
+            // 清除特殊按键事件
+            inputContext.clearSpecialKeyEvent();
         }
         
         // 回调函数处理文本选择问题、字符过滤与清除缓冲区
@@ -1320,7 +1293,7 @@ void Renderer::drawCommandBar() {
                 if (data->EventChar > 127) {
                     return 1; // 丢弃非 ASCII 字符
                 }
-                // Space执行命令，丢弃，判断是否执行的逻辑则由InputHandler负责处理
+                // Space执行命令，这里直接丢弃，InputHandler中已经将按键事件转发给InputContext
                 else if (data->EventChar == ' ')
                 {
                     return 1;
@@ -1350,11 +1323,6 @@ void Renderer::drawCommandBar() {
         ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
             ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter, 
             inputTextCallback, nullptr);
-        
-        // 回车或者空格执行后强制把焦点拉回来，防止输入框失焦
-        if (bShouldExecute) {
-            ImGui::SetKeyboardFocusHere(-1); // -1 代表作用于上一个 Item（即当前的 InputText）
-        }
         
         // 平衡PushItemWidth调用
         ImGui::PopItemWidth();
@@ -1428,22 +1396,6 @@ void Renderer::addContentToCommandHistory(const std::string& command) {
 // 设置是否应该将焦点设置到命令输入框
 void Renderer::setShouldFocusOnCommandInput(bool shouldFocus) {
     s_bShouldFocusOnCommandInput = shouldFocus;
-}
-
-// 设置是否应该执行命令
-void Renderer::setShouldExecuteCommand(bool shouldExecute) {
-    s_bShouldExecuteCommand = shouldExecute;
-}
-
-// 设置是否应该取消命令执行
-void Renderer::setShouldCancelCommand(bool shouldCancel) {
-    s_bShouldCancelCommand = shouldCancel;
-}
-
-// 推送命令到执行队列
-void Renderer::pushCommandToExecute(const std::string& command) {
-    s_commandPendingToBeExecuted = command;
-    s_bShouldCancelCommand = true;
 }
 
 // 从命令输入缓冲区中删除最后一个字符

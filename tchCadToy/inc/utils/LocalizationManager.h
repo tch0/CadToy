@@ -44,7 +44,7 @@ public:
     std::string getCurrentLanguage();
     
     // 获取本地化文本
-    std::string get(const std::string& key);
+    std::string get(const std::string& key, const std::string& fallback = "");
     
     // 获取所有可用语言
     std::vector<std::string> getAvailableLanguages();

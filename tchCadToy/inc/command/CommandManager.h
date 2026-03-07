@@ -29,9 +29,6 @@ public:
     // 执行命令
     void executeCommand(std::shared_ptr<Command> command);
     
-    // 取消当前命令
-    void cancelCurrentCommand();
-    
     // 检查是否有活动命令
     bool hasActiveCommand();
     
