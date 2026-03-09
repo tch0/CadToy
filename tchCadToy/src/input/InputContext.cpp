@@ -7,9 +7,6 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <algorithm>
-#include <format>
-#include <cfloat>
-#include <climits>
 
 namespace tch {
 

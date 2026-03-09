@@ -1,0 +1,44 @@
+# .clangd - 项目根目录
+# yaml语法
+
+# clangd 工作流：
+# 初次使用、新环境：安装clangd插件、下载clangd配置到path(或者让插件自动下载则不需要配置到path)
+#   mkdir build_ninja
+#   cmake -B build_ninja -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+# build_ninja目录仅用于为clangd生成compile_commands.json，不进行实际编译
+# 有新文件加入后重新生成编译数据库：
+#   cmake -B build_ninja -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+#   Ctrl+Shift+P -> "clangd: Restart language server"
+
+# 全局配置
+CompileFlags:
+  CompilationDatabase: build_ninja
+  # 移除 MSVC 多进程编译标志
+  # 移除头文件依赖显示
+  Remove: [
+    /MP,
+    /showIncludes
+  ]
+
+# 全局禁用诊断
+Diagnostics:
+  Suppress: ["*"]
+
+# 项目文件添加诊断
+---
+If:
+  PathMatch: "(tchCadToy|tchPlatform|tchGeneral)/.*"
+Diagnostics:
+  # 只诊断项目文件
+  Suppress: []
+
+# 第三方库相关文件
+---
+If:
+  PathMatch: "(3rdparty|imgui|3rdparty-install)/.*"
+Diagnostics:
+  # 禁用所有诊断
+  Suppress: ["*"]
+Index:
+  # 后台索引时跳过第三方库，需要跳转时会临时建立索引，如果机器性能强悍则可以开启索引
+  Background: Skip

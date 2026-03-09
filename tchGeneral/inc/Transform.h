@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <Geometry.h>
 #include <vector>
+#include <memory>
 
 namespace tch {
 

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <filesystem>
 
 namespace tch {
 
@@ -22,8 +23,8 @@ Logger::Logger(std::ostream& os, const LogConfig& config)
 }
 
 Logger::Logger(const std::string& logFile, const LogConfig& config)
-    : m_config(config)
-    , m_logFilePath(logFile)
+    : m_logFilePath(logFile)
+    , m_config(config)
     , m_bBlockTrace(false)
     , m_bBlockDebug(false)
     , m_bBlockInfo(false)
@@ -261,7 +262,9 @@ std::string Logger::getTimestamp()
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
     
     std::stringstream ss;
-    ss << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S.") << std::setw(3) << std::setfill('0') << ms.count();
+    struct tm timeinfo;
+    localtime_s(&timeinfo, &now_c);
+    ss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S.") << std::setw(3) << std::setfill('0') << ms.count();
     return ss.str();
 }
 

@@ -3,8 +3,9 @@
 #include "Geometry.h"
 #include <fstream>
 #include <rapidjson/document.h>
-#include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <memory>
 
 namespace tch {
 
@@ -171,7 +172,6 @@ bool SaveLoad::loadFromFile(const std::string& filePath) {
                 const auto& layerObj = layers[i];
                 
                 // 获取图层信息
-                int layerId = layerObj["id"].GetInt();
                 std::string layerName = layerObj["name"].GetString();
                 bool visible = layerObj["visible"].GetBool();
                 

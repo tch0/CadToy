@@ -3,7 +3,6 @@
 #include "debug/Logger.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
-#include "rapidjson/filereadstream.h"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -23,7 +22,7 @@ LocalizationManager& LocalizationManager::getInstance() {
     if (!s_instance) {
         s_instance.reset(new LocalizationManager());
     }
-    return *s_instance.get();
+    return *s_instance;
 }
 
 // 初始化

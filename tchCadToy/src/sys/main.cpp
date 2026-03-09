@@ -6,7 +6,7 @@
 #include "command/CommandManager.h"
 #include "debug/Logger.h"
 #include "sys/Global.h"
-#include <iostream>
+
 
 using namespace tch;
 

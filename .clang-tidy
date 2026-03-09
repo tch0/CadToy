@@ -1,0 +1,35 @@
+Checks: >
+  -*,
+  performance-*,
+  -performance-enum-size,
+  readability-braces-around-statements,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  misc-include-cleaner,
+  bugprone-unused-return-value,
+  bugprone-unused-raii,
+  performance-unnecessary-value-param,
+  performance-unnecessary-copy-initialization
+
+CheckOptions:
+  # 未使用参数
+  - key: misc-unused-parameters.StrictMode
+    value: 'true' # 严格模式，检查所有未使用的参数
+  
+  # 未使用返回值
+  - key: bugprone-unused-return-value.CheckedFunctions
+    value: ''  # 允许某些函数忽略返回值
+  
+  # 允许作为值传递的参数
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: ''
+  
+  # 头文件相关
+  - key: misc-include-cleaner.UnusedIncludes
+    value: 'true'
+  - key: misc-include-cleaner.MissingIncludes
+    value: 'true'
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: '' # 忽略的头文件
+  - key: misc-include-cleaner.DeduplicateFindings
+    value: 'true'

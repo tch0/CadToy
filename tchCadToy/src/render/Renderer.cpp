@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <memory>
 
 namespace tch {
 
@@ -358,9 +359,6 @@ void Renderer::drawGrid() {
     // 基础栅格间距（逻辑坐标）
     const double baseGridSize = 10.0;
     
-    // 计算当前有效的栅格间距
-    double currentEffectiveSize = baseGridSize;
-    
     // 确定栅格级别
     // 目标是保持栅格在屏幕上的大小在合理范围内（50-250像素）
     double mainGridSize, subGridSize;
@@ -374,13 +372,11 @@ void Renderer::drawGrid() {
     
     if (gridScreenSize < 50.0) {
         // 当前栅格太小，需要增加栅格级别
-        int level = 0;
         double testSize = baseGridSize;
         double testScreenSize = gridScreenSize;
         while (testScreenSize < 50.0) {
             testSize *= 5.0;
             testScreenSize *= 5.0;
-            level++;
         }
         
         // 设置新的栅格大小
@@ -388,13 +384,11 @@ void Renderer::drawGrid() {
         subGridSize = mainGridSize / 5.0;
     } else if (gridScreenSize > 250.0) {
         // 当前栅格太大，需要减少栅格级别
-        int level = 0;
         double testSize = baseGridSize;
         double testScreenSize = gridScreenSize;
         while (testScreenSize > 250.0) {
             testSize /= 5.0;
             testScreenSize /= 5.0;
-            level++;
         }
         
         // 设置新的栅格大小
@@ -405,10 +399,6 @@ void Renderer::drawGrid() {
         mainGridSize = baseGridSize;
         subGridSize = mainGridSize / 5.0;
     }
-    
-    // 计算逻辑原点
-    double originX = 0.0;
-    double originY = 0.0;
     
     // 绘制子栅格
     glBegin(GL_LINES);

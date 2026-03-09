@@ -1,9 +1,20 @@
+# vscode local configs
+/.vscode/**
+
+# trae generated files
 /.trae/
-/.vscode/
+
+# build folder
 /build/
+
+# 3rd party generated and installed files
 /3rdparty-install/
 /3rdparty/build/
 
 # imgui files, installed from 3rdparty/imgui, do not track them!
 /imgui/**
 !/imgui/CMakeLists.txt
+
+# for clangd, compile_commands.json is generated in this folder, see .clangd for details
+/build_ninja/
+!/.vscode/settings.json

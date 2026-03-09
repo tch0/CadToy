@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "command/CommandManager.h"
 #include "input/InputContext.h"
 #include "command/CommandLine.h"
@@ -33,7 +35,7 @@ void CommandManager::executeCommand(std::shared_ptr<Command> command) {
     }
     
     // 设置新命令
-    m_activeCommand = command;
+    m_activeCommand = std::move(command);
     
     // 设置输入上下文为命令执行状态
     InputContext::getInstance().setInCommandExecution(true);

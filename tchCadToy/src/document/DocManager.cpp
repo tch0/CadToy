@@ -1,7 +1,6 @@
 #include "document/DocManager.h"
 #include "document/Document.h"
-#include "imgui.h"
-#include "utils/LocalizationManager.h"
+
 #include "debug/Logger.h"
 #include <fstream>
 #include <algorithm>
