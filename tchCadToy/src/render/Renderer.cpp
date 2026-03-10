@@ -184,6 +184,38 @@ void Renderer::endRender() {
         return;
     }
     
+    // 处理鼠标悬停与非模态窗口的焦点问题：
+    //      CAD程序需要鼠标位于画布上时时刻保持对键盘输入的获取，而imgui的非模态窗口只要点击一下后焦点就会一直留在窗口内，即使鼠标已经移出窗口。
+    //      那么就需要在鼠标移出了窗口位于画布上时，如果有窗口获得了焦点就将焦点置为空，这样CAD主程序才能获取到键盘输入，每一帧在ImGui::Render前
+    //      检测一次就行，这时ImGui已经计算完成所有的窗口位置和遮盖关系，这时候做最准确不会出任何问题。
+    
+    // 当前没有模态对话框才释放
+    //      如果有模态对话框（如“确认保存”弹窗），则必须保持焦点在模态对话框上，不执行自动释放
+    // 而且还必须没有任何任何弹出层（菜单、下拉菜单、Combo等）才释放
+    //      菜单项就是弹出层，菜单的工作机制涉及焦点的切换，简单地释放焦点会破坏其状态导致一闪而过
+    if (ImGui::GetTopMostPopupModal() == nullptr &&
+        !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        // 有任何窗口获得了焦点
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)) {
+            
+            // 检查鼠标是否悬停在任何ImGui窗口（及其子菜单/弹出项）上
+            // RootAndChildWindows: 保证鼠标在子菜单时主窗口不失焦
+            // AllowWhenBlockedByActiveItem: 保证鼠标点击按钮或滑动条时，即便稍稍滑出边界也不失焦
+            bool mouseOverUI = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | 
+                                                     ImGuiHoveredFlags_RootAndChildWindows | 
+                                                     ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+            
+            // 关键：检查是否有控件正处于“活动状态”（如正在输入文本、拖动滑块、按住按钮）
+            // 如果正在操作UI，即便鼠标移出了窗口边界，也不应该强行夺走焦点
+            bool isInteracting = ImGui::IsAnyItemActive();
+            
+            // 没有悬停在任何窗口上、且没有和任何UI元素进行交互时，就释放焦点
+            if (!mouseOverUI && !isInteracting) {
+                ImGui::SetWindowFocus(NULL); // 释放焦点，让io.WantCaptureKeyboard变为false，此时所有键盘鼠标输入都将被主程序获取
+            }
+        }
+    }
+    
     // 渲染ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
