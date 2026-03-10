@@ -209,8 +209,13 @@ void Renderer::endRender() {
             // 如果正在操作UI，即便鼠标移出了窗口边界，也不应该强行夺走焦点
             bool isInteracting = ImGui::IsAnyItemActive();
             
-            // 没有悬停在任何窗口上、且没有和任何UI元素进行交互时，就释放焦点
-            if (!mouseOverUI && !isInteracting) {
+            // 另外焦点位于命令栏上时也不释放，因为焦点位于画布(NULL)时有键盘输入进来后本来就会将焦点切到命令栏的命令输入框上进行命令输入，
+            // 但不能仅判断焦点位于命令输入框时不释放，因为命令输入框只是一个命令栏上的控件，焦点不是全时保持在其上的，但能够确定的是
+            // 在所有的键盘字符交互过程中焦点的归宿就是命令栏，那么如果焦点已经位于命令栏上了当然是不应该释放的。
+            bool bFocusIsOnCommandBar = focusIsOnWindow("CommandBar");
+            
+            // 没有悬停在任何窗口上、且没有和任何UI元素进行交互、且焦点在除命令栏外的其他窗口上时，就释放焦点
+            if (!mouseOverUI && !isInteracting && !bFocusIsOnCommandBar) {
                 ImGui::SetWindowFocus(NULL); // 释放焦点，让io.WantCaptureKeyboard变为false，此时所有键盘鼠标输入都将被主程序获取
             }
         }
@@ -893,6 +898,7 @@ void Renderer::drawMenuBar() {
             if (ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V")) {
                 CommandManager::getInstance().cancelCurrentCommandAndExecute("paste");
             }
+            ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A")) {
                 CommandManager::getInstance().cancelCurrentCommandAndExecute("selectall");
             }
@@ -912,6 +918,7 @@ void Renderer::drawMenuBar() {
             ImGui::Separator();
             ImGui::MenuItem(loc.get("menu.tools.demo").c_str(), nullptr, &s_demoWindowVisible);
             ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
+            ImGui::Separator();
             ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
             ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &s_inputContextInfoVisible);
             ImGui::EndMenu();
@@ -1468,7 +1475,7 @@ void Renderer::showOptionsDialog(bool visible) {
 
 
 // 检查焦点是否位于指定窗口或其子窗口
-bool Renderer::FocusIsOnWindow(const std::string& windowName) {
+bool Renderer::focusIsOnWindow(const std::string& windowName) {
     if (ImGuiWindow* targetWindow = ImGui::FindWindowByName(windowName.c_str())) {
         ImGuiContext* ctx = ImGui::GetCurrentContext();
         if (ctx && ctx->NavWindow && ctx->NavWindow->RootWindow == targetWindow) {
@@ -1479,7 +1486,7 @@ bool Renderer::FocusIsOnWindow(const std::string& windowName) {
 }
 
 // 检查焦点是否在命令输入框上
-bool Renderer::FocusIsOnCommandInput() {
+bool Renderer::focusIsOnCommandInput() {
     // 获取当前活跃控件的ID
     ImGuiID activeID = ImGui::GetActiveID();
     

@@ -115,7 +115,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         s_keys[key] = true;
         
         // 检查当前焦点是否位于命令栏或其子窗口
-        bool bFocusIsOnCommandBar = Renderer::FocusIsOnWindow("CommandBar");
+        bool bFocusIsOnCommandBar = Renderer::focusIsOnWindow("CommandBar");
         
         // 画布上或者命令栏才处理快捷键或者命令输入
         if (!bFocusIsOnCommandBar && ImGui::GetIO().WantCaptureKeyboard) {
@@ -177,7 +177,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             }
             
             // 处理特殊的"非字符"输入动作
-            bool bFocusIsOnCommandInput = Renderer::FocusIsOnCommandInput();
+            bool bFocusIsOnCommandInput = Renderer::focusIsOnCommandInput();
             // Backsapce
             if (key == GLFW_KEY_BACKSPACE) {
                 if (!bFocusIsOnCommandInput) {
@@ -234,11 +234,11 @@ void InputHandler::handleCharInput(unsigned int codepoint) {
     // 只有在按键回调handleKeyPress没有把当前输入作为快捷键拦截掉的情况下才处理字符
     // 字符回调的会自动处理CapsLock和Shift转换后的结果，而不需要也不应该有任何自行检测CapsLock与Shift的操作
     // 仅处理焦点位于命令栏或者画布上(此时焦点为空)时的字符输入
-    if ((Renderer::FocusIsOnWindow("CommandBar") || !ImGui::GetIO().WantCaptureKeyboard)
+    if ((Renderer::focusIsOnWindow("CommandBar") || !ImGui::GetIO().WantCaptureKeyboard)
         && !s_keyWasConsumedByShortcut) {
         // 如果焦点不在命令栏输入框上，则将焦点拉回到输入框，并将输入的字符添加到缓冲区
         // 而焦点在命令输入栏的话，输入控件会自行处理，则不需要做任何多余处理
-        if (!Renderer::FocusIsOnCommandInput()) {
+        if (!Renderer::focusIsOnCommandInput()) {
             // 通知Renderer设置焦点到命令输入框
             Renderer::setShouldFocusOnCommandInput(true);
             // 添加字符到命令输入框

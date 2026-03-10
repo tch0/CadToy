@@ -95,8 +95,8 @@ public:
     static void drawOptionsDialog(); // 绘制选项对话框
     
     // 焦点检查相关方法
-    static bool FocusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口
-    static bool FocusIsOnCommandInput(); // 检查焦点是否在命令输入框上
+    static bool focusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口
+    static bool focusIsOnCommandInput(); // 检查焦点是否在命令输入框上
     
     
 
