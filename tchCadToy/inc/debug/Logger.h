@@ -104,7 +104,7 @@ private:
     
     // help functions
     static std::string stripFilePath(const char* file);
-    std::string getLevelString(LogLevel level);
+    std::string getColorString(LogLevel level);
     std::string resetColor();
     std::string getTimestamp();
     

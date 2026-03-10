@@ -1,8 +1,9 @@
 #include "debug/Logger.h"
 #include <algorithm>
-#include <iomanip>
 #include <sstream>
 #include <filesystem>
+#include <format>
+#include <chrono>
 
 namespace tch {
 
@@ -207,8 +208,8 @@ std::string Logger::stripFilePath(const char* file)
     return str;
 }
 
-// get level string with color
-std::string Logger::getLevelString(LogLevel level)
+// get color string for log level
+std::string Logger::getColorString(LogLevel level)
 {
     if (!m_config.coloredOutput) {
         return "";
@@ -255,17 +256,24 @@ std::string Logger::resetColor()
 }
 
 // get timestamp
-std::string Logger::getTimestamp()
+std::string Logger::getTimestamp() 
 {
-    auto now = std::chrono::system_clock::now();
-    auto now_c = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+    // 1. 获取当前时间点（毫秒精度）
+    const auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+
+    // 2. 获取时区偏移量
+    const auto tz = std::chrono::current_zone();
+    const auto info = tz->get_info(now); // 获取该时间点的时区详情
     
-    std::stringstream ss;
-    struct tm timeinfo;
-    localtime_s(&timeinfo, &now_c);
-    ss << std::put_time(&timeinfo, "%Y-%m-%d %H:%M:%S.") << std::setw(3) << std::setfill('0') << ms.count();
-    return ss.str();
+    // 将偏移量转换为小时（如 28800s -> 8h）
+    const auto offsetHours = std::chrono::duration_cast<std::chrono::hours>(info.offset);
+    
+    // 3. 构造本地时间对象
+    const auto localTime = std::chrono::zoned_time{tz, now};
+
+    // 4. 格式化输出: [UTC+8] 2023-10-27 10:20:30.456
+    // %F %T 自动处理日期和带毫秒的时间
+    return std::format("UTC{:+} {:%F %T}", offsetHours.count(), localTime);
 }
 
 // Log file management
@@ -438,11 +446,11 @@ void Logger::processLogMessage(const LogMessage& msg)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    std::string levelStr = getLevelString(msg.level);
+    std::string levelStr = getColorString(msg.level);
     std::string reset = resetColor();
     std::string timestamp = getTimestamp();
     
-    std::string logStr = std::format("{}[ {: <8} ]{}[ {} ] [ {: >20} : {: >4} : {: <30} ]: {}\n", 
+    std::string logStr = std::format("{}[ {: <7} ]{}[ {} ] [ {: >20} : {: >4} : {: <30} ]: {}\n", 
         levelStr, 
         msg.level == Trace ? "Trace" : 
         msg.level == Debug ? "Debug" : 
