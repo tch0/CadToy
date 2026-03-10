@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
 #include "command/Command.h"
 
@@ -15,9 +14,6 @@ private:
     
     // 活动命令
     std::shared_ptr<Command> m_activeCommand;
-    
-    // 待执行的命令列表
-    std::vector<std::shared_ptr<Command>> m_pendingCommands;
 
 public:
     // 构造函数
@@ -26,14 +22,20 @@ public:
     // 获取单例实例
     static CommandManager& getInstance();
     
-    // 执行命令
-    void executeCommand(std::shared_ptr<Command> command);
-    
     // 检查是否有活动命令
     bool hasActiveCommand();
     
     // 获取活动命令（用于预览）
     std::shared_ptr<Command> getActiveCommand();
+    
+    // 执行命令
+    void executeCommand(const std::string& command);
+    
+    // 取消当前执行的命令，用于比如文档切换等场景
+    void cancelCurrentCommand();
+    
+    // 取消当前正在执行的命令并执行新命令
+    void cancelCurrentCommandAndExecute(const std::string& command);
     
     // 解析命令
     void parseCommand(const std::string& command);

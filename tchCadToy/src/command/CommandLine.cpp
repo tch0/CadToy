@@ -143,7 +143,7 @@ void CommandLine::drawPreview() {
     }
     
     // 绘制预览线段
-    if (m_state == CommandLineState::kWaitForNextPoint) {
+    if (m_state == CommandLineState::kWaitForNextPointInput) {
         // 获取当前鼠标位置
         glm::dvec3 mousePos = Renderer::getCursorPosWorld();
         

@@ -73,6 +73,9 @@ public:
     // 实时渲染信息窗口相关方法
     static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口
     
+    // 输入上下文信息窗口相关方法
+    static void drawInputContextInfoWindow(); // 绘制输入上下文信息窗口
+    
     // 窗口绘制相关方法
     static void drawModalDialogs(); // 绘制模态对话框
     static void drawNonModalWindows(); // 绘制非模态窗口

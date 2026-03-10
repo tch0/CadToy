@@ -21,6 +21,7 @@
   "menu.tools.demo": "Dear ImGui Demo Window",
   "menu.tools.metrics": "Dear ImGui Metrics/Debugger",
   "menu.tools.renderingInfo": "Real Time Rendering Info",
+  "menu.tools.inputTextInfo": "Input Context Info",
   "menu.language": "Language",
 
   "commandBar.prompt": "Command:",
@@ -60,6 +61,15 @@
   "window.renderingInfo.other.title": "Other Information",
   "window.renderingInfo.other.frame": "Current Frame",
   "window.renderingInfo.other.fps": "FPS",
+
+  "window.inputContextInfo.title": "Input Context Info",
+  "window.inputContextInfo.inCommandExecution": "In Command Execution",
+  "window.inputContextInfo.currentStatus": "Current Input Status",
+  "window.inputContextInfo.allowedTypes": "Allowed Input Types",
+  "window.inputContextInfo.keywordOptions": "Keyword Options",
+  "window.inputContextInfo.prompt": "Prompt",
+  "window.inputContextInfo.errorPrompt": "Error Prompt",
+  "window.inputContextInfo.unknown": "Unknown",
 
   "inputContext.generalErrorPrompt.invalidPoint": "*Invalid point*",
   "inputContext.generalErrorPrompt.invalidSelection": "*Invalid selection*",

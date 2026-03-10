@@ -21,6 +21,7 @@
   "menu.tools.demo": "Dear ImGui 示例窗口",
   "menu.tools.metrics": "Dear ImGui 调试窗口",
   "menu.tools.renderingInfo": "实时渲染信息",
+  "menu.tools.inputTextInfo": "输入上下文信息",
   "menu.language": "语言",
 
   "commandBar.prompt": "命令:",
@@ -60,6 +61,15 @@
   "window.renderingInfo.other.title": "其他信息",
   "window.renderingInfo.other.frame": "当前帧数",
   "window.renderingInfo.other.fps": "帧率",
+
+  "window.inputContextInfo.title": "输入上下文信息",
+  "window.inputContextInfo.inCommandExecution": "命令执行中",
+  "window.inputContextInfo.currentStatus": "当前输入状态",
+  "window.inputContextInfo.allowedTypes": "允许的输入类型",
+  "window.inputContextInfo.keywordOptions": "关键字选项",
+  "window.inputContextInfo.prompt": "提示信息",
+  "window.inputContextInfo.errorPrompt": "错误提示",
+  "window.inputContextInfo.unknown": "未知",
 
   "inputContext.generalErrorPrompt.invalidPoint": "*无效点*",
   "inputContext.generalErrorPrompt.invalidSelection": "*无效选择*",

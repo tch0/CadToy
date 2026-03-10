@@ -52,8 +52,8 @@ private:
     // 命令执行状态
     bool m_inCommandExecution;
     
-    // 是否需要终止命令
-    bool m_shouldAbortCommand;
+    // 是否在取消命令的过程中
+    bool m_inCommandCancelProcess;
     
     // 当前输入状态
     InputStatus m_currentStatus;
@@ -92,13 +92,11 @@ private:
     // 错误提示
     std::string m_errorPrompt;
     
-
-
 public:
     // 获取单例实例
     static InputContext& getInstance();
     
-    // 命令执行状态管理
+    // 命令执行状态管理，CommandManager通过这个接口来全权维护这个标记，命令开始执行时置为true，执行结束/取消执行后置回false
     void setInCommandExecution(bool inExecution);
     bool isInCommandExecution() const;
     
@@ -107,7 +105,7 @@ public:
     const std::string& getPrompt() const;
     
     // 输入状态管理
-    InputStatus getCurrentStatus() const;
+    InputStatus getCurrentStatus();
     void resetStatus();
     
     // 允许的输入类型管理
@@ -144,14 +142,14 @@ public:
     // 输入解析
     void parseInput(const std::string& input);
     
-    // 中止操作（强制取消整个命令）
-    void abort();
-    bool shouldAbortCommand() const;
+    // 是否在取消命令执行的过程中，CommandManager全权维护，通过模拟多次Cancel来实现取消命令执行，在取消命令过程中则所有交互直接返回kCanceled
+    void setInCommandCancelProcess(bool inProcess);
+    bool inCommandCancelProcess() const;
     
     // 预览功能（暂时空实现）
     void drawRubberBand(const glm::dvec3& startPoint);
     
-    // 特殊按键事件管理
+    // 特殊按键事件管理，Enter/Space/Esc
     void setSpecialKeyEvent(SpecialKeyEventType event);
     SpecialKeyEventType getLastSpecialKeyEvent() const;
     void clearSpecialKeyEvent();
@@ -192,6 +190,9 @@ public:
     // 等待实体选择输入
     void waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities = {},
         const std::vector<std::string>& keywords = {});
+    
+    // 绘制输入上下文信息窗口
+    void drawInfoWindow(bool* pOpen = nullptr);
 };
 
 } // namespace tch

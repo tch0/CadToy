@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <algorithm>
+#include <imgui.h>
 
 namespace tch {
 
@@ -16,7 +17,7 @@ std::shared_ptr<InputContext> InputContext::s_instance = nullptr;
 // 构造函数
 InputContext::InputContext() :
     m_inCommandExecution(false),
-    m_shouldAbortCommand(false),
+    m_inCommandCancelProcess(false),
     m_currentStatus(InputStatus::kNone),
     m_allowedTypes(),
     m_prompt(""),
@@ -40,9 +41,10 @@ InputContext& InputContext::getInstance() {
     return *s_instance;
 }
 
-// 命令执行状态管理
+// 命令执行状态管理，CommandManager通过这个接口来管理这个标记，命令开始执行时置为true，执行结束/取消执行后置回false
 void InputContext::setInCommandExecution(bool inExecution) {
     m_inCommandExecution = inExecution;
+    // 命令执行结束，重置输入上下文
     if (!inExecution) {
         resetStatus();
     }
@@ -62,13 +64,17 @@ const std::string& InputContext::getPrompt() const {
 }
 
 // 输入状态管理
-InputStatus InputContext::getCurrentStatus() const {
+InputStatus InputContext::getCurrentStatus() {
+    if (m_inCommandCancelProcess)
+    {
+        m_currentStatus = InputStatus::kCanceled;
+    }
     return m_currentStatus;
 }
 
 void InputContext::resetStatus() {
     m_currentStatus = InputStatus::kNone;
-    m_shouldAbortCommand = false;
+    m_inCommandCancelProcess = false;
     m_allowedTypes.clear();
     m_prompt = "";
     m_pickedPoint = glm::dvec3(0, 0, 0);
@@ -280,24 +286,30 @@ void InputContext::parseInput(const std::string& input) {
     // 没有匹配的类型，输出错误提示
     // 输出提示字符串+输入字符串
     std::string inputPrompt = m_prompt + " " + input;
-    cmdLinePrint(inputPrompt.c_str());
+    cmdLinePrint(inputPrompt);
     
     // 输出错误提示
     if (!m_errorPrompt.empty()) {
-        cmdLinePrint(m_errorPrompt.c_str());
+        cmdLinePrint(m_errorPrompt);
     }
     
     // 保持当前状态为kNone，等待下一次输入
     m_currentStatus = InputStatus::kNone;
 }
 
-// 中止操作（强制取消整个命令）
-void InputContext::abort() {
-    m_shouldAbortCommand = true;
+// 是否在取消命令执行的过程中，CommandManager全权维护，通过模拟多次Cancel来实现取消命令执行，在取消命令过程中则所有交互直接返回kCanceled
+void InputContext::setInCommandCancelProcess(bool inProcess) {
+    m_inCommandCancelProcess = inProcess;
+    if (m_inCommandCancelProcess) {
+        m_currentStatus = InputStatus::kCanceled;
+    }
+    else {
+        m_currentStatus = InputStatus::kNone;
+    }
 }
 
-bool InputContext::shouldAbortCommand() const {
-    return m_shouldAbortCommand;
+bool InputContext::inCommandCancelProcess() const {
+    return m_inCommandCancelProcess;
 }
 
 // 预览功能（暂时空实现）
@@ -315,9 +327,9 @@ void InputContext::handleEnterSpace(const std::string& input) {
         // 添加到命令历史
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandBar.prompt") + " " + input;
-        cmdLinePrint(promptStr.c_str());
+        cmdLinePrint(promptStr);
         // 解析为新命令
-        CommandManager::getInstance().parseCommand(input);
+        CommandManager::getInstance().executeCommand(input);
     }
 }
 
@@ -329,12 +341,12 @@ void InputContext::handleEscape(const std::string& input) {
         // 更新命令提示，添加取消标记和用户输入
         auto& loc = LocalizationManager::getInstance();
         std::string cancelPrompt = m_prompt + " " + input + " " + loc.get("commandBar.prompt.cancel");
-        cmdLinePrint(cancelPrompt.c_str());
+        cmdLinePrint(cancelPrompt);
     } else {
-        // 命令执行外，添加到命令历史
+        // 没有命令执行时按下Esc，键入的字符串也会被输出到命令历史
         auto& loc = LocalizationManager::getInstance();
-        std::string promptStr = loc.get("commandBar.prompt") + " " + input + loc.get("commandBar.prompt.cancel");
-        cmdLinePrint(promptStr.c_str());
+        std::string promptStr = loc.get("commandBar.prompt") + " " + input + " " +  loc.get("commandBar.prompt.cancel");
+        cmdLinePrint(promptStr);
     }
 }
 
@@ -454,5 +466,91 @@ void InputContext::waitForEntity(const std::string& prompt, const std::vector<vo
     // 可以在这里使用existingEntities进行一些操作
 }
 
+// 绘制输入上下文信息窗口
+void InputContext::drawInfoWindow(bool* p_open) {
+    if (p_open && !*p_open) {
+        return;
+    }
+    
+    // InputType枚举到字符串的静态关联列表
+    static const std::unordered_map<InputType, std::string> inputTypeToString = {
+        {InputType::kInteger, "Integer"},
+        {InputType::kFloat, "Float"},
+        {InputType::kString, "String"},
+        {InputType::kKeyword, "Keyword"},
+        {InputType::kPoint, "Point"},
+        {InputType::kEntitySelection, "EntitySelection"}
+    };
+    
+    // InputStatus枚举到字符串的静态关联列表
+    static const std::unordered_map<InputStatus, std::string> inputStatusToString = {
+        {InputStatus::kNone, "None"},
+        {InputStatus::kCanceled, "Canceled"},
+        {InputStatus::kEnterInput, "EnterInput"},
+        {InputStatus::kIntegerInput, "IntegerInput"},
+        {InputStatus::kFloatInput, "FloatInput"},
+        {InputStatus::kStringInput, "StringInput"},
+        {InputStatus::kKeywordInput, "KeywordInput"},
+        {InputStatus::kPointInput, "PointInput"},
+        {InputStatus::kEntitySelection, "EntitySelection"}
+    };
+    
+    // 添加LocalizationManager引用
+    LocalizationManager& loc = LocalizationManager::getInstance();
+    
+    // 修改窗口标题
+    ImGui::Begin(loc.get("window.inputContextInfo.title").c_str(), p_open);
+    
+    // 1. 命令执行状态 - 显示是否正在执行命令
+    ImGui::Text("%s: %s", 
+               loc.get("window.inputContextInfo.inCommandExecution").c_str(), 
+               m_inCommandExecution ? "true" : "false");
+    
+    // 2. 当前状态 - 显示输入状态机的当前状态
+    auto statusIt = inputStatusToString.find(m_currentStatus);
+    if (statusIt != inputStatusToString.end()) {
+        ImGui::Text("%s: %s", 
+                   loc.get("window.inputContextInfo.currentStatus").c_str(), 
+                   statusIt->second.c_str());
+    } else {
+        ImGui::Text("%s: %s(%d)", 
+                   loc.get("window.inputContextInfo.currentStatus").c_str(), 
+                   loc.get("window.inputContextInfo.unknown").c_str(),
+                   static_cast<int>(m_currentStatus));
+    }
+    
+    // 3. 允许的输入类型 - 显示当前允许的输入类型列表
+    ImGui::Text("%s (%zu):", 
+               loc.get("window.inputContextInfo.allowedTypes").c_str(), 
+               m_allowedTypes.size());
+    for (size_t i = 0; i < m_allowedTypes.size(); ++i) {
+        auto it = inputTypeToString.find(m_allowedTypes[i]);
+        if (it != inputTypeToString.end()) {
+            ImGui::Text("  [%zu] %s", i, it->second.c_str());
+        } else {
+            ImGui::Text("  [%zu] Unknown(%d)", i, static_cast<int>(m_allowedTypes[i]));
+        }
+    }
+    
+    // 4. 关键字选项 - 显示可选的关键字列表
+    ImGui::Text("%s (%zu):", 
+               loc.get("window.inputContextInfo.keywordOptions").c_str(), 
+               m_keywordOptions.size());
+    for (size_t i = 0; i < m_keywordOptions.size(); ++i) {
+        ImGui::Text("  [%zu] %s", i, m_keywordOptions[i].c_str());
+    }
+
+    // 5. 提示信息 - 显示给用户的提示文本
+    ImGui::Text("%s: %s", 
+               loc.get("window.inputContextInfo.prompt").c_str(), 
+               m_prompt.empty() ? "" : m_prompt.c_str());
+    
+    // 6. 错误提示 - 显示错误信息文本
+    ImGui::Text("%s: %s", 
+               loc.get("window.inputContextInfo.errorPrompt").c_str(), 
+               m_errorPrompt.empty() ? "" : m_errorPrompt.c_str());
+    
+    ImGui::End();
+}
 
 } // namespace tch

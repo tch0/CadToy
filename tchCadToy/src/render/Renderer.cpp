@@ -67,7 +67,9 @@ static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可�
 // 实时渲染信息窗口相关
 static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否可见
 
-// 文件栏相关 - 使用FileManager类管理
+// 输入上下文信息窗口相关
+static bool s_inputContextInfoVisible = false;  // 输入上下文信息窗口是否可见
+
 
 
 
@@ -210,7 +212,7 @@ void Renderer::drawAll() {
     // 绘制所有图层
     LayerManager::getInstance().draw();
     
-    // 绘制活动命令的预览
+    // TODO: 临时措施，还未实现图形引擎，先简单绘制活动命令的预览
     if (CommandManager::getInstance().hasActiveCommand()) {
         auto activeCommand = CommandManager::getInstance().getActiveCommand();
         if (activeCommand) {
@@ -819,24 +821,24 @@ void Renderer::drawMenuBar() {
         // File菜单
         if (ImGui::BeginMenu(loc.get("menu.file").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.file.new").c_str(), "Ctrl+N")) {
-                CommandManager::getInstance().parseCommand("new");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("new");
             }
             if (ImGui::MenuItem(loc.get("menu.file.open").c_str(), "Ctrl+O")) {
-                CommandManager::getInstance().parseCommand("open");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("open");
             }
             ImGui::MenuItem(loc.get("menu.file.openRecent").c_str());
             if (ImGui::MenuItem(loc.get("menu.file.save").c_str(), "Ctrl+S")) {
-                CommandManager::getInstance().parseCommand("save");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("save");
             }
             if (ImGui::MenuItem(loc.get("menu.file.saveAs").c_str(), "Ctrl+Shift+S")) {
-                CommandManager::getInstance().parseCommand("saveas");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("saveas");
             }
             if (ImGui::MenuItem(loc.get("menu.file.close").c_str(), "Ctrl+W")) {
-                CommandManager::getInstance().parseCommand("close");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("close");
             }
             ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.file.quit").c_str(), "Ctrl+Q")) {
-                CommandManager::getInstance().parseCommand("quit");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("quit");
             }
             ImGui::EndMenu();
         }
@@ -844,26 +846,26 @@ void Renderer::drawMenuBar() {
         // Edit菜单
         if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z")) {
-                CommandManager::getInstance().parseCommand("undo");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("undo");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y")) {
-                CommandManager::getInstance().parseCommand("redo");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("redo");
             }
             ImGui::Separator();
             if (ImGui::MenuItem(loc.get("menu.edit.cut").c_str(), "Ctrl+X")) {
-                CommandManager::getInstance().parseCommand("cut");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("cut");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.copy").c_str(), "Ctrl+C")) {
-                CommandManager::getInstance().parseCommand("copy");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("copy");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.paste").c_str(), "Ctrl+V")) {
-                CommandManager::getInstance().parseCommand("paste");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("paste");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.selectAll").c_str(), "Ctrl+A")) {
-                CommandManager::getInstance().parseCommand("selectall");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("selectall");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.erase").c_str(), "Del")) {
-                CommandManager::getInstance().parseCommand("erase");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("erase");
             }
             ImGui::EndMenu();
         }
@@ -879,6 +881,7 @@ void Renderer::drawMenuBar() {
             ImGui::MenuItem(loc.get("menu.tools.demo").c_str(), nullptr, &s_demoWindowVisible);
             ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
             ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
+            ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &s_inputContextInfoVisible);
             ImGui::EndMenu();
         }
         
@@ -1004,7 +1007,7 @@ void Renderer::drawFileBar() {
                     // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
                     if (DocManager::getCurrentDocumentIndex() != i) {
                         // 切换文档时，取消当前命令执行
-                        InputContext::getInstance().abort();
+                        CommandManager::getInstance().cancelCurrentCommand();
                         // 设置待切换的文档索引，在下一帧执行切换
                         s_pendingFileIndex = i;
                     }
@@ -1020,7 +1023,7 @@ void Renderer::drawFileBar() {
                 
                 // 处理标签关闭
                 if (!tabOpen) {
-                    CommandManager::getInstance().parseCommand("close");
+                    CommandManager::getInstance().cancelCurrentCommandAndExecute("close");
                 }
             }
             
@@ -1134,6 +1137,9 @@ void Renderer::drawNonModalWindows() {
     
     // 绘制实时渲染信息窗口
     drawRenderingInfoWindow();
+    
+    // 绘制输入上下文信息窗口
+    InputContext::getInstance().drawInfoWindow(&s_inputContextInfoVisible);
 }
 
 // 获取当前光标世界坐标

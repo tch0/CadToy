@@ -129,7 +129,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_SHIFT_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+Shift+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().parseCommand(shortcut.commandName);
+                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -147,7 +147,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: Ctrl+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().parseCommand(shortcut.commandName);
+                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -165,7 +165,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
                     LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().parseCommand(shortcut.commandName);
+                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
