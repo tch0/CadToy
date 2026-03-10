@@ -2,6 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <glm/glm.hpp>
+
 #include <vector>
 
 namespace tch {

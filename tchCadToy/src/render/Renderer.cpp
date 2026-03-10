@@ -53,7 +53,6 @@ static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
 
-
 // 选项对话框相关
 static bool s_optionsDialogVisible = false; // 选项对话框是否可见
 

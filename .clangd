@@ -2,38 +2,24 @@
 # yaml语法
 
 # clangd 工作流：
-# 初次使用、新环境：安装clangd插件、下载clangd配置到path(或者让插件自动下载则不需要配置到path)
+# 初次使用、新环境：安装clangd插件、下载clangd配置到path(或者让插件自动下载则不需要配置到path)：
+# 需要在有ninja命令的命令行环境中启动(VS集成ninja在其CMake/Launch终端就可以使用，否则需要自行安装并配置环境变量)
 #   mkdir build_ninja
 #   cmake -B build_ninja -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 # build_ninja目录仅用于为clangd生成compile_commands.json，不进行实际编译
 # 有新文件加入后重新生成编译数据库：
 #   cmake -B build_ninja -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 #   Ctrl+Shift+P -> "clangd: Restart language server"
+# 
+# 使用时配合MSVC标准库头文件总是有各种问题：
+#   找不到MSVC头文件包含的内部头文件、fallback到clangd自带头文件、C++头文件被作为C头文件解析导致头文件诊断出一堆问题
+#   尝试多种方法都无法解决，暂时就这样用了
 
 # 全局配置
 CompileFlags:
   CompilationDatabase: build_ninja
-  # 移除 MSVC 多进程编译标志
-  # 移除头文件依赖显示
-  Remove: [
-    /MP,
-    /showIncludes
-  ]
-
-# 全局禁用诊断
-Diagnostics:
-  Suppress: ["*"]
-
-# 项目文件添加诊断
----
-If:
-  PathMatch: "(tchCadToy|tchPlatform|tchGeneral)/.*"
-Diagnostics:
-  # 只诊断项目文件
-  Suppress: []
 
 # 第三方库相关文件
----
 If:
   PathMatch: "(3rdparty|imgui|3rdparty-install)/.*"
 Diagnostics:

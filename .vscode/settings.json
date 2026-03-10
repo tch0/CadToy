@@ -1,6 +1,11 @@
 {
-    // 禁用微软C++插件的IntelliSense，避免与clangd冲突
+    // Clangd与微软C++插件的IntelliSense是冲突的，下面二选一
+    // 选择1：禁用微软C++插件的IntelliSense，启用clangd，Trae CN中只有这一个选择
     "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.enabled": true,
+    // 选择2：禁用clangd，启用微软C++插件的IntelliSense，VS Code中可选
+    // "C_Cpp.intelliSenseEngine": "default",
+    // "clangd.enabled": false,
     
     // 禁止保存时自动格式化
     "editor.formatOnSave": false,
@@ -48,10 +53,10 @@
         // 指定编译数据库位置（相对于项目根目录）
         "--compile-commands-dir=${workspaceFolder}/build_ninja",
         
-        // 备用：调试时启用，输出clangd详细日志，查看索引进度和错误信息，用于排查clangd问题
-        // "--log=info",
+        // 备用：输出clangd详细日志，查看索引进度和错误信息，用于排查clangd问题
+        "--log=verbose",
         
-        // 备用：当clangd无法正确解析MSVC标准库头文件时启用，路径需根据实际安装调整，一般不需要设置，在交叉编译等情况则必须使用
-        // "--query-driver=C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/cl.exe"
+        // 备用：当clangd无法正确解析标准库头文件时启用，路径需根据实际安装调整，一般不需要设置，在交叉编译等情况则必须使用
+        // "--query-driver=path-to-compiler.exe",
     ]
 }
