@@ -3,6 +3,7 @@
 #include "command/CommandManager.h"
 #include "input/InputContext.h"
 #include "command/CommandLine.h"
+#include "command/CommandClose.h"
 
 namespace tch {
 
@@ -60,13 +61,17 @@ void CommandManager::parseCommand(const std::string& command) {
         // 创建线段命令并添加到待执行列表
         m_pendingCommands.push_back(std::make_shared<CommandLine>());
     }
+    else if (command == "close") {
+        // 创建关闭命令并添加到待执行列表
+        m_pendingCommands.push_back(std::make_shared<CommandClose>());
+    }
     // 其他命令的解析...
 }
 
 // 运行命令循环
 void CommandManager::runCommandLoop() {
     // 检查是否有待执行的命令
-    if (!m_pendingCommands.empty() && !m_activeCommand) {
+    if (!m_pendingCommands.empty() && m_activeCommand == nullptr) {
         // 执行第一个待执行的命令
         executeCommand(m_pendingCommands.front());
         m_pendingCommands.erase(m_pendingCommands.begin());
