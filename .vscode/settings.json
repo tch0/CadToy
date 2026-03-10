@@ -54,7 +54,7 @@
         "--compile-commands-dir=${workspaceFolder}/build_ninja",
         
         // 备用：输出clangd详细日志，查看索引进度和错误信息，用于排查clangd问题
-        "--log=verbose",
+        // "--log=verbose",
         
         // 备用：当clangd无法正确解析标准库头文件时启用，路径需根据实际安装调整，一般不需要设置，在交叉编译等情况则必须使用
         // "--query-driver=path-to-compiler.exe",
