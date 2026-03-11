@@ -67,8 +67,9 @@ public:
     static void drawCommandBar(); // 绘制命令栏
     static void addContentToCommandHistory(const std::string& command); // 添加内容到命令历史记录
     static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
-    static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
     static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符
+    static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
+    static std::string getAndClearCommandBuffer(); // 获取输入缓冲区内容，并清空输入缓冲区
     
     // 实时渲染信息窗口相关方法
     static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口

@@ -67,9 +67,6 @@ static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可�
 // 实时渲染信息窗口相关
 static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否可见
 
-// 输入上下文信息窗口相关
-static bool s_inputContextInfoVisible = false;  // 输入上下文信息窗口是否可见
-
 
 
 
@@ -920,7 +917,7 @@ void Renderer::drawMenuBar() {
             ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
             ImGui::Separator();
             ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
-            ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &s_inputContextInfoVisible);
+            ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &InputContext::getInstance().getInputContextInfoVisible());
             ImGui::EndMenu();
         }
         
@@ -1178,7 +1175,7 @@ void Renderer::drawNonModalWindows() {
     drawRenderingInfoWindow();
     
     // 绘制输入上下文信息窗口
-    InputContext::getInstance().drawInfoWindow(&s_inputContextInfoVisible);
+    InputContext::getInstance().drawInfoWindow();
 }
 
 // 获取当前光标世界坐标
@@ -1275,10 +1272,10 @@ void Renderer::drawCommandBar() {
             if (!prompt.empty()) {
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
             } else {
-                ImGui::Text(loc.get("commandBar.prompt").c_str());
+                ImGui::Text(loc.get("commandLine.prompt.command").c_str());
             }
         } else {
-            ImGui::Text(loc.get("commandBar.prompt").c_str());
+            ImGui::Text(loc.get("commandLine.prompt.command").c_str());
         }
         
         ImGui::SameLine();
@@ -1297,25 +1294,15 @@ void Renderer::drawCommandBar() {
         SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
         // Enter/Space 提交输入框输入到输入上下文中进行处理
         if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
-            // 获取输入
-            std::string input(s_cmdBuffer.data());
-            // 处理输入
-            inputContext.handleEnterSpace(input);
-            // 清空缓冲区
-            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-            s_bNeedClearCommandBuffer = true;
+            // 处理输入并清空缓冲区
+            inputContext.handleEnterSpace(getAndClearCommandBuffer());
             // 清除特殊按键事件
             inputContext.clearSpecialKeyEvent();
         }
         // Esc 同样提交输入到输入上下文进行处理
         else if (inputEvent == SpecialKeyEventType::kEscPressed) {
-            // 获取输入
-            std::string input(s_cmdBuffer.data());
-            // 处理输入
-            inputContext.handleEscape(input);
-            // 清空缓冲区
-            std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-            s_bNeedClearCommandBuffer = true;
+            // 处理输入并清空缓冲区
+            inputContext.handleEscape(getAndClearCommandBuffer());
             // 清除特殊按键事件
             inputContext.clearSpecialKeyEvent();
         }
@@ -1354,7 +1341,7 @@ void Renderer::drawCommandBar() {
             return 0;
         };
 
-        ImGui::InputTextWithHint("##CommandInput", loc.get("commandBar.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
+        ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
             ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter, 
             inputTextCallback, nullptr);
         
@@ -1456,6 +1443,15 @@ void Renderer::addInputChar(unsigned int codepoint) {
         // 设置标记，表示命令输入缓冲区被修改
         s_bCommandBufferModified = true;
     }
+}
+
+// 获取输入缓冲区内容，并清空输入缓冲区
+std::string Renderer::getAndClearCommandBuffer()
+{
+    std::string buffer = s_cmdBuffer.data();
+    std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+    s_bNeedClearCommandBuffer = true;
+    return buffer;
 }
 
 // 获取属性栏是否可见

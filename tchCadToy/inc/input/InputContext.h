@@ -10,8 +10,8 @@ namespace tch {
 // 输入状态枚举
 enum class InputStatus {
     kNone,              // 无输入
-    kCanceled,          // 取消输入（Esc键）
-    kEnterInput,        // 回车输入
+    kCanceled,          // 取消输入(Esc键)
+    kEnterInput,        // 回车输入(空格和回车作用一致，也包括在其中)
     kIntegerInput,      // 整数输入
     kFloatInput,        // 浮点数输入
     kStringInput,       // 字符串输入
@@ -20,7 +20,7 @@ enum class InputStatus {
     kEntitySelection    // 实体选择输入
 };
 
-// 输入类型枚举
+// 允许输入类型枚举
 enum class InputType {
     kInteger,           // 整数输入
     kFloat,             // 浮点数输入
@@ -52,9 +52,6 @@ private:
     // 命令执行状态
     bool m_inCommandExecution;
     
-    // 是否在取消命令的过程中
-    bool m_inCommandCancelProcess;
-    
     // 当前输入状态
     InputStatus m_currentStatus;
     
@@ -63,6 +60,9 @@ private:
     
     // 提示信息
     std::string m_prompt;
+    
+    // 错误提示信息
+    std::string m_errorPrompt;
     
     // 拾取的点
     glm::dvec3 m_pickedPoint;
@@ -87,10 +87,9 @@ private:
     
     // 最后一次特殊按键事件
     SpecialKeyEventType m_lastSpecialKeyEvent;
-    // 输入字符串
-    std::string m_input;
-    // 错误提示
-    std::string m_errorPrompt;
+    
+    // 输入上下文信息窗口相关
+    bool m_inputContextInfoVisible;     // 窗口是否可见
     
 public:
     // 获取单例实例
@@ -142,10 +141,6 @@ public:
     // 输入解析
     void parseInput(const std::string& input);
     
-    // 是否在取消命令执行的过程中，CommandManager全权维护，通过模拟多次Cancel来实现取消命令执行，在取消命令过程中则所有交互直接返回kCanceled
-    void setInCommandCancelProcess(bool inProcess);
-    bool inCommandCancelProcess() const;
-    
     // 预览功能（暂时空实现）
     void drawRubberBand(const glm::dvec3& startPoint);
     
@@ -191,8 +186,9 @@ public:
     void waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities = {},
         const std::vector<std::string>& keywords = {});
     
-    // 绘制输入上下文信息窗口
-    void drawInfoWindow(bool* pOpen = nullptr);
+    // 输入上下文信息窗口相关
+    void drawInfoWindow();
+    bool& getInputContextInfoVisible() { return m_inputContextInfoVisible; }
 };
 
 } // namespace tch

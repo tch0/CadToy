@@ -17,10 +17,10 @@ std::shared_ptr<InputContext> InputContext::s_instance = nullptr;
 // 构造函数
 InputContext::InputContext() :
     m_inCommandExecution(false),
-    m_inCommandCancelProcess(false),
     m_currentStatus(InputStatus::kNone),
     m_allowedTypes(),
     m_prompt(""),
+    m_errorPrompt(""),
     m_pickedPoint(glm::dvec3(0, 0, 0)),
     m_inputInteger(0),
     m_inputFloat(0.0),
@@ -29,8 +29,7 @@ InputContext::InputContext() :
     m_keywordOptions(),
     m_selectedEntities(),
     m_lastSpecialKeyEvent(SpecialKeyEventType::kNone),
-    m_input(""),
-    m_errorPrompt("") {
+    m_inputContextInfoVisible(false) {
 }
 
 // 获取单例实例
@@ -65,18 +64,14 @@ const std::string& InputContext::getPrompt() const {
 
 // 输入状态管理
 InputStatus InputContext::getCurrentStatus() {
-    if (m_inCommandCancelProcess)
-    {
-        m_currentStatus = InputStatus::kCanceled;
-    }
     return m_currentStatus;
 }
 
 void InputContext::resetStatus() {
     m_currentStatus = InputStatus::kNone;
-    m_inCommandCancelProcess = false;
     m_allowedTypes.clear();
     m_prompt = "";
+    m_errorPrompt = "";
     m_pickedPoint = glm::dvec3(0, 0, 0);
     m_inputInteger = 0;
     m_inputFloat = 0.0;
@@ -217,9 +212,9 @@ void InputContext::parseInput(const std::string& input) {
     // 重置当前状态
     m_currentStatus = InputStatus::kNone;
     
-    // 检查是否为空输入（回车）
+    // 检查是否为空输入（Enter/Space），至于什么回车执行默认选项之类的逻辑则返回kEnterInput之后由命令自行去处理
     if (input.empty()) {
-        // 所有输入都允许回车
+        // 所有输入都允许Enter/Space
         m_currentStatus = InputStatus::kEnterInput;
         // 更新命令提示
         cmdLinePrint(m_prompt);
@@ -297,21 +292,6 @@ void InputContext::parseInput(const std::string& input) {
     m_currentStatus = InputStatus::kNone;
 }
 
-// 是否在取消命令执行的过程中，CommandManager全权维护，通过模拟多次Cancel来实现取消命令执行，在取消命令过程中则所有交互直接返回kCanceled
-void InputContext::setInCommandCancelProcess(bool inProcess) {
-    m_inCommandCancelProcess = inProcess;
-    if (m_inCommandCancelProcess) {
-        m_currentStatus = InputStatus::kCanceled;
-    }
-    else {
-        m_currentStatus = InputStatus::kNone;
-    }
-}
-
-bool InputContext::inCommandCancelProcess() const {
-    return m_inCommandCancelProcess;
-}
-
 // 预览功能（暂时空实现）
 void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
     // 暂时空实现
@@ -326,10 +306,13 @@ void InputContext::handleEnterSpace(const std::string& input) {
         // 命令执行外，作为新命令处理
         // 添加到命令历史
         auto& loc = LocalizationManager::getInstance();
-        std::string promptStr = loc.get("commandBar.prompt") + " " + input;
+        std::string promptStr = loc.get("commandLine.prompt.command") + " " + input;
         cmdLinePrint(promptStr);
-        // 解析为新命令
-        CommandManager::getInstance().executeCommand(input);
+        // 不为空则解析为新命令，为空就是单纯敲了一个回车或者空格
+        if (!input.empty())
+        {
+            CommandManager::getInstance().executeCommand(input);
+        }
     }
 }
 
@@ -340,12 +323,12 @@ void InputContext::handleEscape(const std::string& input) {
         m_currentStatus = InputStatus::kCanceled;
         // 更新命令提示，添加取消标记和用户输入
         auto& loc = LocalizationManager::getInstance();
-        std::string cancelPrompt = m_prompt + " " + input + " " + loc.get("commandBar.prompt.cancel");
+        std::string cancelPrompt = m_prompt + " " + input + loc.get("commandLine.prompt.cancel");
         cmdLinePrint(cancelPrompt);
     } else {
         // 没有命令执行时按下Esc，键入的字符串也会被输出到命令历史
         auto& loc = LocalizationManager::getInstance();
-        std::string promptStr = loc.get("commandBar.prompt") + " " + input + " " +  loc.get("commandBar.prompt.cancel");
+        std::string promptStr = loc.get("commandLine.prompt.command") + " " + input + loc.get("commandLine.prompt.cancel");
         cmdLinePrint(promptStr);
     }
 }
@@ -361,15 +344,6 @@ SpecialKeyEventType InputContext::getLastSpecialKeyEvent() const {
 
 void InputContext::clearSpecialKeyEvent() {
     m_lastSpecialKeyEvent = SpecialKeyEventType::kNone;
-}
-
-// 输入管理
-void InputContext::setInput(const std::string& input) {
-    m_input = input;
-}
-
-const std::string& InputContext::getInput() const {
-    return m_input;
 }
 
 // 等待点输入（带基点）
@@ -467,8 +441,8 @@ void InputContext::waitForEntity(const std::string& prompt, const std::vector<vo
 }
 
 // 绘制输入上下文信息窗口
-void InputContext::drawInfoWindow(bool* p_open) {
-    if (p_open && !*p_open) {
+void InputContext::drawInfoWindow() {
+    if (!m_inputContextInfoVisible) {
         return;
     }
     
@@ -499,7 +473,7 @@ void InputContext::drawInfoWindow(bool* p_open) {
     LocalizationManager& loc = LocalizationManager::getInstance();
     
     // 修改窗口标题
-    ImGui::Begin(loc.get("window.inputContextInfo.title").c_str(), p_open);
+    ImGui::Begin(loc.get("window.inputContextInfo.title").c_str(), &m_inputContextInfoVisible);
     
     // 1. 命令执行状态 - 显示是否正在执行命令
     ImGui::Text("%s: %s", 

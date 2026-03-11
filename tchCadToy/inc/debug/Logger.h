@@ -124,7 +124,7 @@ private:
 
 // Global logger functions
 
-inline Logger* s_pGlobalLogger = nullptr;
+inline std::unique_ptr<Logger> s_upGlobalLogger = nullptr;
 
 Logger& globalLogger();
 Logger& defaultLogger();

@@ -31,7 +31,7 @@ public:
     // 执行命令
     void executeCommand(const std::string& command);
     
-    // 取消当前执行的命令，用于比如文档切换等场景
+    // 取消当前执行的命令，用于比如文档切换、关闭文档、快捷键命令等需要先取消命令的场景
     void cancelCurrentCommand();
     
     // 取消当前正在执行的命令并执行新命令

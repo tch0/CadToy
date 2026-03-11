@@ -4,6 +4,7 @@
 #include "command/CommandClose.h"
 #include "debug/Logger.h"
 #include "Utils/GlobalUtils.h"
+#include "render/Renderer.h"
 
 namespace tch {
 
@@ -40,20 +41,33 @@ void CommandManager::executeCommand(const std::string& command) {
     
     parseCommand(command);
     
-    // 设置输入上下文为命令执行状态
+    // 设置输入上下文为命令执行状态，成功解析为了命令那才设置
     InputContext::getInstance().setInCommandExecution(m_activeCommand != nullptr);
 }
 
-// 取消当前执行的命令，用于比如文档切换等场景
+// 取消当前执行的命令，用于比如文档切换、关闭文档、快捷键命令等需要先取消命令的场景
 void CommandManager::cancelCurrentCommand()
 {
     if (m_activeCommand)
     {
-        InputContext::getInstance().setInCommandCancelProcess(true);
+        // 和Esc的行为一样，需要清空缓冲区
+        std::string input = Renderer::getAndClearCommandBuffer();
+        // 通过调用handleEscape模拟Esc的行为来取消，以正确处理提示
+        InputContext::getInstance().handleEscape(input);
         // 通过至多三次取消来取消当前执行的命令，一般来说无论什么命令处于哪个分支，三次取消都应该能够结束了
-        for (int i = 0; i < 3 && !m_activeCommand->isCompleted(); i++)
+        for (int i = 0; i < 3; i++)
         {
+            // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
+            // onUpdate也本身都是
             m_activeCommand->onUpdate();
+            m_activeCommand->onUpdate();
+            m_activeCommand->onUpdate();
+            m_activeCommand->onUpdate();
+            m_activeCommand->onUpdate();
+            if (!m_activeCommand->isCompleted())
+            {
+                InputContext::getInstance().handleEscape("");
+            }
         }
         // 如果取消三次还没有结束，那么就再取消三次，如果六次取消还未结束，那么命令流程大概率出BUG了，就强制结束命令(直接析构掉命令对象)
         if (!m_activeCommand->isCompleted())
@@ -62,6 +76,12 @@ void CommandManager::cancelCurrentCommand()
                 "Please check if the command logic is correct and the command flow is necessary.");
             for (int i = 0; i < 3 && !m_activeCommand->isCompleted(); i++)
             {
+                InputContext::getInstance().handleEscape("");
+                // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
+                m_activeCommand->onUpdate();
+                m_activeCommand->onUpdate();
+                m_activeCommand->onUpdate();
+                m_activeCommand->onUpdate();
                 m_activeCommand->onUpdate();
             }
             if (!m_activeCommand->isCompleted())
@@ -70,11 +90,22 @@ void CommandManager::cancelCurrentCommand()
                     "Please check if the command logic is stuck in an infinite loop. The command will now be forcibly terminated.");
             }
         }
+        // 置空当前命令
         m_activeCommand = nullptr;
         
-        // 重置输入上下文状态
-        InputContext::getInstance().setInCommandCancelProcess(false);
+        // 重置输入上下文为无命令执行状态
         InputContext::getInstance().setInCommandExecution(false);
+        
+        // 最后再输出一个空行
+        InputContext::getInstance().handleEnterSpace("");
+    }
+    else {
+        // 没有命令在执行也同样需要清空缓冲区并输出
+        std::string input = Renderer::getAndClearCommandBuffer();
+        if (!input.empty())
+        {
+            InputContext::getInstance().handleEscape(input);
+        }
     }
 }
 
@@ -107,6 +138,10 @@ void CommandManager::runCommandLoop() {
     // 更新活动命令
     if (m_activeCommand) {
         // 更新命令
+        //      虽然这里每一帧都会进入一次，不缺少调用次数，但是一般命令里的设置输入信息和获取输入是被切割为两个状态，
+        //      还有命令流程结束后也需要一个状态来完成，我们希望在一帧内执行足够多的流程的话就调用两次就足够了。
+        //      执行时大多数命令状态都是在等待输入只执行查询输入上下文的操作，没什么开销，原则上调几次对性能和结果没有也不应该有任何影响。
+        m_activeCommand->onUpdate();
         m_activeCommand->onUpdate();
         
         // 检查命令是否完成

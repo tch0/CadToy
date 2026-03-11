@@ -24,9 +24,9 @@
   "menu.tools.inputTextInfo": "输入上下文信息",
   "menu.language": "语言",
 
-  "commandBar.prompt": "命令:",
-  "commandBar.prompt.cancel": "*取消*",
-  "commandBar.inputPrompt": "在此输入命令",
+  "commandLine.prompt.command": "命令:",
+  "commandLine.prompt.cancel": "*取消*",
+  "commandLine.inputPrompt": "在此输入命令",
 
   "propertyBar.title": "属性",
 

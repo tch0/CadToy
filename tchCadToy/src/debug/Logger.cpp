@@ -54,10 +54,6 @@ Logger::~Logger()
             m_logThread->join();
         }
     }
-    
-    if (this == s_pGlobalLogger) {
-        s_pGlobalLogger = nullptr;
-    }
 }
 
 // Configuration
@@ -479,9 +475,9 @@ void Logger::processLogMessage(const LogMessage& msg)
 
 Logger& globalLogger()
 {
-    if (s_pGlobalLogger)
+    if (s_upGlobalLogger)
     {
-        return *s_pGlobalLogger;
+        return *s_upGlobalLogger;
     }
     return defaultLogger();
 }
@@ -492,9 +488,9 @@ Logger& defaultLogger()
     return coutLogger;
 }
 
-void setGlobalLogger(Logger* pLogger)
+void setGlobalLogger(std::unique_ptr<Logger> upLogger)
 {
-    s_pGlobalLogger = pLogger;
+    s_upGlobalLogger = std::move(upLogger);
 }
 
 } // namespace tch

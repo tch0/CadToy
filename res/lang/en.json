@@ -23,10 +23,10 @@
   "menu.tools.renderingInfo": "Real Time Rendering Info",
   "menu.tools.inputTextInfo": "Input Context Info",
   "menu.language": "Language",
-
-  "commandBar.prompt": "Command:",
-  "commandBar.prompt.cancel": "*Cancel*",
-  "commandBar.inputPrompt": "Input Command Here",
+  
+  "commandLine.prompt.command": "Command:",
+  "commandLine.prompt.cancel": "*Cancel*",
+  "commandLine.inputPrompt": "Input Command Here",
 
   "propertyBar.title": "Properties",
 
