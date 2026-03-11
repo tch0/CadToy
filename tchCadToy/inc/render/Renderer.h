@@ -125,7 +125,7 @@ private:
     static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
     static bool s_bCommandBufferModified; // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
-    static bool s_bNeedClearCommandBuffer; // 是否需要清除命令输入缓冲区
+    static bool s_bNeedClearCommandBufferInternalCopy; // 是否需要清除命令输入缓冲区的内部副本
 
 
     // 辅助方法

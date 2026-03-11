@@ -45,8 +45,8 @@ bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设
 // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
 bool Renderer::s_bCommandBufferModified = false;
 
-// 是否需要清除命令输入缓冲区
-bool Renderer::s_bNeedClearCommandBuffer = false;
+// 是否需要清除ImGui的命令输入缓冲区内部副本
+bool Renderer::s_bNeedClearCommandBufferInternalCopy = false;
 
 // 命令栏相关
 static bool s_commandBarVisible = true; // 命令栏是否可见
@@ -1296,6 +1296,10 @@ void Renderer::drawCommandBar() {
         if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
             // 处理输入并清空缓冲区
             inputContext.handleEnterSpace(getAndClearCommandBuffer());
+            // ImGui会内部维护InputText的缓冲区副本，Enter、Esc等事件时由上面的ImGui::SetKeyboardFocusHere所控制焦点会一直维持在命令输入框上，
+            // 此时光清空外部缓冲区的话，每次InpuText调用都会把内部的副本重新同步回外部缓冲区来，那么就必须通过文本处理回调函数来清空内部的副本。
+            // 而如果焦点已经不在输入框上了，那么单纯清除外部缓冲区就足够了。
+            s_bNeedClearCommandBufferInternalCopy = true;
             // 清除特殊按键事件
             inputContext.clearSpecialKeyEvent();
         }
@@ -1303,6 +1307,8 @@ void Renderer::drawCommandBar() {
         else if (inputEvent == SpecialKeyEventType::kEscPressed) {
             // 处理输入并清空缓冲区
             inputContext.handleEscape(getAndClearCommandBuffer());
+            // 同理清除内部副本
+            s_bNeedClearCommandBufferInternalCopy = true;
             // 清除特殊按键事件
             inputContext.clearSpecialKeyEvent();
         }
@@ -1323,19 +1329,19 @@ void Renderer::drawCommandBar() {
             if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
                 // 命令输入缓冲区被修改，那么就解除选中并移动光标到末尾
                 if (s_bCommandBufferModified) {
-                    // 直接修改缓冲区后，字符在下一帧可能处于选中状态，所以需要取消其选中状态
+                    // 直接修改外部缓冲区后，多出来的字符在下一帧可能处于选中状态，所以需要取消其选中状态
                     data->SelectionStart = data->SelectionEnd = data->BufTextLen;
                     // 焦点丢失后，其他位置的输入总是追加到末尾，所以总是移动光标到末尾，不管焦点丢失前光标在什么位置
                     data->CursorPos = data->BufTextLen;
                     // 重置标记
                     s_bCommandBufferModified = false;
                 }
-                // 需要清除命令输入缓冲区
-                if (s_bNeedClearCommandBuffer) {
+                // 需要清除命令输入缓冲区的内部副本
+                if (s_bNeedClearCommandBufferInternalCopy) {
                     data->DeleteChars(0, data->BufTextLen); // 强制抹除 ImGui 内部的副本
                     data->CursorPos = 0;
                     // 重置标记
-                    s_bNeedClearCommandBuffer = false;
+                    s_bNeedClearCommandBufferInternalCopy = false;
                 }
             }
             return 0;
@@ -1450,7 +1456,6 @@ std::string Renderer::getAndClearCommandBuffer()
 {
     std::string buffer = s_cmdBuffer.data();
     std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-    s_bNeedClearCommandBuffer = true;
     return buffer;
 }
 

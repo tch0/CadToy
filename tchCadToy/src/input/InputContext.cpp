@@ -93,7 +93,7 @@ const std::vector<InputType>& InputContext::getAllowedTypes() const {
 // 点拾取相关
 void InputContext::setPickedPoint(const glm::dvec3& point) {
     // 只有在允许点输入时才设置状态
-    if (m_allowedTypes.empty() || std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
+    if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
         m_pickedPoint = point;
         m_currentStatus = InputStatus::kPointInput;
     }
@@ -115,7 +115,11 @@ void InputContext::handleLeftMouseClick(const glm::vec2& screenPos) {
         // 将屏幕坐标转换为世界坐标
         glm::dvec3 worldPos = Renderer::getTransformManager().screenToWorld(screenPos);
         // 设置到输入上下文
-        setPickedPoint(worldPos);
+        if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
+            m_pickedPoint = worldPos;
+            m_currentStatus = InputStatus::kPointInput;
+            cmdLinePrint(m_prompt);
+        }
     }
 }
 
@@ -191,7 +195,7 @@ bool InputContext::getKeyword(std::string& keyword) {
 // 实体选择相关
 void InputContext::setSelectedEntities(const std::vector<void*>& entities) {
     // 只有在允许实体选择输入时才设置状态
-    if (m_allowedTypes.empty() || std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
+    if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
         m_selectedEntities = entities;
         m_currentStatus = InputStatus::kEntitySelection;
     }
