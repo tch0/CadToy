@@ -16,8 +16,11 @@ public:
     // 清理渲染器
     static void cleanup();
     
+    // 获取渲染器状态
+    static bool isInitialized();
+    
     // 重算布局、更新视口
-    static void calculateLayoutAndUpdateViewport(); // 重算布局、更新视口
+    static void calculateLayoutAndUpdateViewport();
     
     // 开始渲染
     static void beginRender();
@@ -31,17 +34,31 @@ public:
     // 绘制所有图形
     static void drawAll();
     
-    // 绘制十字光标
-    static void drawCursor();
+    // 光标模式枚举
+    enum class CursorMode {
+        kDefault,       // 拾取框加外部十字光标
+        kCrosshair,     // 仅十字光标
+        kPickbox,       // 仅拾取框
+        kPanning        // 平移中，手掌
+    };
     
-    // 设置十字光标大小
-    static void setCrossCursorSize(float size);
+    // 光标标记枚举
+    enum class CursorMarker {
+        kNone,          // 无标记
+        kLeftSelect,    // 向左框选
+        kRightSelect,   // 向右框选
+        kLocked         // 锁定标记
+    };
     
-    // 获取十字光标大小
-    static float getCrossCursorSize();
-    
-    // 获取渲染器状态
-    static bool isInitialized();
+    // 光标相关
+    static void drawCursor(); // 绘制光标
+    static void setCursorMode(CursorMode mode); // 设置光标模式
+    static CursorMode getCursorMode(); // 获取当前光标模式
+    static void setCursorMarker(CursorMarker marker); // 设置光标标记
+    static CursorMarker getCursorMarker(); // 获取当前光标标记
+    static void setCrossCursorSize(float size); // 设置十字光标大小
+    static float getCrossCursorSize(); // 获取十字光标大小
+    static glm::dvec3 getCursorPosWorld(); // 获取当前光标世界坐标
 
     // 视图操作方法
     static void zoomIn(const glm::vec2& cursorPos);  // 以光标位置为中心放大
@@ -81,9 +98,6 @@ public:
     static void drawModalDialogs(); // 绘制模态对话框
     static void drawNonModalWindows(); // 绘制非模态窗口
     
-    // 获取当前光标世界坐标
-    static glm::dvec3 getCursorPosWorld();
-    
     // 视口相关方法
     static bool isPointInViewport(const glm::vec2& screenPos); // 判断点是否在视口内
     
@@ -105,16 +119,19 @@ private:
     // 静态成员变量
     static bool s_initialized;                  // 渲染器初始化状态
     static GLFWwindow* s_window;                // 窗口指针
-    static float s_crossCursorSize;            // 十字光标大小（包含选择框的总大小，线段长度为十字光标大小减去选择框大小）
-    static float s_pickBoxSize;                // 拾取框大小
+    
+    // 光标相关
+    static float s_crossCursorSize;             // 十字光标大小（包含拾取框的总大小，线段长度为十字光标大小减去拾取框大小）
+    static float s_pickBoxSize;                 // 拾取框大小
+    static CursorMode s_currentCursorMode;      // 当前光标模式
+    static CursorMarker s_currentCursorMarker;  // 当前光标标记
+    static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
     
     // 栅格和坐标轴颜色
     static float s_mainGridColor[3];            // 主栅格颜色 RGB: 54,61,78
     static float s_subGridColor[3];             // 子栅格颜色 RGB: 38,45,55
     static float s_xAxisColor[3];               // X轴颜色 RGB: 97,37,39
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
-    static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
-    
     
     // UI组件高度
     static float s_menuBarHeight;              // 菜单栏高度
@@ -133,6 +150,14 @@ private:
     static void drawAxes();                     // 绘制XY轴
     static void initializeImGui();              // 初始化ImGui
     static void cleanupImGui();                 // 清理ImGui
+    // 光标绘制相关
+    static void drawPickBox(const glm::vec2& pos, float pickBoxSize); // 绘制拾取框
+    static void drawCrosshair(const glm::vec2& pos, float pickBoxSize); // 绘制十字线
+    static void drawHandCursor(const glm::vec2& pos); // 绘制手掌光标
+    static void drawLeftSelectMarker(const glm::vec2& pos); // 绘制向左框选标记
+    static void drawRightSelectMarker(const glm::vec2& pos); // 绘制向右框选标记
+    static void drawLockMarker(const glm::vec2& pos); // 绘制锁标记
+    static void drawCursorMarker(const glm::vec2& pos); // 绘制光标标记
 };
 
 } // namespace tch

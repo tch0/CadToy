@@ -23,6 +23,8 @@ bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
 float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
+Renderer::CursorMode Renderer::s_currentCursorMode = Renderer::CursorMode::kDefault;
+Renderer::CursorMarker Renderer::s_currentCursorMarker = Renderer::CursorMarker::kNone;
 
 // 栅格和坐标轴颜色初始化
 float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f}; // 主栅格颜色 RGB: 54,61,78
@@ -83,8 +85,6 @@ void Renderer::initialize(GLFWwindow* window) {
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
     
-
-    
     // 启用混合
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -106,6 +106,11 @@ void Renderer::cleanup() {
     
     s_initialized = false;
     s_window = nullptr;
+}
+
+// 获取渲染器状态
+bool Renderer::isInitialized() {
+    return s_initialized;
 }
 
 // 计算布局并更新视口
@@ -255,11 +260,6 @@ void Renderer::drawAll() {
     }
 }
 
-// 获取渲染器状态
-bool Renderer::isInitialized() {
-    return s_initialized;
-}
-
 // 绘制光标
 void Renderer::drawCursor() {
     if (!s_initialized || !s_window) {
@@ -292,41 +292,31 @@ void Renderer::drawCursor() {
     // 禁用深度测试
     glDisable(GL_DEPTH_TEST);
     
-    // 绘制拾取框
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
-    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y - s_pickBoxSize);
-    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y - s_pickBoxSize);
-    glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y + s_pickBoxSize);
-    glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y + s_pickBoxSize);
-    glEnd();
-    
-    // 只有当十字光标尺寸大于0且大于选择框尺寸时，才绘制光标的四条线
-    if (s_crossCursorSize > 0 && s_crossCursorSize > s_pickBoxSize) {
-        // 计算线段长度：十字光标大小减去选择框大小
-        float lineLength = s_crossCursorSize - s_pickBoxSize;
-        
-        // 绘制从正方形四条边中点向外延伸的光标线条
-        glBegin(GL_LINES);
-        glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
-        
-        // 上边中点向上延伸
-        glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize);
-        glVertex2f(cursorScreenPos.x, cursorScreenPos.y - s_pickBoxSize - lineLength);
-        
-        // 下边中点向下延伸
-        glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize);
-        glVertex2f(cursorScreenPos.x, cursorScreenPos.y + s_pickBoxSize + lineLength);
-        
-        // 左边中点向左延伸
-        glVertex2f(cursorScreenPos.x - s_pickBoxSize, cursorScreenPos.y);
-        glVertex2f(cursorScreenPos.x - s_pickBoxSize - lineLength, cursorScreenPos.y);
-        
-        // 右边中点向右延伸
-        glVertex2f(cursorScreenPos.x + s_pickBoxSize, cursorScreenPos.y);
-        glVertex2f(cursorScreenPos.x + s_pickBoxSize + lineLength, cursorScreenPos.y);
-        glEnd();
+    // 根据光标模式绘制不同的光标
+    switch (s_currentCursorMode) {
+        case CursorMode::kDefault:
+        case CursorMode::kCrosshair: {
+            // 统一处理：kCrosshair模式等价于pickbox=0
+            float effectivePickBoxSize = (s_currentCursorMode == CursorMode::kCrosshair) ? 0.0f : s_pickBoxSize;
+            // 绘制拾取框（如果effectivePickBoxSize > 0）
+            drawPickBox(cursorScreenPos, effectivePickBoxSize);
+            // 绘制十字线，根据effectivePickBoxSize决定绘制方式
+            drawCrosshair(cursorScreenPos, effectivePickBoxSize);
+            break;
+        }
+        case CursorMode::kPickbox:
+            // 仅绘制拾取框
+            drawPickBox(cursorScreenPos, s_pickBoxSize);
+            break;
+            
+        case CursorMode::kPanning:
+            // 绘制手掌形状
+            drawHandCursor(cursorScreenPos);
+            break;
     }
+    
+    // 绘制光标标记
+    drawCursorMarker(cursorScreenPos);
     
     // 恢复矩阵状态
     glPopMatrix();
@@ -338,6 +328,292 @@ void Renderer::drawCursor() {
     glEnable(GL_DEPTH_TEST);
 }
 
+// 绘制拾取框
+void Renderer::drawPickBox(const glm::vec2& pos, float pickBoxSize) {
+    if (pickBoxSize > 0) {
+        glBegin(GL_LINE_LOOP);
+        glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+        float halfSize = pickBoxSize;
+        // 考虑像素宽度，添加0.5偏移以确保线对齐像素中心
+        glVertex2f(pos.x - halfSize + 0.5f, pos.y - halfSize + 0.5f);
+        glVertex2f(pos.x + halfSize + 0.5f, pos.y - halfSize + 0.5f);
+        glVertex2f(pos.x + halfSize + 0.5f, pos.y + halfSize + 0.5f);
+        glVertex2f(pos.x - halfSize + 0.5f, pos.y + halfSize + 0.5f);
+        glEnd();
+    }
+}
+
+// 绘制十字线
+void Renderer::drawCrosshair(const glm::vec2& pos, float pickBoxSize) {
+    if (s_crossCursorSize > 0) {
+        float lineLength = s_crossCursorSize;
+        if (lineLength > 0) {
+            // 考虑像素宽度，添加0.5偏移以确保线对齐像素中心
+            float startOffset = pickBoxSize;
+            float outerLength = lineLength - startOffset;
+            
+            // 只有当有足够空间绘制十字线时才绘制
+            if (outerLength > 0) {
+                glBegin(GL_LINES);
+                glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+                
+                // 统一计算每个方向的起点和终点
+                float topStart = pos.y - startOffset + 0.5f;
+                float topEnd = pos.y - lineLength + 0.5f;
+                float bottomStart = pos.y + startOffset + 0.5f;
+                float bottomEnd = pos.y + lineLength + 0.5f;
+                float leftStart = pos.x - startOffset + 0.5f;
+                float leftEnd = pos.x - lineLength + 0.5f;
+                float rightStart = pos.x + startOffset + 0.5f;
+                float rightEnd = pos.x + lineLength + 0.5f;
+                
+                // 上边
+                glVertex2f(pos.x + 0.5f, topStart);
+                glVertex2f(pos.x + 0.5f, topEnd);
+                
+                // 下边
+                glVertex2f(pos.x + 0.5f, bottomStart);
+                glVertex2f(pos.x + 0.5f, bottomEnd);
+                
+                // 左边
+                glVertex2f(leftStart, pos.y + 0.5f);
+                glVertex2f(leftEnd, pos.y + 0.5f);
+                
+                // 右边
+                glVertex2f(rightStart, pos.y + 0.5f);
+                glVertex2f(rightEnd, pos.y + 0.5f);
+                
+                glEnd();
+            }
+        }
+    }
+}
+
+// 绘制手掌光标
+void Renderer::drawHandCursor(const glm::vec2& pos) {
+    // 手掌大小（固定大小，不随拾取框变化）
+    float handSize = 25.0f;
+    
+    // 绘制手掌轮廓
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+    
+    // 手掌底部
+    glVertex2f(pos.x - handSize * 0.4f + 0.5f, pos.y + handSize * 0.2f + 0.5f);
+    glVertex2f(pos.x + handSize * 0.4f + 0.5f, pos.y + handSize * 0.2f + 0.5f);
+    
+    // 手掌右侧
+    glVertex2f(pos.x + handSize * 0.4f + 0.5f, pos.y + handSize * 0.2f + 0.5f);
+    glVertex2f(pos.x + handSize * 0.3f + 0.5f, pos.y - handSize * 0.3f + 0.5f);
+    
+    // 手掌顶部
+    glVertex2f(pos.x + handSize * 0.3f + 0.5f, pos.y - handSize * 0.3f + 0.5f);
+    glVertex2f(pos.x + handSize * 0.1f + 0.5f, pos.y - handSize * 0.4f + 0.5f);
+    glVertex2f(pos.x + 0.5f, pos.y - handSize * 0.45f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.1f + 0.5f, pos.y - handSize * 0.4f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.3f + 0.5f, pos.y - handSize * 0.3f + 0.5f);
+    
+    // 手掌左侧
+    glVertex2f(pos.x - handSize * 0.3f + 0.5f, pos.y - handSize * 0.3f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.4f + 0.5f, pos.y + handSize * 0.2f + 0.5f);
+    
+    glEnd();
+    
+    // 绘制手指
+    glBegin(GL_LINES);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色光标
+    
+    // 拇指
+    glVertex2f(pos.x - handSize * 0.25f + 0.5f, pos.y + handSize * 0.1f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.35f + 0.5f, pos.y + handSize * 0.15f + 0.5f);
+    
+    // 食指
+    glVertex2f(pos.x + handSize * 0.25f + 0.5f, pos.y - handSize * 0.1f + 0.5f);
+    glVertex2f(pos.x + handSize * 0.3f + 0.5f, pos.y - handSize * 0.35f + 0.5f);
+    
+    // 中指
+    glVertex2f(pos.x + handSize * 0.08f + 0.5f, pos.y - handSize * 0.15f + 0.5f);
+    glVertex2f(pos.x + handSize * 0.12f + 0.5f, pos.y - handSize * 0.4f + 0.5f);
+    
+    // 无名指
+    glVertex2f(pos.x - handSize * 0.08f + 0.5f, pos.y - handSize * 0.15f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.04f + 0.5f, pos.y - handSize * 0.4f + 0.5f);
+    
+    // 小指
+    glVertex2f(pos.x - handSize * 0.25f + 0.5f, pos.y - handSize * 0.1f + 0.5f);
+    glVertex2f(pos.x - handSize * 0.2f + 0.5f, pos.y - handSize * 0.35f + 0.5f);
+    
+    glEnd();
+}
+
+// 绘制向左框选标记（参照示例，2白2透明2白2透明2白的模式）
+void Renderer::drawLeftSelectMarker(const glm::vec2& pos) {
+    float boxSize = 10.0f; // 整体大小
+    float squareSize = 5.0f; // 小正方形大小
+    
+    // 绘制虚线框（2白2透明2白2透明2白模式的虚线）
+    glEnable(GL_LINE_STIPPLE);
+    glLineStipple(1, 0xCCCC); // 1100110011001100 模式，即2白2透明2白2透明2白
+    
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色框
+    // 小框左上角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 小框右上角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 小框右下角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    // 小框左下角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    glEnd();
+    
+    glDisable(GL_LINE_STIPPLE);
+    
+    // 绘制实心正方形（位于正方形左侧边上）
+    glBegin(GL_QUADS);
+    glColor3f(91.0f/255.0f, 201.0f/255.0f, 189.0f/255.0f); // 绿色 rgb(91,201,189)
+    // 正方形左上角
+    glVertex2f(pos.x - boxSize * 0.5f - squareSize + 2.0f + 0.5f, pos.y - squareSize * 0.5f + 0.5f);
+    // 正方形右上角
+    glVertex2f(pos.x - boxSize * 0.5f + 2.0f + 0.5f, pos.y - squareSize * 0.5f + 0.5f);
+    // 正方形右下角
+    glVertex2f(pos.x - boxSize * 0.5f + 2.0f + 0.5f, pos.y + squareSize * 0.5f + 0.5f);
+    // 正方形左下角
+    glVertex2f(pos.x - boxSize * 0.5f - squareSize + 2.0f + 0.5f, pos.y + squareSize * 0.5f + 0.5f);
+    glEnd();
+}
+
+// 绘制向右框选标记
+void Renderer::drawRightSelectMarker(const glm::vec2& pos) {
+    float boxSize = 10.0f; // 整体大小
+    float innerSquareSize = 5.0f; // 中间正方形大小
+    
+    // 绘制白色实线框
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色
+    // 框左上角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 框右上角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 框右下角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    // 框左下角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    glEnd();
+    
+    // 绘制实心正方形（位于框中间）
+    glBegin(GL_QUADS);
+    glColor3f(56.0f/255.0f, 171.0f/255.0f, 223.0f/255.0f); // 蓝色 rgb(56,171,223)
+    // 正方形左上角
+    glVertex2f(pos.x - innerSquareSize * 0.5f + 0.5f, pos.y - innerSquareSize * 0.5f + 0.5f);
+    // 正方形右上角
+    glVertex2f(pos.x + innerSquareSize * 0.5f + 0.5f, pos.y - innerSquareSize * 0.5f + 0.5f);
+    // 正方形右下角
+    glVertex2f(pos.x + innerSquareSize * 0.5f + 0.5f, pos.y + innerSquareSize * 0.5f + 0.5f);
+    // 正方形左下角
+    glVertex2f(pos.x - innerSquareSize * 0.5f + 0.5f, pos.y + innerSquareSize * 0.5f + 0.5f);
+    glEnd();
+}
+
+// 绘制锁标记
+void Renderer::drawLockMarker(const glm::vec2& pos) {
+    // 长方形尺寸：宽度10，高度6
+    float rectWidth = 10.0f;
+    float rectHeight = 6.0f;
+    
+    // 计算长方形位置
+    float rectX = pos.x - rectWidth * 0.5f;
+    float rectY = pos.y - rectHeight * 0.5f;
+    
+    // 锁柱高度
+    float lockPostHeight = 5.0f;
+    
+    // 锁柱起始位置
+    float leftPostX = rectX + 2.0f; // 左侧锁柱位置
+    float rightPostX = rectX + rectWidth - 1.0f; // 右侧锁柱位置
+    
+    // 绘制下方长方形
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色
+    // 长方形左上角
+    glVertex2f(rectX, rectY);
+    // 长方形右上角
+    glVertex2f(rectX + rectWidth, rectY);
+    // 长方形右下角
+    glVertex2f(rectX + rectWidth, rectY + rectHeight);
+    // 长方形左下角
+    glVertex2f(rectX, rectY + rectHeight);
+    glEnd();
+    
+    // 绘制锁柱，三根线段
+    glBegin(GL_LINE_STRIP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色
+    
+    // 左侧
+    glVertex2f(leftPostX, rectY);
+    glVertex2f(leftPostX, rectY - lockPostHeight);
+    
+    // 顶部
+    glVertex2f(leftPostX, rectY - lockPostHeight);
+    glVertex2f(rightPostX, rectY - lockPostHeight);
+    
+    // 右侧
+    glVertex2f(rightPostX, rectY - lockPostHeight);
+    glVertex2f(rightPostX, rectY);
+    
+    glEnd();
+}
+
+// 绘制光标标记
+void Renderer::drawCursorMarker(const glm::vec2& pos) {
+    // 标记中心位置：拾取框右上角的右上方10个像素
+    glm::vec2 markerPos = pos;
+    markerPos.x += s_pickBoxSize + 10.0f;
+    markerPos.y -= s_pickBoxSize + 10.0f;
+    
+    switch (s_currentCursorMarker) {
+        case CursorMarker::kLeftSelect:
+            // 绘制向左框选标记
+            drawLeftSelectMarker(markerPos);
+            break;
+            
+        case CursorMarker::kRightSelect:
+            // 绘制向右框选标记
+            drawRightSelectMarker(markerPos);
+            break;
+            
+        case CursorMarker::kLocked:
+            // 绘制锁标记
+            drawLockMarker(markerPos);
+            break;
+            
+        case CursorMarker::kNone:
+        default:
+            // 无标记，不绘制
+            break;
+    }
+}
+
+// 设置光标模式
+void Renderer::setCursorMode(CursorMode mode) {
+    s_currentCursorMode = mode;
+}
+
+// 获取当前光标模式
+Renderer::CursorMode Renderer::getCursorMode() {
+    return s_currentCursorMode;
+}
+
+// 设置光标标记
+void Renderer::setCursorMarker(CursorMarker marker) {
+    s_currentCursorMarker = marker;
+}
+
+// 获取当前光标标记
+Renderer::CursorMarker Renderer::getCursorMarker() {
+    return s_currentCursorMarker;
+}
+
 // 设置十字光标大小
 void Renderer::setCrossCursorSize(float size) {
     s_crossCursorSize = size;
@@ -346,6 +622,11 @@ void Renderer::setCrossCursorSize(float size) {
 // 获取十字光标大小
 float Renderer::getCrossCursorSize() {
     return s_crossCursorSize;
+}
+
+// 获取当前光标世界坐标
+glm::dvec3 Renderer::getCursorPosWorld() {
+    return s_cursorPosWorld;
 }
 
 // 绘制栅格
@@ -735,7 +1016,7 @@ void Renderer::drawOptionsDialog() {
                 
                 // 第二个选项卡：选择集
                 if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.selection").c_str())) {
-                    // 选择框大小
+                    // 拾取框大小
                     ImGui::Spacing();
                     ImGui::Text(loc.get("optionsDialog.pickBoxSize").c_str());
                     ImGui::Spacing();
@@ -743,7 +1024,7 @@ void Renderer::drawOptionsDialog() {
                     // 首先绘制预览框
                     ImGui::BeginGroup();
                     
-                    // 创建一个更大的预览区域，确保最大选择框也能完全显示
+                    // 创建一个更大的预览区域，确保最大拾取框也能完全显示
                     ImVec2 previewSize(120, 120);
                     ImGui::BeginChild("Preview", previewSize, true);
                     
@@ -1186,11 +1467,6 @@ void Renderer::drawNonModalWindows() {
     
     // 绘制输入上下文信息窗口
     InputContext::getInstance().drawInfoWindow();
-}
-
-// 获取当前光标世界坐标
-glm::dvec3 Renderer::getCursorPosWorld() {
-    return s_cursorPosWorld;
 }
 
 // 判断点是否在视口内
