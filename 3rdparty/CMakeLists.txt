@@ -20,10 +20,6 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/minicoro/minicoro.h DESTINATION includ
 
 # install GLFW headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include/GLFW DESTINATION include)
-# install format_bridge
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/format_bridge DESTINATION include)
-# install fmt headers
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include/fmt DESTINATION include)
 
 # install imgui sources to imgui/
 file(GLOB imgui_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.cpp)

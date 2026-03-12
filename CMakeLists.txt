@@ -206,18 +206,6 @@ set(3rdparty_lib_dir ${CMAKE_SOURCE_DIR}/3rdparty-install/lib)
 
 
 #-------------------------------------------------------------------------------------#
-#  check format is supported or not on your compiler, use fmt library if not supported yet!
-#-------------------------------------------------------------------------------------#
-add_library(format_bridge INTERFACE)
-include(CheckCXXSourceCompiles)
-check_cxx_source_compiles("#include <format>\nint main() { return 0; }" format_supported)
-if (NOT format_supported)
-    target_include_directories(format_bridge INTERFACE ${CMAKE_SOURCE_DIR}/3rdparty-install/include/format_bridge)
-    message("## <format> is not support on your compiler yet, use fmt library instead!")
-endif()
-
-
-#-------------------------------------------------------------------------------------#
 #            copy necessary files after every build (only when different)
 #-------------------------------------------------------------------------------------#
 function(copy_dir_to_target_file_dir target dirname source)
@@ -242,8 +230,6 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(3rdparty/glfw EXCLUDE_FROM_ALL)
-
-list(APPEND essential_libs ${GLFW_LIBRARIES} format_bridge)
 
 if (WIN32)
     list(APPEND essential_libs opengl32)
