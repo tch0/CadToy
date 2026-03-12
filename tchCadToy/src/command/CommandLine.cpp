@@ -40,7 +40,7 @@ void CommandLine::onUpdate() {
             
             // 无输入，直接返回
             if (status == InputStatus::kNone) {
-                return;
+                break;
             }
             // Esc、Enter和关键字，结束命令
             else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
@@ -73,7 +73,7 @@ void CommandLine::onUpdate() {
             
             // 无输入，直接返回
             if (status == InputStatus::kNone) {
-                return;
+                break;
             }
             // Esc、Enter和关键字，进入结束状态
             else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {

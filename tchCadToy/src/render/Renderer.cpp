@@ -982,15 +982,15 @@ void Renderer::drawPropertyBar() {
 // 绘制文件栏
 void Renderer::drawFileBar() {
     // 待切换的文件索引，-1表示无待切换文件
-    static std::size_t s_pendingFileIndex = -1;
+    static std::size_t s_pendingFileIndexToSwitch = -1;
     
     // 处理上一帧的待切换文档
-    if (s_pendingFileIndex != static_cast<std::size_t>(-1)) {
-        DocManager::setCurrentDocumentIndex(s_pendingFileIndex);
+    if (s_pendingFileIndexToSwitch != -1) {
+        DocManager::setCurrentDocumentIndex(s_pendingFileIndexToSwitch);
         // 切换文档后，自动滚动命令历史到最底部
         s_bScrollCommandHistoryToBottom = true;
         // 重置待切换标记
-        s_pendingFileIndex = static_cast<std::size_t>(-1);
+        s_pendingFileIndexToSwitch = -1;
     }
     
     // 获取窗口大小
@@ -1022,12 +1022,16 @@ void Renderer::drawFileBar() {
             if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
                 // 创建新文档
                 std::size_t newFileIndex = DocManager::createNewDocument();
+                // 新建文档并切换也需要取消当前命令
+                CommandManager::getInstance().cancelCurrentCommand();
                 // 设置待切换的文件索引，在下一帧执行切换
-                s_pendingFileIndex = newFileIndex;
+                s_pendingFileIndexToSwitch = newFileIndex;
             }
             
             // 遍历文档列表，绘制每一个打开文档
             std::size_t documentCount = DocManager::getDocumentCount();
+            // 待关闭的文件索引，-1表示无文件待关闭
+            static std::size_t s_docIndexToBeClosed = -1;
             for (std::size_t i = 0; i < documentCount; i++) {
                 // 获取文件名
                 std::string tabText = DocManager::getFileName(i);
@@ -1045,7 +1049,7 @@ void Renderer::drawFileBar() {
                         // 切换文档时，取消当前命令执行
                         CommandManager::getInstance().cancelCurrentCommand();
                         // 设置待切换的文档索引，在下一帧执行切换
-                        s_pendingFileIndex = i;
+                        s_pendingFileIndexToSwitch = i;
                     }
                     ImGui::EndTabItem();
                 }
@@ -1059,8 +1063,14 @@ void Renderer::drawFileBar() {
                 
                 // 处理标签关闭
                 if (!tabOpen) {
-                    CommandManager::getInstance().cancelCurrentCommandAndExecute("close");
+                    s_docIndexToBeClosed = i;
                 }
+            }
+            // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
+            if (s_docIndexToBeClosed != -1) {
+                CommandManager::getInstance().cancelCurrentCommand();
+                DocManager::closeDocument(s_docIndexToBeClosed);
+                s_docIndexToBeClosed = -1;
             }
             
             ImGui::EndTabBar();

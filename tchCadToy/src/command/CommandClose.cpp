@@ -9,6 +9,9 @@ CommandClose::CommandClose() {
 }
 
 void CommandClose::onUpdate() {
+    if (isCompleted()) {
+        return;
+    }
     // 关闭当前文档
     std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
     if (DocManager::closeDocument(currentIndex)) {

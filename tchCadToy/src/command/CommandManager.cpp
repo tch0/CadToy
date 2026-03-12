@@ -48,7 +48,17 @@ void CommandManager::executeCommand(const std::string& command) {
 // 取消当前执行的命令，用于比如文档切换、关闭文档、快捷键命令等需要先取消命令的场景
 void CommandManager::cancelCurrentCommand()
 {
-    if (m_activeCommand)
+    // 没有命令正在执行、或者有命令正在执行但已经执行完毕
+    if (m_activeCommand == nullptr || (m_activeCommand != nullptr && m_activeCommand->isCompleted())) {
+        m_activeCommand = nullptr;
+        std::string input = Renderer::getAndClearCommandBuffer();
+        if (!input.empty())
+        {
+            InputContext::getInstance().handleEscape(input);
+        }
+    }
+    // 有命令正在执行且没有执行完毕
+    else
     {
         // 和Esc的行为一样，需要清空缓冲区
         std::string input = Renderer::getAndClearCommandBuffer();
@@ -98,14 +108,6 @@ void CommandManager::cancelCurrentCommand()
         
         // 最后再输出一个空行
         InputContext::getInstance().handleEnterSpace("");
-    }
-    else {
-        // 没有命令在执行也同样需要清空缓冲区并输出
-        std::string input = Renderer::getAndClearCommandBuffer();
-        if (!input.empty())
-        {
-            InputContext::getInstance().handleEscape(input);
-        }
     }
 }
 

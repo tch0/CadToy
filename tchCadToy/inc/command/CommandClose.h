@@ -9,7 +9,6 @@ class CommandClose : public Command {
 public:
     CommandClose();
     
-    // 命令更新方法
     void onUpdate() override;
 };
 
