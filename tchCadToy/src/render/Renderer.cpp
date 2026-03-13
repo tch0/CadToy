@@ -810,7 +810,7 @@ void Renderer::drawCursorTestWindow() {
         }
         
         // 光标标记选择
-        static const char* cursorMarkerNames[] = {"None", "Locked", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "Orthogonal", "LeftSelect", "RightSelect"};
+        static const char* cursorMarkerNames[] = {"None", "Locked", "Orthogonal", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "LeftSelect", "RightSelect"};
         static int currentMarker = static_cast<int>(s_currentCursorMarker);
         if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames), 12)) {
             s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
@@ -853,6 +853,11 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
             drawLockMarker(markerPos);
             break;
             
+        case CursorMarker::kOrthogonal:
+            // 绘制正交标记
+            drawOrthogonalMarker(markerPos);
+            break;
+            
         case CursorMarker::kErase:
             // 绘制删除标记
             drawEraseMarker(markerPos);
@@ -886,11 +891,6 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
         case CursorMarker::kRemoveSelect:
             // 绘制减选标记（-号）
             drawSelectMarker(markerPos, false);
-            break;
-            
-        case CursorMarker::kOrthogonal:
-            // 绘制正交标记
-            drawOrthogonalMarker(markerPos);
             break;
             
         case CursorMarker::kLeftSelect:

@@ -1,6 +1,6 @@
 # CAD程序研究
 
-## 功能列表：已实现与Todo
+## 功能研究与实现
 
 已实现：
 - 主循环
@@ -33,6 +33,7 @@
     - 实现光标右上角的标记：目前已实现向左向右框选、锁定标记、加选减选、正交标记
     - 移动、旋转、缩放、复制、裁剪/删除标记实现
     - 优先级：限制类 > 即时编辑动作 > 选择模式 > 约束，框选模式是鼠标瞬时状态，鼠标拖动时覆盖其他标记。
+    - TODO: 将所有marker全部写进一个大的 VBO 里，通过 Offset 来切换显示？
 
 Todo：
 - 框选交互实现，
@@ -104,6 +105,36 @@ void Renderer::drawSelectionWindow(const glm::vec2& start, const glm::vec2& end)
     glDisable(GL_LINE_STIPPLE);
 }
 ```
+
+光标Marker决策器研究：配合优先级？
+```C++
+CursorMarker GetActiveMarker() {
+    if (isLayerLocked) return CursorMarker::kLocked;
+    
+    // 危险/明确结果优先
+    if (currentCommand == Command::kErase) return CursorMarker::kErase;
+    if (currentCommand == Command::kCopy) return CursorMarker::kCopy;
+
+    // 约束优先 (针对 Move/Line 等需点位的命令)
+    if (isOrthoEnabled && isAwaitingPoint) return CursorMarker::kOrthogonal;
+
+    // 选择模式优先
+    if (isAddMode) return CursorMarker::kAddSelect;
+    if (isRemoveMode) return CursorMarker::kRemoveSelect;
+
+    // 动作提示
+    if (currentCommand == Command::kMove) return CursorMarker::kMove;
+    if (currentCommand == Command::kRotate) return CursorMarker::kRotate;
+    if (currentCommand == Command::kScale) return CursorMarker::kScale;
+
+    // 基础交互
+    if (isDraggingLeft) return CursorMarker::kLeftSelect;
+    if (isDraggingRight) return CursorMarker::kRightSelect;
+
+    return CursorMarker::kNone;
+}
+```
+- 优先级特殊情况：框选模式下，erase命令框里面有实体会被选中时，优先显示erase标记，没有实体才显示框选标记
 
 ## BUG
 
