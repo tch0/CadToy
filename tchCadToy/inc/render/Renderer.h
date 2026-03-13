@@ -47,7 +47,10 @@ public:
         kNone,          // 无标记
         kLeftSelect,    // 向左框选
         kRightSelect,   // 向右框选
-        kLocked         // 锁定标记
+        kLocked,        // 锁定标记
+        kAddSelect,     // 加选标记(+号)
+        kRemoveSelect,  // 减选标记(-号)
+        kOrthogonal     // 正交标记(⊥)
     };
     
     // 光标相关
@@ -158,6 +161,8 @@ private:
     static void drawLeftSelectMarker(const glm::vec2& pos); // 绘制向左框选标记
     static void drawRightSelectMarker(const glm::vec2& pos); // 绘制向右框选标记
     static void drawLockMarker(const glm::vec2& pos); // 绘制锁标记
+    static void drawSelectMarker(const glm::vec2& pos, bool isAdd); // 绘制加选和减选标记
+    static void drawOrthogonalMarker(const glm::vec2& pos); // 绘制正交标记
     static void drawCursorMarker(const glm::vec2& pos); // 绘制光标标记
     static void drawCursorTestWindow(); // 绘制光标测试窗口
 };

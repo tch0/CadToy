@@ -565,6 +565,61 @@ void Renderer::drawLockMarker(const glm::vec2& pos) {
     glEnd();
 }
 
+// 绘制加选和减选标记
+void Renderer::drawSelectMarker(const glm::vec2& pos, bool isAdd) {
+    float lineLength = 8.0f; // 线段长度
+    float lineWidth = 2.0f;  // 线段宽度
+    
+    // 设置颜色
+    if (isAdd) {
+        glColor3f(0.0f, 1.0f, 0.0f); // 绿色
+    } else {
+        glColor3f(1.0f, 0.0f, 0.0f); // 红色
+    }
+    
+    // 绘制线段
+    glLineWidth(lineWidth);
+    glBegin(GL_LINES);
+    
+    // 绘制水平线段
+    glVertex2f(pos.x - lineLength * 0.5f, pos.y);
+    glVertex2f(pos.x + lineLength * 0.5f, pos.y);
+    
+    // 如果是+号，绘制垂直线段
+    if (isAdd) {
+        glVertex2f(pos.x, pos.y - lineLength * 0.5f);
+        glVertex2f(pos.x, pos.y + lineLength * 0.5f);
+    }
+    
+    glEnd();
+    glLineWidth(1.0f); // 恢复默认线宽
+}
+
+// 绘制正交标记
+void Renderer::drawOrthogonalMarker(const glm::vec2& pos) {
+    float lineLength = 8.0f; // 水平线段长度
+    float verticalLineLength = 6.0f; // 垂直线段长度
+    float lineWidth = 2.0f;  // 线段宽度
+    
+    // 设置颜色为白色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制线段
+    glLineWidth(lineWidth);
+    glBegin(GL_LINES);
+    
+    // 绘制垂直线段（从中心到下端，长度为verticalLineLength）
+    glVertex2f(pos.x, pos.y);
+    glVertex2f(pos.x, pos.y + verticalLineLength);
+    
+    // 绘制水平线段（在最下端）
+    glVertex2f(pos.x - lineLength * 0.5f, pos.y + verticalLineLength);
+    glVertex2f(pos.x + lineLength * 0.5f, pos.y + verticalLineLength);
+    
+    glEnd();
+    glLineWidth(1.0f); // 恢复默认线宽
+}
+
 // 绘制光标测试窗口
 void Renderer::drawCursorTestWindow() {
     if (s_cursorTestWindowVisible) {
@@ -578,7 +633,7 @@ void Renderer::drawCursorTestWindow() {
         }
         
         // 光标标记选择
-        static const char* cursorMarkerNames[] = {"None", "LeftSelect", "RightSelect", "Locked"};
+        static const char* cursorMarkerNames[] = {"None", "LeftSelect", "RightSelect", "Locked", "AddSelect", "RemoveSelect", "Orthogonal"};
         static int currentMarker = static_cast<int>(s_currentCursorMarker);
         if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames))) {
             s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
@@ -625,6 +680,21 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
         case CursorMarker::kLocked:
             // 绘制锁标记
             drawLockMarker(markerPos);
+            break;
+            
+        case CursorMarker::kAddSelect:
+            // 绘制加选标记（+号）
+            drawSelectMarker(markerPos, true);
+            break;
+            
+        case CursorMarker::kRemoveSelect:
+            // 绘制减选标记（-号）
+            drawSelectMarker(markerPos, false);
+            break;
+            
+        case CursorMarker::kOrthogonal:
+            // 绘制正交标记
+            drawOrthogonalMarker(markerPos);
             break;
             
         case CursorMarker::kNone:
