@@ -126,6 +126,7 @@ private:
     static CursorMode s_currentCursorMode;      // 当前光标模式
     static CursorMarker s_currentCursorMarker;  // 当前光标标记
     static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
+    static bool s_cursorTestWindowVisible;      // 光标测试窗口可见性
     
     // 栅格和坐标轴颜色
     static float s_mainGridColor[3];            // 主栅格颜色 RGB: 54,61,78
@@ -158,6 +159,7 @@ private:
     static void drawRightSelectMarker(const glm::vec2& pos); // 绘制向右框选标记
     static void drawLockMarker(const glm::vec2& pos); // 绘制锁标记
     static void drawCursorMarker(const glm::vec2& pos); // 绘制光标标记
+    static void drawCursorTestWindow(); // 绘制光标测试窗口
 };
 
 } // namespace tch

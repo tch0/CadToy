@@ -22,6 +22,7 @@
   "menu.tools.metrics": "Dear ImGui Metrics/Debugger",
   "menu.tools.renderingInfo": "Real Time Rendering Info",
   "menu.tools.inputTextInfo": "Input Context Info",
+  "menu.tools.cursorTestWindow": "Cursor Test Window",
   "menu.language": "Language",
   
   "commandLine.prompt.command": "Command:",

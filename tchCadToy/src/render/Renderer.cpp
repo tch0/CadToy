@@ -25,6 +25,7 @@ float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 Renderer::CursorMode Renderer::s_currentCursorMode = Renderer::CursorMode::kDefault;
 Renderer::CursorMarker Renderer::s_currentCursorMarker = Renderer::CursorMarker::kNone;
+bool Renderer::s_cursorTestWindowVisible = false;
 
 // 栅格和坐标轴颜色初始化
 float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f}; // 主栅格颜色 RGB: 54,61,78
@@ -564,6 +565,45 @@ void Renderer::drawLockMarker(const glm::vec2& pos) {
     glEnd();
 }
 
+// 绘制光标测试窗口
+void Renderer::drawCursorTestWindow() {
+    if (s_cursorTestWindowVisible) {
+        ImGui::Begin("Cursor Test Window", &s_cursorTestWindowVisible);
+        
+        // 光标模式选择
+        static const char* cursorModeNames[] = {"Default", "Crosshair", "Pickbox", "Panning"};
+        static int currentMode = static_cast<int>(s_currentCursorMode);
+        if (ImGui::Combo("Cursor Mode", &currentMode, cursorModeNames, IM_ARRAYSIZE(cursorModeNames))) {
+            s_currentCursorMode = static_cast<CursorMode>(currentMode);
+        }
+        
+        // 光标标记选择
+        static const char* cursorMarkerNames[] = {"None", "LeftSelect", "RightSelect", "Locked"};
+        static int currentMarker = static_cast<int>(s_currentCursorMarker);
+        if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames))) {
+            s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
+        }
+        
+        // 光标尺寸拖动条（范围10~100）
+        static int crossCursorSizeInt = static_cast<int>(s_crossCursorSize);
+        ImGui::PushItemWidth(300);
+        if (ImGui::SliderInt("Cursor Size", &crossCursorSizeInt, 10, 100, "%d")) {
+            s_crossCursorSize = static_cast<float>(crossCursorSizeInt);
+        }
+        ImGui::PopItemWidth();
+        
+        // 拾取框尺寸拖动条（范围0~50）
+        static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
+        ImGui::PushItemWidth(300);
+        if (ImGui::SliderInt("Pickbox Size", &pickBoxSizeInt, 0, 50, "%d")) {
+            s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
+        }
+        ImGui::PopItemWidth();
+        
+        ImGui::End();
+    }
+}
+
 // 绘制光标标记
 void Renderer::drawCursorMarker(const glm::vec2& pos) {
     // 标记中心位置：拾取框右上角的右上方10个像素
@@ -1006,9 +1046,9 @@ void Renderer::drawOptionsDialog() {
                     ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
                     ImGui::Spacing();
                     
-                    // 滑块控件，范围5-100，使用整数，长度设为500
+                    // 滑块控件，范围10-100，使用整数，长度设为500
                     ImGui::PushItemWidth(500); // 设置滑块宽度为500
-                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 5, 100, "%d");
+                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 100, "%d");
                     ImGui::PopItemWidth();
                     
                     ImGui::EndTabItem();
@@ -1189,8 +1229,7 @@ void Renderer::drawMenuBar() {
         // Tools菜单
         if (ImGui::BeginMenu(loc.get("menu.tools").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.tools.options").c_str())) {
-                // 执行OPTIONS命令
-                Renderer::showOptionsDialog(true);
+                s_optionsDialogVisible = true;
             }
             ImGui::MenuItem(loc.get("menu.tools.properties").c_str(), nullptr, &s_propertyBarVisible);
             ImGui::Separator();
@@ -1199,6 +1238,7 @@ void Renderer::drawMenuBar() {
             ImGui::Separator();
             ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
             ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &InputContext::getInstance().getInputContextInfoVisible());
+            ImGui::MenuItem(loc.get("menu.tools.cursorTestWindow").c_str(), nullptr, &s_cursorTestWindowVisible);
             ImGui::EndMenu();
         }
         
@@ -1467,6 +1507,9 @@ void Renderer::drawNonModalWindows() {
     
     // 绘制输入上下文信息窗口
     InputContext::getInstance().drawInfoWindow();
+    
+    // 绘制光标测试窗口
+    drawCursorTestWindow();
 }
 
 // 判断点是否在视口内

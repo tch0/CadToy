@@ -22,6 +22,7 @@
   "menu.tools.metrics": "Dear ImGui 调试窗口",
   "menu.tools.renderingInfo": "实时渲染信息",
   "menu.tools.inputTextInfo": "输入上下文信息",
+  "menu.tools.cursorTestWindow": "光标测试窗口",
   "menu.language": "语言",
 
   "commandLine.prompt.command": "命令:",
