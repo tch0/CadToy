@@ -30,7 +30,9 @@
     - 实现鼠标移出非模态窗口就自动失去焦点的功能，以实现只要鼠标在画布上就能进行输入（而不是需要点击一下画布将焦点从某个窗口释放才能输入，这种操作会破坏CAD的交互逻辑，因为点击画布是点输入的一种交互）
 - 光标形状定制：
     - 支持十字、选择框、选择框+十字、手掌四种光标形状
-    - 实现光标右上角的标记：目前已实现向左向右框选、锁定标记
+    - 实现光标右上角的标记：目前已实现向左向右框选、锁定标记、加选减选、正交标记
+    - 移动、旋转、缩放、复制、裁剪/删除标记实现
+    - 优先级：限制类 > 即时编辑动作 > 选择模式 > 约束，框选模式是鼠标瞬时状态，鼠标拖动时覆盖其他标记。
 
 Todo：
 - 框选交互实现，
@@ -56,6 +58,52 @@ Todo：
     - F2打开新文本窗口
 - 命令历史使用InputMultiText实现，使命令历史可选中
 
+框选实现研究：
+- InputContext内部集成SelectionTask，作为一个被动状态机，由InputContext来管理其状态
+- InputContext内部维护瞬态数据，比如框选的框现在有多大，光标应该是什么形状之类，由Renderer获取之后进行渲染
+- InputContext本身实现OnUpdate，其中调用SlectionTask的onUpdate（根据状态判断要调用哪个task，后续方便扩展），在runCommandLoop中先调InputContext::onUpdate，再调用命令的onUpdate
+- InputContext的SelectionTask如果在框选状态下，那么输入会先给SelectionTask，SelectionTask运行结束后才会将输入给到命令
+- Shift减选或者反选，需要判断实体状态与Shift是否按下，InputContext中可能需要维护Shift状态，由InputHandler来管理，再handleLeftMouseClick来进行判断。
+- Shift减选，或者选择集已经有实体了，那么再选就是加选
+
+其他待实现细节研究：
+- 选择点时，按住Shift强制进入正交模式，会有marker标记
+- 第三方R树（或者自己实现）实现空间索引（如Boost.Geometry 或 libspatialindex），boost::geometry::index::rtree
+- 考虑使用更现代的ECS (Entity Component System，实体组件系统) 实现数据结构，而不是使用传统的继承，以实现超强的性能（百万量级图元），C++ECS库EnTT。
+- 实体渲染：预选中、选中高亮
+- 后续夹点实现：可以在InputContext中实现GripTask，在onUpdate中查询各个task是否激活，决定调用各个task的onUpdate
+
+改进建议：
+- 将视口矩阵的设置提取到 beginRender() 中，或者在 calculateLayoutAndUpdateViewport() 时缓存一个专用的 OverlayProjectionMatrix，绘制光标和 UI 标记时直接 glLoadMatrix 即可，避免每帧多次重算投影。
+- 框选的选择框绘制：
+```C++
+// 建议在 Renderer.h 中定义，在 drawAll 的末尾调用
+void Renderer::drawSelectionWindow(const glm::vec2& start, const glm::vec2& end) {
+    bool isCrossing = (end.x < start.x); // 左拉为蓝（窗口），右拉为绿（交叉）
+    
+    // 1. 绘制填充（带透明度）
+    glEnable(GL_BLEND);
+    glBegin(GL_QUADS);
+    if (isCrossing) glColor4f(0.0f, 1.0f, 0.0f, 0.15f); // 绿色背景
+    else glColor4f(0.0f, 0.5f, 1.0f, 0.15f);           // 蓝色背景
+    glVertex2f(start.x, start.y);
+    glVertex2f(end.x, start.y);
+    glVertex2f(end.x, end.y);
+    glVertex2f(start.x, end.y);
+    glEnd();
+
+    // 2. 绘制边框（Crossing 模式使用虚线）
+    if (isCrossing) {
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0x0F0F); // 虚线样式
+    }
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 1.0f, 1.0f); // 白色边框
+    // ... 顶点同上 ...
+    glEnd();
+    glDisable(GL_LINE_STIPPLE);
+}
+```
 
 ## BUG
 

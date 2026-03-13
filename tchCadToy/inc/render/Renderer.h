@@ -42,15 +42,25 @@ public:
         kPanning        // 平移中，手掌
     };
     
-    // 光标标记枚举
+    // 光标标记枚举（按优先级从高到低排列）
     enum class CursorMarker {
         kNone,          // 无标记
-        kLeftSelect,    // 向左框选
-        kRightSelect,   // 向右框选
+        // 第一梯队：禁止与限制
         kLocked,        // 锁定标记
+        // 第二梯队：即时编辑动作
+        kErase,         // 删除标记
+        kCopy,          // 复制标记
+        kMove,          // 移动标记
+        kRotate,        // 旋转标记
+        kScale,         // 缩放标记
+        // 第三梯队：选择模式
         kAddSelect,     // 加选标记(+号)
         kRemoveSelect,  // 减选标记(-号)
-        kOrthogonal     // 正交标记(⊥)
+        // 第四梯队：约束
+        kOrthogonal,    // 正交标记(⊥)
+        // 特殊梯队：框选模式，鼠标瞬时状态（拖动时覆盖其他标记）
+        kLeftSelect,    // 向左框选
+        kRightSelect    // 向右框选
     };
     
     // 光标相关
@@ -163,6 +173,11 @@ private:
     static void drawLockMarker(const glm::vec2& pos); // 绘制锁标记
     static void drawSelectMarker(const glm::vec2& pos, bool isAdd); // 绘制加选和减选标记
     static void drawOrthogonalMarker(const glm::vec2& pos); // 绘制正交标记
+    static void drawCopyMarker(const glm::vec2& pos); // 绘制复制标记
+    static void drawEraseMarker(const glm::vec2& pos); // 绘制删除标记
+    static void drawMoveMarker(const glm::vec2& pos); // 绘制移动标记
+    static void drawRotateMarker(const glm::vec2& pos); // 绘制旋转标记
+    static void drawScaleMarker(const glm::vec2& pos); // 绘制缩放标记
     static void drawCursorMarker(const glm::vec2& pos); // 绘制光标标记
     static void drawCursorTestWindow(); // 绘制光标测试窗口
 };

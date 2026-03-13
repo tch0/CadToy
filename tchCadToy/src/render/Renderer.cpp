@@ -620,6 +620,183 @@ void Renderer::drawOrthogonalMarker(const glm::vec2& pos) {
     glLineWidth(1.0f); // 恢复默认线宽
 }
 
+// 绘制复制标记
+void Renderer::drawCopyMarker(const glm::vec2& pos) {
+    float rectSize = 8.0f; // 矩形大小
+    float offset = 2.0f;    // 偏移量
+    float lineWidth = 3.0f;  // 线段宽度
+    
+    // 设置颜色为白色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制第一个矩形
+    glBegin(GL_QUADS);
+    glVertex2f(pos.x - rectSize * 0.5f + 0.5f, pos.y - rectSize * 0.5f + 0.5f);
+    glVertex2f(pos.x + rectSize * 0.5f + 0.5f, pos.y - rectSize * 0.5f + 0.5f);
+    glVertex2f(pos.x + rectSize * 0.5f + 0.5f, pos.y + rectSize * 0.5f + 0.5f);
+    glVertex2f(pos.x - rectSize * 0.5f + 0.5f, pos.y + rectSize * 0.5f + 0.5f);
+    glEnd();
+    
+    // 绘制第二条矩形的替代线段（宽度3，长度8）
+    glLineWidth(lineWidth);
+    glBegin(GL_LINES);
+    // 水平线段（从第二个矩形右下角向左）
+    glVertex2f(pos.x + rectSize * 0.5f + offset + 0.5f, pos.y + rectSize * 0.5f + offset + 0.5f + 1.0f);
+    glVertex2f(pos.x + rectSize * 0.5f + offset - rectSize + 0.5f, pos.y + rectSize * 0.5f + offset + 0.5f + 1.0f);
+    // 垂直线段（从第二个矩形右下角向上）
+    glVertex2f(pos.x + rectSize * 0.5f + offset + 0.5f, pos.y + rectSize * 0.5f + offset + 0.5f + 2.0f);
+    glVertex2f(pos.x + rectSize * 0.5f + offset + 0.5f, pos.y + rectSize * 0.5f + offset - rectSize + 0.5f + 2.0f);
+    glEnd();
+    glLineWidth(1.0f); // 恢复默认线宽
+}
+
+// 绘制删除标记
+void Renderer::drawEraseMarker(const glm::vec2& pos) {
+    float lineLength = 10.0f; // 线段长度
+    float lineWidth = 2.0f;  // 线段宽度
+    
+    // 设置颜色为红色
+    glColor3f(1.0f, 0.0f, 0.0f);
+    
+    // 绘制线段
+    glLineWidth(lineWidth);
+    glBegin(GL_LINES);
+    
+    // 绘制第一条对角线（左上到右下）
+    glVertex2f(pos.x - lineLength * 0.5f, pos.y - lineLength * 0.5f);
+    glVertex2f(pos.x + lineLength * 0.5f, pos.y + lineLength * 0.5f);
+    
+    // 绘制第二条对角线（右上到左下）
+    glVertex2f(pos.x + lineLength * 0.5f, pos.y - lineLength * 0.5f);
+    glVertex2f(pos.x - lineLength * 0.5f, pos.y + lineLength * 0.5f);
+    
+    glEnd();
+    glLineWidth(1.0f); // 恢复默认线宽
+}
+
+// 绘制移动标记
+void Renderer::drawMoveMarker(const glm::vec2& pos) {
+    float lineLength = 8.0f; // 线段长度
+    float arrowLength = 2.0f; // 箭头长度
+    float lineWidth = 1.0f;   // 线段宽度
+    
+    // 设置颜色为白色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制线段
+    glLineWidth(lineWidth);
+    glBegin(GL_LINES);
+    
+    // 绘制上部分线段
+    glVertex2f(pos.x + 0.5f, pos.y - lineLength + 0.5f);
+    glVertex2f(pos.x + 0.5f, pos.y - arrowLength + 0.5f);
+    
+    // 绘制下部分线段
+    glVertex2f(pos.x + 0.5f, pos.y + arrowLength + 0.5f);
+    glVertex2f(pos.x + 0.5f, pos.y + lineLength + 1.0f + 0.5f);
+    
+    // 绘制左部分线段
+    glVertex2f(pos.x - lineLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y + 0.5f);
+    
+    // 绘制右部分线段
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x + lineLength + 1.0f + 0.5f, pos.y + 0.5f);
+    
+    // 绘制箭头（上）
+    glVertex2f(pos.x + 0.5f, pos.y - arrowLength + 0.5f);
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y - arrowLength + 0.5f);
+    
+    glVertex2f(pos.x + 0.5f, pos.y - arrowLength + 0.5f);
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y - arrowLength + 0.5f);
+    
+    // 绘制箭头（下）
+    glVertex2f(pos.x + 0.5f, pos.y + arrowLength + 0.5f);
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y + arrowLength + 0.5f);
+    
+    glVertex2f(pos.x + 0.5f, pos.y + arrowLength + 0.5f);
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y + arrowLength + 0.5f);
+    
+    // 绘制箭头（左）
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y - arrowLength + 0.5f);
+    
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x - arrowLength + 0.5f, pos.y + arrowLength + 0.5f);
+    
+    // 绘制箭头（右）
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y - arrowLength + 0.5f);
+    
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y + 0.5f);
+    glVertex2f(pos.x + arrowLength + 0.5f, pos.y + arrowLength + 0.5f);
+    
+    glEnd();
+    glLineWidth(1.0f); // 恢复默认线宽
+}
+
+// 绘制旋转标记
+void Renderer::drawRotateMarker(const glm::vec2& pos) {
+    float boxSize = 10.0f;   // 矩形框大小
+    float arrowSize = 6.0f; // 箭头大小
+    
+    // 设置颜色为白色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制三面封闭的矩形框
+    glBegin(GL_LINE_STRIP);
+    // 左上角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 右上角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f);
+    // 右下角
+    glVertex2f(pos.x + boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    // 左下角
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y + boxSize * 0.5f + 0.5f);
+    glEnd();
+    
+    // 绘制箭头（实心三角形，在最上边那条边上，朝左，向右偏移）
+    glBegin(GL_TRIANGLES);
+    // 三角形顶点：左边顶点就是矩形框左上角顶点，右边一条垂直于顶边的线段，两个点分别位于顶边两侧
+    glVertex2f(pos.x - boxSize * 0.5f + 0.5f, pos.y - boxSize * 0.5f + 0.5f); // 左边顶点（同矩形框左上角顶点一致）
+    glVertex2f(pos.x - boxSize * 0.5f + arrowSize + 0.5f, pos.y - boxSize * 0.5f - arrowSize / 2.0f + 0.5f); // 右边线段的上方点（顶边上方）
+    glVertex2f(pos.x - boxSize * 0.5f + arrowSize + 0.5f, pos.y - boxSize * 0.5f + arrowSize / 2.0f + 0.5f); // 右边线段的下方点（顶边下方）
+    glEnd();
+}
+
+// 绘制缩放标记
+void Renderer::drawScaleMarker(const glm::vec2& pos) {
+    float largeBoxSize = 12.0f;  // 大框大小
+    float smallBoxSize = 6.0f;   // 小框大小
+    
+    // 设置颜色为白色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制大框
+    glBegin(GL_LINE_LOOP);
+    // 大框左上角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + 0.5f, pos.y - largeBoxSize * 0.5f + 0.5f);
+    // 大框右上角
+    glVertex2f(pos.x + largeBoxSize * 0.5f + 0.5f, pos.y - largeBoxSize * 0.5f + 0.5f);
+    // 大框右下角
+    glVertex2f(pos.x + largeBoxSize * 0.5f + 0.5f, pos.y + largeBoxSize * 0.5f + 0.5f);
+    // 大框左下角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + 0.5f, pos.y + largeBoxSize * 0.5f + 0.5f);
+    glEnd();
+    
+    // 绘制小框（左下角，实心）
+    glBegin(GL_QUADS);
+    // 小框左上角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + 0.5f, pos.y + largeBoxSize * 0.5f - smallBoxSize + 0.5f);
+    // 小框右上角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + smallBoxSize + 0.5f, pos.y + largeBoxSize * 0.5f - smallBoxSize + 0.5f);
+    // 小框右下角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + smallBoxSize + 0.5f, pos.y + largeBoxSize * 0.5f + 0.5f);
+    // 小框左下角
+    glVertex2f(pos.x - largeBoxSize * 0.5f + 0.5f, pos.y + largeBoxSize * 0.5f + 0.5f);
+    glEnd();
+}
+
 // 绘制光标测试窗口
 void Renderer::drawCursorTestWindow() {
     if (s_cursorTestWindowVisible) {
@@ -628,14 +805,14 @@ void Renderer::drawCursorTestWindow() {
         // 光标模式选择
         static const char* cursorModeNames[] = {"Default", "Crosshair", "Pickbox", "Panning"};
         static int currentMode = static_cast<int>(s_currentCursorMode);
-        if (ImGui::Combo("Cursor Mode", &currentMode, cursorModeNames, IM_ARRAYSIZE(cursorModeNames))) {
+        if (ImGui::Combo("Cursor Mode", &currentMode, cursorModeNames, IM_ARRAYSIZE(cursorModeNames), 4)) {
             s_currentCursorMode = static_cast<CursorMode>(currentMode);
         }
         
         // 光标标记选择
-        static const char* cursorMarkerNames[] = {"None", "LeftSelect", "RightSelect", "Locked", "AddSelect", "RemoveSelect", "Orthogonal"};
+        static const char* cursorMarkerNames[] = {"None", "Locked", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "Orthogonal", "LeftSelect", "RightSelect"};
         static int currentMarker = static_cast<int>(s_currentCursorMarker);
-        if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames))) {
+        if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames), 12)) {
             s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
         }
         
@@ -667,19 +844,38 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
     markerPos.y -= s_pickBoxSize + 10.0f;
     
     switch (s_currentCursorMarker) {
-        case CursorMarker::kLeftSelect:
-            // 绘制向左框选标记
-            drawLeftSelectMarker(markerPos);
-            break;
-            
-        case CursorMarker::kRightSelect:
-            // 绘制向右框选标记
-            drawRightSelectMarker(markerPos);
+        case CursorMarker::kNone:
+            // 无标记，不绘制
             break;
             
         case CursorMarker::kLocked:
             // 绘制锁标记
             drawLockMarker(markerPos);
+            break;
+            
+        case CursorMarker::kErase:
+            // 绘制删除标记
+            drawEraseMarker(markerPos);
+            break;
+            
+        case CursorMarker::kCopy:
+            // 绘制复制标记
+            drawCopyMarker(markerPos);
+            break;
+            
+        case CursorMarker::kMove:
+            // 绘制移动标记
+            drawMoveMarker(markerPos);
+            break;
+            
+        case CursorMarker::kRotate:
+            // 绘制旋转标记
+            drawRotateMarker(markerPos);
+            break;
+            
+        case CursorMarker::kScale:
+            // 绘制缩放标记
+            drawScaleMarker(markerPos);
             break;
             
         case CursorMarker::kAddSelect:
@@ -697,7 +893,16 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
             drawOrthogonalMarker(markerPos);
             break;
             
-        case CursorMarker::kNone:
+        case CursorMarker::kLeftSelect:
+            // 绘制向左框选标记
+            drawLeftSelectMarker(markerPos);
+            break;
+            
+        case CursorMarker::kRightSelect:
+            // 绘制向右框选标记
+            drawRightSelectMarker(markerPos);
+            break;
+            
         default:
             // 无标记，不绘制
             break;
