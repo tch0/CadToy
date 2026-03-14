@@ -15,6 +15,6 @@
 /imgui/**
 !/imgui/CMakeLists.txt
 
-# for clangd, compile_commands.json is generated in build_ninja/, see .clangd for details
-/build_ninja/
+# for clangd, compile_commands.json is generated in build_tmp/, see .clangd for details
+/build_tmp/
 !/.vscode/settings.json

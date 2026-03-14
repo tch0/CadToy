@@ -51,7 +51,7 @@
         "--pretty",
         
         // 指定编译数据库位置（相对于项目根目录）
-        "--compile-commands-dir=${workspaceFolder}/build_ninja",
+        "--compile-commands-dir=${workspaceFolder}/build_tmp",
         
         // 备用：输出clangd详细日志，查看索引进度和错误信息，用于排查clangd问题
         // "--log=verbose",
