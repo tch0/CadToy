@@ -1,3 +1,4 @@
+#include "common/CommonTypes.h"
 #include "render/Renderer.h"
 #include "document/DocManager.h"
 #include "Layer.h"
@@ -23,8 +24,8 @@ bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
 float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
-Renderer::CursorMode Renderer::s_currentCursorMode = Renderer::CursorMode::kDefault;
-Renderer::CursorMarker Renderer::s_currentCursorMarker = Renderer::CursorMarker::kNone;
+CursorMode Renderer::s_currentCursorMode = CursorMode::kDefault;
+CursorMarker Renderer::s_currentCursorMarker = CursorMarker::kNone;
 bool Renderer::s_cursorTestWindowVisible = false;
 
 // 栅格和坐标轴颜色初始化
@@ -447,8 +448,8 @@ void Renderer::drawHandCursor(const glm::vec2& pos) {
     glEnd();
 }
 
-// 绘制向左框选标记（参照示例，2白2透明2白2透明2白的模式）
-void Renderer::drawLeftSelectMarker(const glm::vec2& pos) {
+// 绘制交叉选择标记（参照示例，2白2透明2白2透明2白的模式）
+void Renderer::drawCrossingSelectMarker(const glm::vec2& pos) {
     float boxSize = 10.0f; // 整体大小
     float squareSize = 5.0f; // 小正方形大小
     
@@ -484,8 +485,8 @@ void Renderer::drawLeftSelectMarker(const glm::vec2& pos) {
     glEnd();
 }
 
-// 绘制向右框选标记
-void Renderer::drawRightSelectMarker(const glm::vec2& pos) {
+// 绘制窗口选择标记
+void Renderer::drawWindowSelectMarker(const glm::vec2& pos) {
     float boxSize = 10.0f; // 整体大小
     float innerSquareSize = 5.0f; // 中间正方形大小
     
@@ -810,7 +811,7 @@ void Renderer::drawCursorTestWindow() {
         }
         
         // 光标标记选择
-        static const char* cursorMarkerNames[] = {"None", "Locked", "Orthogonal", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "LeftSelect", "RightSelect"};
+        static const char* cursorMarkerNames[] = {"None", "Locked", "Orthogonal", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "CrossingSelect", "WindowSelect"};
         static int currentMarker = static_cast<int>(s_currentCursorMarker);
         if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames), 12)) {
             s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
@@ -893,14 +894,14 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
             drawSelectMarker(markerPos, false);
             break;
             
-        case CursorMarker::kLeftSelect:
-            // 绘制向左框选标记
-            drawLeftSelectMarker(markerPos);
+        case CursorMarker::kCrossingSelect:
+            // 绘制交叉选择标记
+            drawCrossingSelectMarker(markerPos);
             break;
             
-        case CursorMarker::kRightSelect:
-            // 绘制向右框选标记
-            drawRightSelectMarker(markerPos);
+        case CursorMarker::kWindowSelect:
+            // 绘制窗口选择标记
+            drawWindowSelectMarker(markerPos);
             break;
             
         default:
@@ -915,7 +916,7 @@ void Renderer::setCursorMode(CursorMode mode) {
 }
 
 // 获取当前光标模式
-Renderer::CursorMode Renderer::getCursorMode() {
+CursorMode Renderer::getCursorMode() {
     return s_currentCursorMode;
 }
 
@@ -925,7 +926,7 @@ void Renderer::setCursorMarker(CursorMarker marker) {
 }
 
 // 获取当前光标标记
-Renderer::CursorMarker Renderer::getCursorMarker() {
+CursorMarker Renderer::getCursorMarker() {
     return s_currentCursorMarker;
 }
 
@@ -1871,8 +1872,9 @@ void Renderer::drawCommandBar() {
         ImGui::AlignTextToFramePadding();
         
         // 显示命令提示信息
-        if (InputContext::getInstance().isInCommandExecution()) {
-            const std::string& prompt = InputContext::getInstance().getPrompt();
+        auto& inputContext = InputContext::getInstance();
+        if (inputContext.isInCommandExecution()) {
+            const std::string& prompt = inputContext.getPrompt();
             if (!prompt.empty()) {
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
             } else {
@@ -1894,7 +1896,6 @@ void Renderer::drawCommandBar() {
         ImGui::PushItemWidth(-1);
 
         // 检查InputContext的特殊按键事件
-        auto& inputContext = InputContext::getInstance();
         SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
         // Enter/Space 提交输入框输入到输入上下文中进行处理
         if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {

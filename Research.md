@@ -58,6 +58,12 @@ Todo：
     - F1帮助
     - F2打开新文本窗口
 - 命令历史使用InputMultiText实现，使命令历史可选中
+- 修改主循环，拦截窗口关闭操作，替换为自己的窗口关闭逻辑，弹窗，继续渲染循环，
+    - 方法1：回调函数glfwSetWindowShouldClose设置标记
+    - 方法2：主循环中拦截窗口关闭消息，glfwWindowShouldClose(window, GLFW\_FALSE)阻止窗口关闭，不调用拦截关闭动作的话，下一帧渲染循环就会结束
+    - 用方法2，依次调用每个文档的关闭操作就好了，有一个不关闭就留下来
+    - 待仔细研究
+
 
 框选实现研究：
 - InputContext内部集成SelectionTask，作为一个被动状态机，由InputContext来管理其状态

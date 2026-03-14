@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include "common/CommonTypes.h"
 #include "transform/TransformManager.h"
 
 namespace tch {
@@ -33,36 +34,6 @@ public:
     
     // 绘制所有图形
     static void drawAll();
-    
-    // 光标模式枚举
-    enum class CursorMode {
-        kDefault,       // 拾取框加外部十字光标
-        kCrosshair,     // 仅十字光标
-        kPickbox,       // 仅拾取框
-        kPanning        // 平移中，手掌
-    };
-    
-    // 光标标记枚举（按优先级从高到低排列），优先级并非完全定死，只是大体上的优先级，
-    // 可能根据命令模式、交互状态等情况有一些例外需动态调整
-    enum class CursorMarker {
-        kNone,          // 无标记
-        // 第一梯队：禁止与限制
-        kLocked,        // 锁定标记
-        // 第二梯队：约束
-        kOrthogonal,    // 正交标记(⊥)
-        // 第三梯队：即时编辑动作
-        kErase,         // 删除标记
-        kCopy,          // 复制标记
-        kMove,          // 移动标记
-        kRotate,        // 旋转标记
-        kScale,         // 缩放标记
-        // 第四梯队：选择模式
-        kAddSelect,     // 加选标记(+号)
-        kRemoveSelect,  // 减选标记(-号)
-        // 特殊梯队：框选模式，鼠标瞬时状态（拖动时覆盖其他标记）
-        kLeftSelect,    // 向左框选
-        kRightSelect    // 向右框选
-    };
     
     // 光标相关
     static void drawCursor(); // 绘制光标
@@ -169,8 +140,8 @@ private:
     static void drawPickBox(const glm::vec2& pos, float pickBoxSize); // 绘制拾取框
     static void drawCrosshair(const glm::vec2& pos, float pickBoxSize); // 绘制十字线
     static void drawHandCursor(const glm::vec2& pos); // 绘制手掌光标
-    static void drawLeftSelectMarker(const glm::vec2& pos); // 绘制向左框选标记
-    static void drawRightSelectMarker(const glm::vec2& pos); // 绘制向右框选标记
+    static void drawCrossingSelectMarker(const glm::vec2& pos); // 绘制交叉选择标记
+    static void drawWindowSelectMarker(const glm::vec2& pos); // 绘制窗口选择标记
     static void drawLockMarker(const glm::vec2& pos); // 绘制锁标记
     static void drawSelectMarker(const glm::vec2& pos, bool isAdd); // 绘制加选和减选标记
     static void drawOrthogonalMarker(const glm::vec2& pos); // 绘制正交标记

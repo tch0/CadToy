@@ -68,7 +68,7 @@ void CommandManager::cancelCurrentCommand()
         for (int i = 0; i < 3; i++)
         {
             // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
-            // onUpdate也本身都是
+            // onUpdate也本身都是可重复调用的，在等待输入的时候多次调用几乎没有代价
             m_activeCommand->onUpdate();
             m_activeCommand->onUpdate();
             m_activeCommand->onUpdate();
