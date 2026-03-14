@@ -1,4 +1,5 @@
 #include "input/InputContext.h"
+#include "input/InputHandler.h"
 #include "render/Renderer.h"
 #include "command/CommandManager.h"
 #include "utils/LocalizationManager.h"
@@ -108,10 +109,12 @@ bool InputContext::getPickedPoint(glm::dvec3& point) {
     return false;
 }
 
-// 处理鼠标左键点击（由InputHandler调用）
-void InputContext::handleLeftMouseClick(const glm::vec2& screenPos) {
+// 处理鼠标左键点击事件
+void InputContext::handleLeftMouseClick() {
     // 检查是否有活动命令
     if (m_inCommandExecution) {
+        // 从InputHandler获取光标位置
+        glm::vec2 screenPos = InputHandler::getCursorPosition();
         // 将屏幕坐标转换为世界坐标
         glm::dvec3 worldPos = Renderer::getTransformManager().screenToWorld(screenPos);
         // 设置到输入上下文
@@ -120,11 +123,27 @@ void InputContext::handleLeftMouseClick(const glm::vec2& screenPos) {
             m_currentStatus = InputStatus::kPointInput;
             cmdLinePrint(m_prompt);
         }
+        // TODO: 命令中的选择
+    } else {
+        // 检查是否有活动的选择任务
+        if (m_windowSelectionTask) {
+            m_windowSelectionTask->onLeftMouseDown();
+        } else if (m_polygonSelectionTask) {
+            m_polygonSelectionTask->onLeftMouseDown();
+        } else if (m_fenceSelectionTask) {
+            m_fenceSelectionTask->onLeftMouseDown();
+        } else {
+            // 没有活动任务，默认激活窗口选择任务
+            activateSelectionTask(SelectionMode::kWindow);
+            if (m_windowSelectionTask) {
+                m_windowSelectionTask->onLeftMouseDown();
+            }
+        }
     }
 }
 
 // 处理鼠标右键点击（由InputHandler调用）
-void InputContext::handleRightMouseClick(const glm::vec2& screenPos) {
+void InputContext::handleRightMouseClick() {
     // 检查是否有活动命令
     if (m_inCommandExecution) {
         // 暂时空出
@@ -528,7 +547,195 @@ void InputContext::drawInfoWindow() {
                loc.get("window.inputContextInfo.errorPrompt").c_str(), 
                m_errorPrompt.empty() ? "" : m_errorPrompt.c_str());
     
+    // 添加分隔线
+    ImGui::Separator();
+    
+    // 7. 交互数据
+    ImGui::Text("%s:", loc.get("window.inputContextInfo.interactionData").c_str());
+    
+    // 光标模式
+    static const std::unordered_map<CursorMode, std::string> cursorModeToString = {
+        {CursorMode::kDefault, "Default"},
+        {CursorMode::kCrosshair, "Crosshair"},
+        {CursorMode::kPickbox, "Pickbox"},
+        {CursorMode::kPanning, "Panning"}
+    };
+    auto cursorModeIt = cursorModeToString.find(m_interactionData.cursorMode);
+    if (cursorModeIt != cursorModeToString.end()) {
+        ImGui::Text("  %s: %s", 
+                   loc.get("window.inputContextInfo.cursorMode").c_str(), 
+                   cursorModeIt->second.c_str());
+    } else {
+        ImGui::Text("  %s: Unknown(%d)", 
+                   loc.get("window.inputContextInfo.cursorMode").c_str(), 
+                   static_cast<int>(m_interactionData.cursorMode));
+    }
+    
+    // 光标标记
+    static const std::unordered_map<CursorMarker, std::string> cursorMarkerToString = {
+        {CursorMarker::kNone, "None"},
+        {CursorMarker::kLocked, "Locked"},
+        {CursorMarker::kOrthogonal, "Orthogonal"},
+        {CursorMarker::kErase, "Erase"},
+        {CursorMarker::kCopy, "Copy"},
+        {CursorMarker::kMove, "Move"},
+        {CursorMarker::kRotate, "Rotate"},
+        {CursorMarker::kScale, "Scale"},
+        {CursorMarker::kAddSelect, "AddSelect"},
+        {CursorMarker::kRemoveSelect, "RemoveSelect"},
+        {CursorMarker::kCrossingSelect, "CrossingSelect"},
+        {CursorMarker::kWindowSelect, "WindowSelect"}
+    };
+    auto cursorMarkerIt = cursorMarkerToString.find(m_interactionData.cursorMarker);
+    if (cursorMarkerIt != cursorMarkerToString.end()) {
+        ImGui::Text("  %s: %s", 
+                   loc.get("window.inputContextInfo.cursorMarker").c_str(), 
+                   cursorMarkerIt->second.c_str());
+    } else {
+        ImGui::Text("  %s: Unknown(%d)", 
+                   loc.get("window.inputContextInfo.cursorMarker").c_str(), 
+                   static_cast<int>(m_interactionData.cursorMarker));
+    }
+    
+    // 选择模式
+    static const std::unordered_map<SelectionMode, std::string> selectionModeToString = {
+        {SelectionMode::kNone, "None"},
+        {SelectionMode::kSingle, "Single"},
+        {SelectionMode::kWindow, "Window"},
+        {SelectionMode::kCrossing, "Crossing"},
+        {SelectionMode::kFence, "Fence"},
+        {SelectionMode::kWindowLasso, "WindowLasso"},
+        {SelectionMode::kCrossingLasso, "CrossingLasso"},
+        {SelectionMode::kWindowPolygon, "WindowPolygon"},
+        {SelectionMode::kCrossingPolygon, "CrossingPolygon"},
+        {SelectionMode::kAll, "All"}
+    };
+    auto selectionModeIt = selectionModeToString.find(m_interactionData.selectionMode);
+    if (selectionModeIt != selectionModeToString.end()) {
+        ImGui::Text("  %s: %s", 
+                   loc.get("window.inputContextInfo.selectionMode").c_str(), 
+                   selectionModeIt->second.c_str());
+    } else {
+        ImGui::Text("  %s: Unknown(%d)", 
+                   loc.get("window.inputContextInfo.selectionMode").c_str(), 
+                   static_cast<int>(m_interactionData.selectionMode));
+    }
+    
+    // 选择状态
+    ImGui::Text("  %s: %s", 
+               loc.get("window.inputContextInfo.isSelectionActive").c_str(), 
+               m_interactionData.isSelectionActive ? "true" : "false");
+    
+    // 选择框起点
+    ImGui::Text("  %s: (%.2f, %.2f)", 
+               loc.get("window.inputContextInfo.selectionBoxStart").c_str(), 
+               m_interactionData.selectionBoxStart.x, 
+               m_interactionData.selectionBoxStart.y);
+    
+    // 选择框当前点
+    ImGui::Text("  %s: (%.2f, %.2f)", 
+               loc.get("window.inputContextInfo.selectionBoxCurrent").c_str(), 
+               m_interactionData.selectionBoxCurrent.x, 
+               m_interactionData.selectionBoxCurrent.y);
+    
+    // 选择点数量
+    ImGui::Text("  %s: %zu", 
+               loc.get("window.inputContextInfo.selectionPointsCount").c_str(), 
+               m_interactionData.selectionPoints.size());
+    
     ImGui::End();
+}
+
+// 获取交互数据
+InteractionData& InputContext::getInteractionData() {
+    return m_interactionData;
+}
+
+// 更新输入上下文
+void InputContext::onUpdate() {
+    // 更新窗口选择任务
+    if (m_windowSelectionTask) {
+        m_windowSelectionTask->onUpdate();
+        if (m_windowSelectionTask->isCompleted()) {
+            m_windowSelectionTask.reset();
+        }
+    }
+    
+    // 更新套索选择任务
+    if (m_lassoSelectionTask) {
+        m_lassoSelectionTask->onUpdate();
+        if (m_lassoSelectionTask->isCompleted()) {
+            m_lassoSelectionTask.reset();
+        }
+    }
+    
+    // 更新多边形选择任务
+    if (m_polygonSelectionTask) {
+        m_polygonSelectionTask->onUpdate();
+        if (m_polygonSelectionTask->isCompleted()) {
+            m_polygonSelectionTask.reset();
+        }
+    }
+    
+    // 更新栏选任务
+    if (m_fenceSelectionTask) {
+        m_fenceSelectionTask->onUpdate();
+        if (m_fenceSelectionTask->isCompleted()) {
+            m_fenceSelectionTask.reset();
+        }
+    }
+}
+
+// 激活选择任务
+void InputContext::activateSelectionTask(SelectionMode mode) {
+    // 根据选择模式激活对应的任务
+    switch (mode) {
+        case SelectionMode::kWindow:
+        case SelectionMode::kCrossing:
+            m_windowSelectionTask = std::make_unique<WindowSelectionTask>(&m_interactionData);
+            m_activeTask.reset();
+            break;
+            
+        case SelectionMode::kWindowLasso:
+        case SelectionMode::kCrossingLasso:
+            m_lassoSelectionTask = std::make_unique<LassoSelectionTask>(&m_interactionData);
+            m_activeTask.reset();
+            break;
+            
+        case SelectionMode::kWindowPolygon:
+        case SelectionMode::kCrossingPolygon:
+            m_polygonSelectionTask = std::make_unique<PolygonSelectionTask>(&m_interactionData);
+            m_activeTask.reset();
+            break;
+            
+        case SelectionMode::kFence:
+            m_fenceSelectionTask = std::make_unique<FenceSelectionTask>(&m_interactionData);
+            m_activeTask.reset();
+            break;
+            
+        default:
+            break;
+    }
+}
+
+
+
+// 处理回车/空格事件
+void InputContext::handleEnterSpace() {
+    // 检查是否有活动的栏选任务
+    if (m_fenceSelectionTask) {
+        m_fenceSelectionTask->onEnterSpace();
+    } else if (m_polygonSelectionTask) {
+        m_polygonSelectionTask->onEnterSpace();
+    }
+}
+
+// 处理Escape事件
+void InputContext::handleEscape() {
+    // 检查是否有活动的栏选任务
+    if (m_fenceSelectionTask) {
+        m_fenceSelectionTask->onEscape();
+    }
 }
 
 } // namespace tch

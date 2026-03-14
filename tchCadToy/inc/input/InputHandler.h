@@ -41,6 +41,13 @@ public:
     // 初始化输入处理器
     static void initialize(GLFWwindow* window);
     
+    // 获取光标位置
+    static glm::vec2 getCursorPosition();
+    
+    // 检查鼠标左键是否按下
+    static bool isLeftMouseButtonPressed();
+
+private:
     // 处理键盘输入
     static void handleKeyPress(int key, int scancode, int action, int mods);
     
@@ -62,15 +69,11 @@ public:
     // 处理窗口大小变化
     static void handleWindowSize(int width, int height);
     
-    // 获取光标位置
-    static glm::vec2 getCursorPosition();
-    
     // 检查鼠标按钮是否按下
     static bool isMouseButtonPressed(int button);
     
     // 检查键盘按键是否按下
     static bool isKeyPressed(int key);
-    
     
     // 注册事件回调
     static void registerCallback(InputEventType eventType, const std::function<void()>& callback);
@@ -96,7 +99,6 @@ public:
     // 清除所有快捷键
     static void clearAllShortcuts();
     
-private:
     // 注册默认快捷键
     static void registerDefaultShortcuts();
 

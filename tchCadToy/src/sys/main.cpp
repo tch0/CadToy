@@ -93,6 +93,9 @@ int main(int argc, char* argv[])
         // 处理事件
         glfwPollEvents();
         
+        // 运行命令循环
+        CommandManager::getInstance().runCommandLoop();
+        
         // 开始渲染
         Renderer::beginRender();
         
@@ -125,9 +128,6 @@ int main(int argc, char* argv[])
         
         // 结束渲染
         Renderer::endRender();
-        
-        // 运行命令循环
-        CommandManager::getInstance().runCommandLoop();
     }
     
     // 清理资源

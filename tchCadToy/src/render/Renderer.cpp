@@ -24,8 +24,6 @@ bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
 float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
-CursorMode Renderer::s_currentCursorMode = CursorMode::kDefault;
-CursorMarker Renderer::s_currentCursorMarker = CursorMarker::kNone;
 bool Renderer::s_cursorTestWindowVisible = false;
 
 // 栅格和坐标轴颜色初始化
@@ -33,6 +31,10 @@ float Renderer::s_mainGridColor[3] = {54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f};
 float Renderer::s_subGridColor[3] = {38.0f/255.0f, 45.0f/255.0f, 55.0f/255.0f};  // 子栅格颜色 RGB: 38,45,55
 float Renderer::s_xAxisColor[3] = {97.0f/255.0f, 37.0f/255.0f, 39.0f/255.0f};    // X轴颜色 RGB: 97,37,39
 float Renderer::s_yAxisColor[3] = {34.0f/255.0f, 89.0f/255.0f, 41.0f/255.0f};    // Y轴颜色 RGB: 34,89,41
+
+// 选择区域颜色初始化
+const float Renderer::s_windowSelectionColor[4] = {20.0f/255.0f, 90.0f/255.0f, 223.0f/255.0f, 0.1f}; // 蓝色(RGB:20,90,223)，透明度0.1
+const float Renderer::s_crossingSelectionColor[4] = {0.0f, 1.0f, 0.0f, 0.1f}; // 绿色，透明度0.1
 
 // 当前光标位置的世界坐标
 glm::dvec3 Renderer::s_cursorPosWorld = glm::dvec3(0.0, 0.0, 0.0);
@@ -253,6 +255,9 @@ void Renderer::drawAll() {
     // 绘制所有图层
     LayerManager::getInstance().draw();
     
+    // 绘制选择
+    drawSelection();
+    
     // TODO: 临时措施，还未实现图形引擎，先简单绘制活动命令的预览
     if (CommandManager::getInstance().hasActiveCommand()) {
         auto activeCommand = CommandManager::getInstance().getActiveCommand();
@@ -260,6 +265,260 @@ void Renderer::drawAll() {
             activeCommand->drawPreview();
         }
     }
+}
+
+// 绘制选择相关图元
+void Renderer::drawSelection() {
+    // 获取交互数据
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
+    // 检查是否正在进行选择
+    if (!interactionData.isSelectionActive) {
+        return;
+    }
+    
+    // 保存当前矩阵状态
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // 设置正交投影，Y轴朝下（标准鼠标坐标系）
+    int width, height;
+    glfwGetFramebufferSize(s_window, &width, &height);
+    glOrtho(0, width, height, 0, -1, 1);
+    
+    // 切换到模型视图矩阵
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // 禁用深度测试
+    glDisable(GL_DEPTH_TEST);
+    
+    // 启用混合模式，用于透明效果
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    switch (interactionData.selectionMode) {
+        case SelectionMode::kWindow:
+        case SelectionMode::kCrossing:
+            // 绘制框选
+            drawWindowSelection();
+            break;
+            
+        case SelectionMode::kWindowLasso:
+        case SelectionMode::kCrossingLasso:
+            // 绘制套索选择
+            drawLassoSelection();
+            break;
+            
+        case SelectionMode::kWindowPolygon:
+        case SelectionMode::kCrossingPolygon:
+            // 绘制多边形选择
+            drawPolygonSelection();
+            break;
+            
+        case SelectionMode::kFence:
+            // 绘制栏选
+            drawFenceSelection();
+            break;
+            
+        default:
+            break;
+    }
+    
+    // 禁用混合模式
+    glDisable(GL_BLEND);
+    
+    // 恢复矩阵状态
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    
+    // 重新启用深度测试
+    glEnable(GL_DEPTH_TEST);
+}
+
+// 绘制框选
+void Renderer::drawWindowSelection() {
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
+    // 获取选择框起点和当前点
+    glm::vec2 start = interactionData.selectionBoxStart;
+    glm::vec2 current = interactionData.selectionBoxCurrent;
+    
+    // 计算选择框的边界
+    float left = std::min(start.x, current.x);
+    float right = std::max(start.x, current.x);
+    float top = std::min(start.y, current.y);
+    float bottom = std::max(start.y, current.y);
+    
+    // 绘制填充区域
+    if (interactionData.selectionMode == SelectionMode::kWindow) {
+        // 窗口选择：蓝色填充
+        glColor4fv(s_windowSelectionColor);
+    } else if (interactionData.selectionMode == SelectionMode::kCrossing) {
+        // 交叉选择：绿色填充
+        glColor4fv(s_crossingSelectionColor);
+    }
+    
+    // 绘制填充矩形
+    glBegin(GL_QUADS);
+    glVertex2f(left + 0.5f, top + 0.5f);
+    glVertex2f(right + 0.5f, top + 0.5f);
+    glVertex2f(right + 0.5f, bottom + 0.5f);
+    glVertex2f(left + 0.5f, bottom + 0.5f);
+    glEnd();
+    
+    // 绘制选择框线条
+    if (interactionData.selectionMode == SelectionMode::kWindow) {
+        // 窗口选择：实线
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glDisable(GL_LINE_STIPPLE);
+    } else if (interactionData.selectionMode == SelectionMode::kCrossing) {
+        // 交叉选择：虚线
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0xCCCC);
+    }
+    
+    // 绘制选择框
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(left + 0.5f, top + 0.5f);
+    glVertex2f(right + 0.5f, top + 0.5f);
+    glVertex2f(right + 0.5f, bottom + 0.5f);
+    glVertex2f(left + 0.5f, bottom + 0.5f);
+    glEnd();
+    
+    // 恢复默认状态
+    glDisable(GL_LINE_STIPPLE);
+}
+
+// 绘制套索选择
+void Renderer::drawLassoSelection() {
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
+    // 检查是否有套索点
+    if (interactionData.selectionPoints.size() < 2) {
+        return;
+    }
+    
+    // 绘制填充区域
+    if (interactionData.selectionMode == SelectionMode::kWindowLasso) {
+        // 窗口选择：蓝色填充
+        glColor4fv(s_windowSelectionColor);
+    } else if (interactionData.selectionMode == SelectionMode::kCrossingLasso) {
+        // 交叉选择：绿色填充
+        glColor4fv(s_crossingSelectionColor);
+    }
+    
+    // 绘制填充多边形
+    glBegin(GL_POLYGON);
+    for (const auto& point : interactionData.selectionPoints) {
+        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    }
+    glEnd();
+    
+    // 绘制套索线条
+    if (interactionData.selectionMode == SelectionMode::kCrossingLasso) {
+        // 交叉选择：虚线
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0xCCCC); // 2白2透明的虚线模式
+    } else {
+        // 窗口选择：实线
+        glDisable(GL_LINE_STIPPLE);
+    }
+    
+    // 设置颜色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制套索线条
+    glBegin(GL_LINE_STRIP);
+    for (const auto& point : interactionData.selectionPoints) {
+        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    }
+    glEnd();
+    
+    // 恢复默认状态
+    glDisable(GL_LINE_STIPPLE);
+}
+
+// 绘制多边形选择
+void Renderer::drawPolygonSelection() {
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
+    // 检查是否有多边形点
+    if (interactionData.selectionPoints.size() < 3) {
+        return;
+    }
+    
+    // 绘制填充区域
+    if (interactionData.selectionMode == SelectionMode::kWindowPolygon) {
+        // 窗口选择：蓝色填充
+        glColor4fv(s_windowSelectionColor);
+    } else if (interactionData.selectionMode == SelectionMode::kCrossingPolygon) {
+        // 交叉选择：绿色填充
+        glColor4fv(s_crossingSelectionColor);
+    }
+    
+    // 绘制填充多边形
+    glBegin(GL_POLYGON);
+    for (const auto& point : interactionData.selectionPoints) {
+        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    }
+    glEnd();
+    
+    // 绘制多边形线条
+    if (interactionData.selectionMode == SelectionMode::kCrossingPolygon) {
+        // 交叉选择：虚线
+        glEnable(GL_LINE_STIPPLE);
+        glLineStipple(1, 0xCCCC); // 2白2透明的虚线模式
+    } else {
+        // 窗口选择：实线
+        glDisable(GL_LINE_STIPPLE);
+    }
+    
+    // 设置颜色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制多边形线条
+    glBegin(GL_LINE_LOOP);
+    for (const auto& point : interactionData.selectionPoints) {
+        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    }
+    glEnd();
+    
+    // 恢复默认状态
+    glDisable(GL_LINE_STIPPLE);
+}
+
+// 绘制栏选
+void Renderer::drawFenceSelection() {
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
+    // 检查是否有栏选点
+    if (interactionData.selectionPoints.size() < 2) {
+        return;
+    }
+    
+    // 设置虚线样式
+    glEnable(GL_LINE_STIPPLE);
+    glLineStipple(1, 0xCCCC); // 2白2透明的虚线模式
+    
+    // 设置颜色
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // 绘制虚线线段
+    glBegin(GL_LINES);
+    for (size_t i = 0; i < interactionData.selectionPoints.size() - 1; ++i) {
+        glVertex2f(interactionData.selectionPoints[i].x + 0.5f, interactionData.selectionPoints[i].y + 0.5f);
+        glVertex2f(interactionData.selectionPoints[i + 1].x + 0.5f, interactionData.selectionPoints[i + 1].y + 0.5f);
+    }
+    glEnd();
+    
+    // 恢复默认状态
+    glDisable(GL_LINE_STIPPLE);
 }
 
 // 绘制光标
@@ -270,6 +529,9 @@ void Renderer::drawCursor() {
     
     // 计算光标在屏幕上的位置
     glm::vec2 cursorScreenPos = InputHandler::getCursorPosition();
+    
+    // 获取交互数据
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 更新当前光标位置（使用变换管理器转换）
     s_cursorPosWorld = getTransformManager().screenToWorld(cursorScreenPos);
@@ -295,11 +557,11 @@ void Renderer::drawCursor() {
     glDisable(GL_DEPTH_TEST);
     
     // 根据光标模式绘制不同的光标
-    switch (s_currentCursorMode) {
+    switch (interactionData.cursorMode) {
         case CursorMode::kDefault:
         case CursorMode::kCrosshair: {
             // 统一处理：kCrosshair模式等价于pickbox=0
-            float effectivePickBoxSize = (s_currentCursorMode == CursorMode::kCrosshair) ? 0.0f : s_pickBoxSize;
+            float effectivePickBoxSize = (interactionData.cursorMode == CursorMode::kCrosshair) ? 0.0f : s_pickBoxSize;
             // 绘制拾取框（如果effectivePickBoxSize > 0）
             drawPickBox(cursorScreenPos, effectivePickBoxSize);
             // 绘制十字线，根据effectivePickBoxSize决定绘制方式
@@ -803,18 +1065,21 @@ void Renderer::drawCursorTestWindow() {
     if (s_cursorTestWindowVisible) {
         ImGui::Begin("Cursor Test Window", &s_cursorTestWindowVisible);
         
+        // 获取交互数据
+        InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+        
         // 光标模式选择
         static const char* cursorModeNames[] = {"Default", "Crosshair", "Pickbox", "Panning"};
-        static int currentMode = static_cast<int>(s_currentCursorMode);
+        static int currentMode = static_cast<int>(interactionData.cursorMode);
         if (ImGui::Combo("Cursor Mode", &currentMode, cursorModeNames, IM_ARRAYSIZE(cursorModeNames), 4)) {
-            s_currentCursorMode = static_cast<CursorMode>(currentMode);
+            interactionData.cursorMode = static_cast<CursorMode>(currentMode);
         }
         
         // 光标标记选择
         static const char* cursorMarkerNames[] = {"None", "Locked", "Orthogonal", "Erase", "Copy", "Move", "Rotate", "Scale", "AddSelect", "RemoveSelect", "CrossingSelect", "WindowSelect"};
-        static int currentMarker = static_cast<int>(s_currentCursorMarker);
+        static int currentMarker = static_cast<int>(interactionData.cursorMarker);
         if (ImGui::Combo("Cursor Marker", &currentMarker, cursorMarkerNames, IM_ARRAYSIZE(cursorMarkerNames), 12)) {
-            s_currentCursorMarker = static_cast<CursorMarker>(currentMarker);
+            interactionData.cursorMarker = static_cast<CursorMarker>(currentMarker);
         }
         
         // 光标尺寸拖动条（范围10~100）
@@ -839,12 +1104,15 @@ void Renderer::drawCursorTestWindow() {
 
 // 绘制光标标记
 void Renderer::drawCursorMarker(const glm::vec2& pos) {
+    // 获取交互数据
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+    
     // 标记中心位置：拾取框右上角的右上方10个像素
     glm::vec2 markerPos = pos;
     markerPos.x += s_pickBoxSize + 10.0f;
     markerPos.y -= s_pickBoxSize + 10.0f;
     
-    switch (s_currentCursorMarker) {
+    switch (interactionData.cursorMarker) {
         case CursorMarker::kNone:
             // 无标记，不绘制
             break;
@@ -908,26 +1176,6 @@ void Renderer::drawCursorMarker(const glm::vec2& pos) {
             // 无标记，不绘制
             break;
     }
-}
-
-// 设置光标模式
-void Renderer::setCursorMode(CursorMode mode) {
-    s_currentCursorMode = mode;
-}
-
-// 获取当前光标模式
-CursorMode Renderer::getCursorMode() {
-    return s_currentCursorMode;
-}
-
-// 设置光标标记
-void Renderer::setCursorMarker(CursorMarker marker) {
-    s_currentCursorMarker = marker;
-}
-
-// 获取当前光标标记
-CursorMarker Renderer::getCursorMarker() {
-    return s_currentCursorMarker;
 }
 
 // 设置十字光标大小

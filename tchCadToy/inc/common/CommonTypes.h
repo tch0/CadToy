@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <vector>
 
 namespace tch {
 
@@ -59,9 +60,9 @@ struct InteractionData {
     // 选择相关数据
     bool isSelectionActive = false;                     // 是否正在进行选择
     SelectionMode selectionMode = SelectionMode::kNone; // 当前选择模式
-    // 框选
     glm::vec2 selectionBoxStart = glm::vec2(0.0f, 0.0f); // 选择框起点屏幕坐标
     glm::vec2 selectionBoxCurrent = glm::vec2(0.0f, 0.0f); // 选择框当前点屏幕坐标
+    std::vector<glm::vec2> selectionPoints; // 选择点集合（用于套索、多边形、栏选等）
     
     // 后续可添加的其他数据
     // 例如：
@@ -85,6 +86,7 @@ struct InteractionData {
         selectionMode = SelectionMode::kNone;
         selectionBoxStart = glm::vec2(0.0f, 0.0f);
         selectionBoxCurrent = glm::vec2(0.0f, 0.0f);
+        selectionPoints.clear();
     }
     
     // 重置所有状态

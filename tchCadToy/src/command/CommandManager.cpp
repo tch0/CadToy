@@ -137,6 +137,9 @@ void CommandManager::parseCommand(const std::string& command) {
 
 // 运行命令循环
 void CommandManager::runCommandLoop() {
+    // 首先更新输入上下文
+    InputContext::getInstance().onUpdate();
+    
     // 更新活动命令
     if (m_activeCommand) {
         // 更新命令

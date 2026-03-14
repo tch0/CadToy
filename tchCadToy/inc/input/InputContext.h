@@ -4,6 +4,12 @@
 #include <vector>
 #include <memory>
 #include <glm/glm.hpp>
+#include "input/Task.h"
+#include "input/WindowSelectionTask.h"
+#include "input/LassoSelectionTask.h"
+#include "input/PolygonSelectionTask.h"
+#include "input/FenceSelectionTask.h"
+#include "common/CommonTypes.h"
 
 namespace tch {
 
@@ -91,6 +97,18 @@ private:
     // 输入上下文信息窗口相关
     bool m_inputContextInfoVisible;     // 窗口是否可见
     
+    // 交互数据
+    InteractionData m_interactionData;
+    
+    // 当前活动任务
+    std::unique_ptr<Task> m_activeTask;
+    
+    // 选择任务
+    std::unique_ptr<WindowSelectionTask> m_windowSelectionTask;
+    std::unique_ptr<LassoSelectionTask> m_lassoSelectionTask;
+    std::unique_ptr<PolygonSelectionTask> m_polygonSelectionTask;
+    std::unique_ptr<FenceSelectionTask> m_fenceSelectionTask;
+    
 public:
     // 获取单例实例
     static InputContext& getInstance();
@@ -115,11 +133,11 @@ public:
     void setPickedPoint(const glm::dvec3& point);
     bool getPickedPoint(glm::dvec3& point);
     
-    // 处理鼠标左键点击（由InputHandler调用）
-    void handleLeftMouseClick(const glm::vec2& screenPos);
+    // 处理鼠标左键点击事件（由InputHandler调用）
+    void handleLeftMouseClick();
     
     // 处理鼠标右键点击（由InputHandler调用）
-    void handleRightMouseClick(const glm::vec2& screenPos);
+    void handleRightMouseClick();
     
     // 数字输入相关
     bool getInteger(int& value);
@@ -152,7 +170,7 @@ public:
     // 输入管理
     void setInput(const std::string& input);
     const std::string& getInput() const;
-    
+
     // 处理Enter/Space输入
     void handleEnterSpace(const std::string& input);
     // 处理Escape输入
@@ -189,6 +207,21 @@ public:
     // 输入上下文信息窗口相关
     void drawInfoWindow();
     bool& getInputContextInfoVisible() { return m_inputContextInfoVisible; }
+    
+    // 获取交互数据
+    InteractionData& getInteractionData();
+    
+    // 更新输入上下文
+    void onUpdate();
+    
+    // 激活选择任务
+    void activateSelectionTask(SelectionMode mode);
+    
+    // 处理回车/空格事件
+    void handleEnterSpace();
+    
+    // 处理Escape事件
+    void handleEscape();
 };
 
 } // namespace tch

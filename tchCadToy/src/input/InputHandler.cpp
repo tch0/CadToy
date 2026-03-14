@@ -105,6 +105,16 @@ void InputHandler::initialize(GLFWwindow* window) {
     registerDefaultShortcuts();
 }
 
+// 获取光标位置
+glm::vec2 InputHandler::getCursorPosition() {
+    return s_cursorPosition;
+}
+
+// 检查鼠标左键是否按下
+bool InputHandler::isLeftMouseButtonPressed() {
+    return isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+}
+
 // 处理键盘输入
 void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
     // 仅处理按下和释放，不处理GLFW_REPEAT，快捷键不应该重复执行，而命令输入的重复在第一个字符后会交由命令输入框处理
@@ -192,6 +202,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_ENTER) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEnterPressed);
+                InputContext::getInstance().handleEnterSpace();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 
@@ -201,6 +212,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_SPACE) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kSpacePressed);
+                InputContext::getInstance().handleEnterSpace();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
@@ -209,6 +221,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_ESCAPE) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEscPressed);
+                InputContext::getInstance().handleEscape();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
@@ -261,14 +274,16 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
             s_lastCursorPosition = s_cursorPosition;
             // 检查鼠标是否在视口内
+            // 其实这里从原理上来说是不需要判断的，前面已经检测过了鼠标不在ImGui上，那么只要进入这里就一定是在视口上的，
+            // 但这个逻辑保留在这里就好，以后如果需要支持同时多视口显示，直接从这里扩展就行
             s_mouseMiddleButtonPressedInViewport = Renderer::isPointInViewport(s_cursorPosition);
         }
         
         // 将鼠标按钮事件传递给输入上下文处理
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            InputContext::getInstance().handleLeftMouseClick(s_cursorPosition);
+            InputContext::getInstance().handleLeftMouseClick();
         } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            InputContext::getInstance().handleRightMouseClick(s_cursorPosition);
+            InputContext::getInstance().handleRightMouseClick();
         }
         
         // 触发鼠标按下回调
@@ -364,11 +379,6 @@ void InputHandler::handleMouseEnter(int entered) {
 // 处理窗口大小变化
 void InputHandler::handleWindowSize(int width, int height) {
     // 每一帧开头都会重算布局并计算与更新视口，这里不需要做任何事情
-}
-
-// 获取光标位置
-glm::vec2 InputHandler::getCursorPosition() {
-    return s_cursorPosition;
 }
 
 // 检查鼠标按钮是否按下

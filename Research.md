@@ -34,6 +34,9 @@
     - 移动、旋转、缩放、复制、裁剪/删除标记实现
     - 优先级：限制类 > 即时编辑动作 > 选择模式 > 约束，框选模式是鼠标瞬时状态，鼠标拖动时覆盖其他标记。
     - TODO: 将所有marker全部写进一个大的 VBO 里，通过 Offset 来切换显示？
+- 选择：
+    - 框选交互于绘制实现
+    - 多边形、套索、栏选绘制与交互实现，还未测试，还需要后续完善
 
 Todo：
 - 框选交互实现，
@@ -63,15 +66,6 @@ Todo：
     - 方法2：主循环中拦截窗口关闭消息，glfwWindowShouldClose(window, GLFW\_FALSE)阻止窗口关闭，不调用拦截关闭动作的话，下一帧渲染循环就会结束
     - 用方法2，依次调用每个文档的关闭操作就好了，有一个不关闭就留下来
     - 待仔细研究
-
-
-框选实现研究：
-- InputContext内部集成SelectionTask，作为一个被动状态机，由InputContext来管理其状态
-- InputContext内部维护瞬态数据，比如框选的框现在有多大，光标应该是什么形状之类，由Renderer获取之后进行渲染
-- InputContext本身实现OnUpdate，其中调用SlectionTask的onUpdate（根据状态判断要调用哪个task，后续方便扩展），在runCommandLoop中先调InputContext::onUpdate，再调用命令的onUpdate
-- InputContext的SelectionTask如果在框选状态下，那么输入会先给SelectionTask，SelectionTask运行结束后才会将输入给到命令
-- Shift减选或者反选，需要判断实体状态与Shift是否按下，InputContext中可能需要维护Shift状态，由InputHandler来管理，再handleLeftMouseClick来进行判断。
-- Shift减选，或者选择集已经有实体了，那么再选就是加选
 
 其他待实现细节研究：
 - 选择点时，按住Shift强制进入正交模式，会有marker标记
@@ -227,6 +221,35 @@ void LineCommand::Execute() {
 实现考虑：
 - C++20无栈协程侵入性和传染性太强，对架构影响非常大，这里暂时不考虑。
 - 先实现为状态机，后续如果合适可以切换为有栈协程。
+
+## 选择功能研究
+
+分类：
+- 点选：点击一个实体即将其加入选择集，只要实体和拾取框有重叠即可选中
+- 框选：通过两个点确定矩形范围进行选择（两次点击）
+    - 向左为交叉选择(Crossing Selection)，交叉选择只要和实体有交叉就能选中
+    - 向右为(Window Selection)窗口选择，窗口选择则必须将实体完整包围才能选中
+    - 选择时（或者无命令执行时）点击一个点默认就是框选，向左移动时交叉选择，向右移动为窗口选择
+- 多边形选择(Polygon Selection)：由多个点指定多边形进行判定
+    - 多边形交叉(Polygon Crossing Selection)，也翻译为**圈交(CP)**，有交叉即选中
+    - 多边形窗口(Polygon WindowSelection)，也翻译为**圈围(WP)**，全部包围才能选中
+    - 一般通过选择的分支进入
+- 套索(Lasso Selection)选择：按下鼠标左键，不放开移动鼠标，形成一个平滑的套索，
+    - 套索交叉选择(Lasso Crossing Selection)：交叉即选中
+    - 套索窗口选择(Lasso Window Selection)：全部包围选中
+    - 按下鼠标左键不放开就进入套索选择，逻辑上需要和框选进行区分，一般通过按下左键移动一定距离（比如XY只有有一边达到10个像素）后如果还没有放开左键就进入套索选择直到左键放开套索完成，小范围内已经放开左键则进入框选，拖动预览等待第二点，如果一直按着左键鼠标也不动那么就延后再判定
+    - 和框选一个入口通过按住鼠标左键不放进入，一般没有其他进入途径
+- 栏选(Fence Selection): 类似line命令流程，画出一系列线段，于这些线段相交的实体被选中
+    - 通过分支进入
+- 全选(All)：不知道是通过命令(selectall)实现的功能，还是需要选择框架原生支持(比如通过某个选择分支)，待定
+
+实现研究：
+- InputContext内部集成SelectionTask，作为一个被动状态机，由InputContext来管理其状态
+- InputContext内部维护瞬态数据，比如框选的框现在有多大，光标应该是什么形状之类，由Renderer获取之后进行渲染
+- InputContext本身实现OnUpdate，其中调用SlectionTask的onUpdate（根据状态判断要调用哪个task，后续方便扩展），在runCommandLoop中先调InputContext::onUpdate，再调用命令的onUpdate
+- InputContext的SelectionTask如果在框选状态下，那么输入会先给SelectionTask，SelectionTask运行结束后才会将输入给到命令
+- Shift减选或者反选，需要判断实体状态与Shift是否按下，InputContext中可能需要维护Shift状态，由InputHandler来管理，再handleLeftMouseClick来进行判断。
+- Shift减选，或者选择集已经有实体了，那么再选就是加选
 
 ## 功能实现顺序
 

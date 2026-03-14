@@ -3,7 +3,6 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include "common/CommonTypes.h"
 #include "transform/TransformManager.h"
 
 namespace tch {
@@ -35,12 +34,11 @@ public:
     // 绘制所有图形
     static void drawAll();
     
+    // 选择相关
+    static void drawSelection(); // 绘制选择相关图元
+    
     // 光标相关
     static void drawCursor(); // 绘制光标
-    static void setCursorMode(CursorMode mode); // 设置光标模式
-    static CursorMode getCursorMode(); // 获取当前光标模式
-    static void setCursorMarker(CursorMarker marker); // 设置光标标记
-    static CursorMarker getCursorMarker(); // 获取当前光标标记
     static void setCrossCursorSize(float size); // 设置十字光标大小
     static float getCrossCursorSize(); // 获取十字光标大小
     static glm::dvec3 getCursorPosWorld(); // 获取当前光标世界坐标
@@ -99,7 +97,6 @@ public:
     static bool focusIsOnCommandInput(); // 检查焦点是否在命令输入框上
     
     
-
 private:
     // 静态成员变量
     static bool s_initialized;                  // 渲染器初始化状态
@@ -108,8 +105,6 @@ private:
     // 光标相关
     static float s_crossCursorSize;             // 十字光标大小（包含拾取框的总大小，线段长度为十字光标大小减去拾取框大小）
     static float s_pickBoxSize;                 // 拾取框大小
-    static CursorMode s_currentCursorMode;      // 当前光标模式
-    static CursorMarker s_currentCursorMarker;  // 当前光标标记
     static glm::dvec3 s_cursorPosWorld;         // 当前光标位置的世界坐标
     static bool s_cursorTestWindowVisible;      // 光标测试窗口可见性
     
@@ -118,6 +113,10 @@ private:
     static float s_subGridColor[3];             // 子栅格颜色 RGB: 38,45,55
     static float s_xAxisColor[3];               // X轴颜色 RGB: 97,37,39
     static float s_yAxisColor[3];               // Y轴颜色 RGB: 34,89,41
+    
+    // 选择区域颜色
+    static const float s_windowSelectionColor[4]; // 窗口选择颜色（蓝色，透明度0.2）
+    static const float s_crossingSelectionColor[4]; // 交叉选择颜色（绿色，透明度0.2）
     
     // UI组件高度
     static float s_menuBarHeight;              // 菜单栏高度
@@ -152,6 +151,12 @@ private:
     static void drawScaleMarker(const glm::vec2& pos); // 绘制缩放标记
     static void drawCursorMarker(const glm::vec2& pos); // 绘制光标标记
     static void drawCursorTestWindow(); // 绘制光标测试窗口
+    
+    // 选择相关
+    static void drawWindowSelection();          // 绘制框选
+    static void drawLassoSelection();           // 绘制套索选择
+    static void drawPolygonSelection();         // 绘制多边形选择
+    static void drawFenceSelection();           // 绘制栏选
 };
 
 } // namespace tch
