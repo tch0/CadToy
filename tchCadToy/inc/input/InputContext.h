@@ -5,10 +5,7 @@
 #include <memory>
 #include <glm/glm.hpp>
 #include "input/Task.h"
-#include "input/WindowSelectionTask.h"
-#include "input/LassoSelectionTask.h"
-#include "input/PolygonSelectionTask.h"
-#include "input/FenceSelectionTask.h"
+#include "input/SelectionTask.h"
 #include "common/CommonTypes.h"
 
 namespace tch {
@@ -104,10 +101,7 @@ private:
     std::unique_ptr<Task> m_activeTask;
     
     // 选择任务
-    std::unique_ptr<WindowSelectionTask> m_windowSelectionTask;
-    std::unique_ptr<LassoSelectionTask> m_lassoSelectionTask;
-    std::unique_ptr<PolygonSelectionTask> m_polygonSelectionTask;
-    std::unique_ptr<FenceSelectionTask> m_fenceSelectionTask;
+    std::unique_ptr<SelectionTask> m_selectionTask;
     
 public:
     // 获取单例实例
@@ -216,6 +210,9 @@ public:
     
     // 激活选择任务
     void activateSelectionTask(SelectionMode mode);
+    
+    // 处理选择任务的关键字输入
+    void handleSelectionKeyword(const std::string& keyword);
     
     // 处理回车/空格事件
     void handleEnterSpace();

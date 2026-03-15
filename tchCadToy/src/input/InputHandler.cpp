@@ -115,6 +115,11 @@ bool InputHandler::isLeftMouseButtonPressed() {
     return isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
 }
 
+// 检查Shift键是否按下
+bool InputHandler::isShiftPressed() {
+    return isKeyPressed(GLFW_KEY_LEFT_SHIFT) || isKeyPressed(GLFW_KEY_RIGHT_SHIFT);
+}
+
 // 处理键盘输入
 void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
     // 仅处理按下和释放，不处理GLFW_REPEAT，快捷键不应该重复执行，而命令输入的重复在第一个字符后会交由命令输入框处理

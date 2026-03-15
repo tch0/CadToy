@@ -37,7 +37,7 @@ enum class CursorMarker {
 
 // 选择模式枚举
 enum class SelectionMode {
-    kNone,              // 无选择
+    kNone,              // 无选择模式，未处于选择交互中
     kSingle,            // 单点选择
     kWindow,            // 窗口选择（框选右拉）
     kCrossing,          // 交叉选择（框选左拉）
@@ -60,9 +60,10 @@ struct InteractionData {
     // 选择相关数据
     bool isSelectionActive = false;                     // 是否正在进行选择
     SelectionMode selectionMode = SelectionMode::kNone; // 当前选择模式
-    glm::vec2 selectionBoxStart = glm::vec2(0.0f, 0.0f); // 选择框起点屏幕坐标
-    glm::vec2 selectionBoxCurrent = glm::vec2(0.0f, 0.0f); // 选择框当前点屏幕坐标
-    std::vector<glm::vec2> selectionPoints; // 选择点集合（用于套索、多边形、栏选等）
+    glm::dvec3 selectionBoxStartWorld = glm::dvec3(0.0, 0.0, 0.0); // 选择框起点世界坐标
+    glm::dvec3 selectionBoxCurrentWorld = glm::dvec3(0.0, 0.0, 0.0); // 选择框当前点世界坐标
+    std::vector<glm::dvec3> selectionPointsWorld; // 选择点集合（世界坐标，用于套索、多边形、栏选等）
+    std::vector<glm::vec2> selectionPointsScreen; // 选择点集合（屏幕坐标，用于绘制），绘制时先计算了存在这里
     
     // 后续可添加的其他数据
     // 例如：
@@ -84,9 +85,10 @@ struct InteractionData {
     void resetSelection() {
         isSelectionActive = false;
         selectionMode = SelectionMode::kNone;
-        selectionBoxStart = glm::vec2(0.0f, 0.0f);
-        selectionBoxCurrent = glm::vec2(0.0f, 0.0f);
-        selectionPoints.clear();
+        selectionBoxStartWorld = glm::dvec3(0.0, 0.0, 0.0);
+        selectionBoxCurrentWorld = glm::dvec3(0.0, 0.0, 0.0);
+        selectionPointsWorld.clear();
+        selectionPointsScreen.clear();
     }
     
     // 重置所有状态

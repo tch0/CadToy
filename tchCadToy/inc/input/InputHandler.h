@@ -46,6 +46,9 @@ public:
     
     // 检查鼠标左键是否按下
     static bool isLeftMouseButtonPressed();
+    
+    // 检查Shift键是否按下
+    static bool isShiftPressed();
 
 private:
     // 处理键盘输入

@@ -277,6 +277,12 @@ void Renderer::drawSelection() {
         return;
     }
     
+    // 坐标变换：将选择点的世界坐标转换为屏幕坐标
+    interactionData.selectionPointsScreen.clear();
+    for (const auto& point : interactionData.selectionPointsWorld) {
+        interactionData.selectionPointsScreen.push_back(getTransformManager().worldToScreen(point));
+    }
+    
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -344,9 +350,13 @@ void Renderer::drawSelection() {
 void Renderer::drawWindowSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
-    // 获取选择框起点和当前点
-    glm::vec2 start = interactionData.selectionBoxStart;
-    glm::vec2 current = interactionData.selectionBoxCurrent;
+    // 获取选择框起点和当前点（世界坐标）
+    glm::dvec3 startWorld = interactionData.selectionBoxStartWorld;
+    glm::dvec3 currentWorld = interactionData.selectionBoxCurrentWorld;
+    
+    // 转换为屏幕坐标
+    glm::vec2 start = getTransformManager().worldToScreen(startWorld);
+    glm::vec2 current = getTransformManager().worldToScreen(currentWorld);
     
     // 计算选择框的边界
     float left = std::min(start.x, current.x);
@@ -400,11 +410,22 @@ void Renderer::drawLassoSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 检查是否有套索点
-    if (interactionData.selectionPoints.size() < 2) {
+    if (interactionData.selectionPointsScreen.size() < 2) {
         return;
     }
     
-    // 绘制填充区域
+    // 开启深度测试
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    
+    // 清除深度缓冲区
+    glClear(GL_DEPTH_BUFFER_BIT);
+    
+    // 开启混合
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // 绘制填充区域（使用较低的Z值），通过开启深度测试来实现重叠的环颜色也不会叠加
     if (interactionData.selectionMode == SelectionMode::kWindowLasso) {
         // 窗口选择：蓝色填充
         glColor4fv(s_windowSelectionColor);
@@ -415,12 +436,12 @@ void Renderer::drawLassoSelection() {
     
     // 绘制填充多边形
     glBegin(GL_POLYGON);
-    for (const auto& point : interactionData.selectionPoints) {
-        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    for (const auto& point : interactionData.selectionPointsScreen) {
+        glVertex3f(point.x + 0.5f, point.y + 0.5f, 0.0f); // 填充使用Z=0.0
     }
     glEnd();
     
-    // 绘制套索线条
+    // 绘制套索线条（使用较高的Z值，确保在填充之上）
     if (interactionData.selectionMode == SelectionMode::kCrossingLasso) {
         // 交叉选择：虚线
         glEnable(GL_LINE_STIPPLE);
@@ -434,14 +455,16 @@ void Renderer::drawLassoSelection() {
     glColor3f(1.0f, 1.0f, 1.0f);
     
     // 绘制套索线条
-    glBegin(GL_LINE_STRIP);
-    for (const auto& point : interactionData.selectionPoints) {
-        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    glBegin(GL_LINE_LOOP);
+    for (const auto& point : interactionData.selectionPointsScreen) {
+        glVertex3f(point.x + 0.5f, point.y + 0.5f, 0.5f); // 线条使用Z=0.5，高于填充
     }
     glEnd();
     
     // 恢复默认状态
     glDisable(GL_LINE_STIPPLE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 // 绘制多边形选择
@@ -449,11 +472,22 @@ void Renderer::drawPolygonSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 检查是否有多边形点
-    if (interactionData.selectionPoints.size() < 3) {
+    if (interactionData.selectionPointsScreen.size() < 3) {
         return;
     }
     
-    // 绘制填充区域
+    // 开启深度测试
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    
+    // 清除深度缓冲区
+    glClear(GL_DEPTH_BUFFER_BIT);
+    
+    // 开启混合
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // 绘制填充区域（使用较低的Z值），通过开启深度测试来实现重叠的环颜色也不会叠加
     if (interactionData.selectionMode == SelectionMode::kWindowPolygon) {
         // 窗口选择：蓝色填充
         glColor4fv(s_windowSelectionColor);
@@ -464,12 +498,12 @@ void Renderer::drawPolygonSelection() {
     
     // 绘制填充多边形
     glBegin(GL_POLYGON);
-    for (const auto& point : interactionData.selectionPoints) {
-        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    for (const auto& point : interactionData.selectionPointsScreen) {
+        glVertex3f(point.x + 0.5f, point.y + 0.5f, 0.0f); // 填充使用Z=0.0
     }
     glEnd();
     
-    // 绘制多边形线条
+    // 绘制多边形线条（使用较高的Z值，确保在填充之上）
     if (interactionData.selectionMode == SelectionMode::kCrossingPolygon) {
         // 交叉选择：虚线
         glEnable(GL_LINE_STIPPLE);
@@ -484,13 +518,15 @@ void Renderer::drawPolygonSelection() {
     
     // 绘制多边形线条
     glBegin(GL_LINE_LOOP);
-    for (const auto& point : interactionData.selectionPoints) {
-        glVertex2f(point.x + 0.5f, point.y + 0.5f);
+    for (const auto& point : interactionData.selectionPointsScreen) {
+        glVertex3f(point.x + 0.5f, point.y + 0.5f, 0.5f); // 线条使用Z=0.5，高于填充
     }
     glEnd();
     
     // 恢复默认状态
     glDisable(GL_LINE_STIPPLE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 // 绘制栏选
@@ -498,7 +534,7 @@ void Renderer::drawFenceSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 检查是否有栏选点
-    if (interactionData.selectionPoints.size() < 2) {
+    if (interactionData.selectionPointsScreen.size() < 2) {
         return;
     }
     
@@ -511,9 +547,9 @@ void Renderer::drawFenceSelection() {
     
     // 绘制虚线线段
     glBegin(GL_LINES);
-    for (size_t i = 0; i < interactionData.selectionPoints.size() - 1; ++i) {
-        glVertex2f(interactionData.selectionPoints[i].x + 0.5f, interactionData.selectionPoints[i].y + 0.5f);
-        glVertex2f(interactionData.selectionPoints[i + 1].x + 0.5f, interactionData.selectionPoints[i + 1].y + 0.5f);
+    for (size_t i = 0; i < interactionData.selectionPointsScreen.size() - 1; ++i) {
+        glVertex2f(interactionData.selectionPointsScreen[i].x + 0.5f, interactionData.selectionPointsScreen[i].y + 0.5f);
+        glVertex2f(interactionData.selectionPointsScreen[i + 1].x + 0.5f, interactionData.selectionPointsScreen[i + 1].y + 0.5f);
     }
     glEnd();
     

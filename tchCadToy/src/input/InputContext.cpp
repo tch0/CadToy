@@ -30,7 +30,8 @@ InputContext::InputContext() :
     m_keywordOptions(),
     m_selectedEntities(),
     m_lastSpecialKeyEvent(SpecialKeyEventType::kNone),
-    m_inputContextInfoVisible(false) {
+    m_inputContextInfoVisible(false),
+    m_selectionTask(std::make_unique<SelectionTask>()) {
 }
 
 // 获取单例实例
@@ -126,17 +127,14 @@ void InputContext::handleLeftMouseClick() {
         // TODO: 命令中的选择
     } else {
         // 检查是否有活动的选择任务
-        if (m_windowSelectionTask) {
-            m_windowSelectionTask->onLeftMouseDown();
-        } else if (m_polygonSelectionTask) {
-            m_polygonSelectionTask->onLeftMouseDown();
-        } else if (m_fenceSelectionTask) {
-            m_fenceSelectionTask->onLeftMouseDown();
+        if (m_selectionTask && m_selectionTask->isSelecting()) {
+            m_selectionTask->handleLeftMouseClick();
         } else {
             // 没有活动任务，默认激活窗口选择任务
             activateSelectionTask(SelectionMode::kWindow);
-            if (m_windowSelectionTask) {
-                m_windowSelectionTask->onLeftMouseDown();
+            if (m_selectionTask) {
+                m_selectionTask->start();
+                m_selectionTask->handleLeftMouseClick();
             }
         }
     }
@@ -629,19 +627,19 @@ void InputContext::drawInfoWindow() {
     // 选择框起点
     ImGui::Text("  %s: (%.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionBoxStart").c_str(), 
-               m_interactionData.selectionBoxStart.x, 
-               m_interactionData.selectionBoxStart.y);
+               m_interactionData.selectionBoxStartWorld.x, 
+               m_interactionData.selectionBoxStartWorld.y);
     
     // 选择框当前点
     ImGui::Text("  %s: (%.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionBoxCurrent").c_str(), 
-               m_interactionData.selectionBoxCurrent.x, 
-               m_interactionData.selectionBoxCurrent.y);
+               m_interactionData.selectionBoxCurrentWorld.x, 
+               m_interactionData.selectionBoxCurrentWorld.y);
     
     // 选择点数量
     ImGui::Text("  %s: %zu", 
                loc.get("window.inputContextInfo.selectionPointsCount").c_str(), 
-               m_interactionData.selectionPoints.size());
+               m_interactionData.selectionPointsWorld.size());
     
     ImGui::End();
 }
@@ -653,88 +651,65 @@ InteractionData& InputContext::getInteractionData() {
 
 // 更新输入上下文
 void InputContext::onUpdate() {
-    // 更新窗口选择任务
-    if (m_windowSelectionTask) {
-        m_windowSelectionTask->onUpdate();
-        if (m_windowSelectionTask->isCompleted()) {
-            m_windowSelectionTask.reset();
-        }
-    }
-    
-    // 更新套索选择任务
-    if (m_lassoSelectionTask) {
-        m_lassoSelectionTask->onUpdate();
-        if (m_lassoSelectionTask->isCompleted()) {
-            m_lassoSelectionTask.reset();
-        }
-    }
-    
-    // 更新多边形选择任务
-    if (m_polygonSelectionTask) {
-        m_polygonSelectionTask->onUpdate();
-        if (m_polygonSelectionTask->isCompleted()) {
-            m_polygonSelectionTask.reset();
-        }
-    }
-    
-    // 更新栏选任务
-    if (m_fenceSelectionTask) {
-        m_fenceSelectionTask->onUpdate();
-        if (m_fenceSelectionTask->isCompleted()) {
-            m_fenceSelectionTask.reset();
+    // 更新选择任务
+    if (m_selectionTask) {
+        m_selectionTask->onUpdate();
+        if (m_selectionTask->isCompleted()) {
+            // 选择任务完成，处理选择结果
+            std::vector<void*> selectedEntities;
+            // 实际的实体选择逻辑需要在后续实现
+            // 根据Shift状态决定是加选还是减选
+            setSelectedEntities(selectedEntities);
+            
+            // 重置选择任务
+            m_selectionTask->reset();
         }
     }
 }
 
 // 激活选择任务
 void InputContext::activateSelectionTask(SelectionMode mode) {
-    // 根据选择模式激活对应的任务
-    switch (mode) {
-        case SelectionMode::kWindow:
-        case SelectionMode::kCrossing:
-            m_windowSelectionTask = std::make_unique<WindowSelectionTask>(&m_interactionData);
-            m_activeTask.reset();
-            break;
-            
-        case SelectionMode::kWindowLasso:
-        case SelectionMode::kCrossingLasso:
-            m_lassoSelectionTask = std::make_unique<LassoSelectionTask>(&m_interactionData);
-            m_activeTask.reset();
-            break;
-            
-        case SelectionMode::kWindowPolygon:
-        case SelectionMode::kCrossingPolygon:
-            m_polygonSelectionTask = std::make_unique<PolygonSelectionTask>(&m_interactionData);
-            m_activeTask.reset();
-            break;
-            
-        case SelectionMode::kFence:
-            m_fenceSelectionTask = std::make_unique<FenceSelectionTask>(&m_interactionData);
-            m_activeTask.reset();
-            break;
-            
-        default:
-            break;
+    // 重置选择任务
+    if (!m_selectionTask) {
+        m_selectionTask = std::make_unique<SelectionTask>();
+    } else {
+        m_selectionTask->reset();
     }
+    
+    // 开始选择任务，传递命令执行状态
+    m_selectionTask->start(isInCommandExecution());
+    
+    // 设置选择模式
+    m_interactionData.selectionMode = mode;
+    m_interactionData.isSelectionActive = true;
+    
+    // 重置活动任务
+    m_activeTask.reset();
 }
 
 
 
 // 处理回车/空格事件
 void InputContext::handleEnterSpace() {
-    // 检查是否有活动的栏选任务
-    if (m_fenceSelectionTask) {
-        m_fenceSelectionTask->onEnterSpace();
-    } else if (m_polygonSelectionTask) {
-        m_polygonSelectionTask->onEnterSpace();
+    // 检查是否有活动的选择任务
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
+        m_selectionTask->handleEnterSpace();
     }
 }
 
 // 处理Escape事件
 void InputContext::handleEscape() {
-    // 检查是否有活动的栏选任务
-    if (m_fenceSelectionTask) {
-        m_fenceSelectionTask->onEscape();
+    // 检查是否有活动的选择任务
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
+        m_selectionTask->handleEscape();
+        m_interactionData.isSelectionActive = false;
+    }
+}
+
+// 处理选择任务的关键字输入
+void InputContext::handleSelectionKeyword(const std::string& keyword) {
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
+        m_selectionTask->handleKeyword(keyword);
     }
 }
 
