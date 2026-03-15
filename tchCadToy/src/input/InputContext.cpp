@@ -337,6 +337,14 @@ void InputContext::handleEnterSpace(const std::string& input) {
     }
 }
 
+// 处理回车/空格事件
+void InputContext::handleEnterSpace() {
+    // 检查是否有活动的选择任务
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
+        m_selectionTask->handleEnterSpace();
+    }
+}
+
 // 处理Escape输入
 void InputContext::handleEscape(const std::string& input) {
     if (m_inCommandExecution) {
@@ -351,6 +359,15 @@ void InputContext::handleEscape(const std::string& input) {
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandLine.prompt.command") + " " + input + loc.get("commandLine.prompt.cancel");
         cmdLinePrint(promptStr);
+    }
+}
+
+// 处理Escape事件
+void InputContext::handleEscape() {
+    // 检查是否有活动的选择任务
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
+        m_selectionTask->handleEscape();
+        m_interactionData.isSelectionActive = false;
     }
 }
 
@@ -670,7 +687,7 @@ void InputContext::onUpdate() {
 // 激活选择任务
 void InputContext::activateSelectionTask(SelectionMode mode) {
     // 重置选择任务
-    if (!m_selectionTask) {
+    if (m_selectionTask == nullptr) {
         m_selectionTask = std::make_unique<SelectionTask>();
     } else {
         m_selectionTask->reset();
@@ -685,25 +702,6 @@ void InputContext::activateSelectionTask(SelectionMode mode) {
     
     // 重置活动任务
     m_activeTask.reset();
-}
-
-
-
-// 处理回车/空格事件
-void InputContext::handleEnterSpace() {
-    // 检查是否有活动的选择任务
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->handleEnterSpace();
-    }
-}
-
-// 处理Escape事件
-void InputContext::handleEscape() {
-    // 检查是否有活动的选择任务
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->handleEscape();
-        m_interactionData.isSelectionActive = false;
-    }
 }
 
 // 处理选择任务的关键字输入

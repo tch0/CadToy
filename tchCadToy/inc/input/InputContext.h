@@ -161,14 +161,11 @@ public:
     SpecialKeyEventType getLastSpecialKeyEvent() const;
     void clearSpecialKeyEvent();
     
-    // 输入管理
-    void setInput(const std::string& input);
-    const std::string& getInput() const;
-
-    // 处理Enter/Space输入
-    void handleEnterSpace(const std::string& input);
-    // 处理Escape输入
-    void handleEscape(const std::string& input);
+    // TODO: 现在两个重载处理不同的事情，当事件来临时两个版本函数都会被调用，后续看是否需要统一起来
+    void handleEnterSpace(const std::string& input);        // 处理Enter/Space输入
+    void handleEnterSpace();                                // 处理Enter/Space事件
+    void handleEscape(const std::string& input);            // 处理Escape输入
+    void handleEscape();                                    // 处理Escape事件
     
     // 等待点输入（带基点）
     void waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords = {});
@@ -213,12 +210,6 @@ public:
     
     // 处理选择任务的关键字输入
     void handleSelectionKeyword(const std::string& keyword);
-    
-    // 处理回车/空格事件
-    void handleEnterSpace();
-    
-    // 处理Escape事件
-    void handleEscape();
 };
 
 } // namespace tch

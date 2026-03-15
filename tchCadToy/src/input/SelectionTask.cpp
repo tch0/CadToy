@@ -307,16 +307,17 @@ void SelectionTask::handleEnterSpace() {
         // 单选模式下按回车或空格键结束选择
         finishSelection();
     } else if (m_state == SelectionState::kLassoSelecting) {
-        // 循环切换套索模式
+        // 套索模式Enter/Space将在交叉套索、窗口套索、栏选套索之间切换
         switch (m_lassoModeCycle) {
             case LassoModeCycle::kCrossing:
                 m_lassoModeCycle = LassoModeCycle::kWindow;
                 m_selectionMode = SelectionMode::kWindowLasso;
                 break;
             case LassoModeCycle::kWindow:
+                // 这里选择模式切换为栏选(Fence)，但是选择状态需要保持为套索，因为套索当中的栏选是按着鼠标左键交互的
                 m_lassoModeCycle = LassoModeCycle::kFence;
                 m_selectionMode = SelectionMode::kFence;
-                m_state = SelectionState::kFenceSelecting;
+                m_state = SelectionState::kLassoSelecting;
                 break;
         case LassoModeCycle::kFence:
             m_lassoModeCycle = LassoModeCycle::kCrossing;

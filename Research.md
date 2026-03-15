@@ -88,6 +88,9 @@ Todo：
     - 用方法2，依次调用每个文档的关闭操作就好了，有一个不关闭就留下来
     - 待仔细研究
 
+细节TODO：
+- InputContext的Enter/Space/Esc统一处理，命令交互与选择交互有机结合起来
+
 其他待实现细节研究：
 - 选择点时，按住Shift强制进入正交模式，会有marker标记
 - 第三方R树（或者自己实现）实现空间索引（如Boost.Geometry 或 libspatialindex），boost::geometry::index::rtree
@@ -98,6 +101,7 @@ Todo：
 小细节：
 - 将视口矩阵的设置提取到 beginRender() 中，或者在 calculateLayoutAndUpdateViewport() 时缓存一个专用的 OverlayProjectionMatrix，绘制光标和 UI 标记时直接 glLoadMatrix 即可，避免每帧多次重算投影。
 - 优先级特殊情况：框选模式下，erase命令框里面有实体会被选中时，优先显示erase标记，没有实体才显示框选标记
+
 
 ## BUG
 

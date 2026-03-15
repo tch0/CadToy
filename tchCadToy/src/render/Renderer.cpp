@@ -305,6 +305,7 @@ void Renderer::drawSelection() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
+    // TODO: 当前逻辑只能绘制凸多边形，套索和多边形是凹多边形的情况下覆盖绘制不准确，后续需要修复
     switch (interactionData.selectionMode) {
         case SelectionMode::kWindow:
         case SelectionMode::kCrossing:

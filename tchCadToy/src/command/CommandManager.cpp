@@ -56,6 +56,8 @@ void CommandManager::cancelCurrentCommand()
         {
             InputContext::getInstance().handleEscape(input);
         }
+        // TODO: 目前两个重载逻辑分离，所以都需要调用
+        InputContext::getInstance().handleEscape();
     }
     // 有命令正在执行且没有执行完毕
     else
@@ -64,6 +66,7 @@ void CommandManager::cancelCurrentCommand()
         std::string input = Renderer::getAndClearCommandBuffer();
         // 通过调用handleEscape模拟Esc的行为来取消，以正确处理提示
         InputContext::getInstance().handleEscape(input);
+        InputContext::getInstance().handleEscape();
         // 通过至多三次取消来取消当前执行的命令，一般来说无论什么命令处于哪个分支，三次取消都应该能够结束了
         for (int i = 0; i < 3; i++)
         {
@@ -77,6 +80,7 @@ void CommandManager::cancelCurrentCommand()
             if (!m_activeCommand->isCompleted())
             {
                 InputContext::getInstance().handleEscape("");
+                InputContext::getInstance().handleEscape();
             }
         }
         // 如果取消三次还没有结束，那么就再取消三次，如果六次取消还未结束，那么命令流程大概率出BUG了，就强制结束命令(直接析构掉命令对象)
