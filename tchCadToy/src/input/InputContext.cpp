@@ -55,13 +55,24 @@ bool InputContext::isInCommandExecution() const {
     return m_inCommandExecution;
 }
 
+// 是否处于命令执行中或者任何任务(例如选择交互、夹点编辑交互)执行中
+bool InputContext::isAnyCommandOrTaskRunning() const
+{
+    return m_inCommandExecution ||
+        (m_selectionTask && m_selectionTask->isSelecting());
+}
+
 // 提示信息相关
-void InputContext::setPrompt(const std::string& prompt) {
+void InputContext::setPrompt(const std::string& prompt){
     m_prompt = prompt;
 }
 
 const std::string& InputContext::getPrompt() const {
     return m_prompt;
+}
+
+void InputContext::setErrorPrompt(const std::string& errorPrompt) {
+    m_errorPrompt = errorPrompt;
 }
 
 // 输入状态管理
@@ -112,6 +123,7 @@ bool InputContext::getPickedPoint(glm::dvec3& point) {
 
 // 处理鼠标左键点击事件
 void InputContext::handleLeftMouseClick() {
+    // TODO: 优化统一这里的逻辑，处理命令中的选择
     // 检查是否有活动命令
     if (m_inCommandExecution) {
         // 从InputHandler获取光标位置
@@ -124,18 +136,26 @@ void InputContext::handleLeftMouseClick() {
             m_currentStatus = InputStatus::kPointInput;
             cmdLinePrint(m_prompt);
         }
-        // TODO: 命令中的选择
-    } else {
-        // 检查是否有活动的选择任务
+    }
+    else {
+        // 检查是否有活动的选择任务，处理选择过程中的点击
+        // TODO: 和命令处理一致，统一起来
         if (m_selectionTask && m_selectionTask->isSelecting()) {
-            m_selectionTask->handleLeftMouseClick();
-        } else {
-            // 没有活动任务，默认激活窗口选择任务
-            activateSelectionTask(SelectionMode::kWindow);
-            if (m_selectionTask) {
-                m_selectionTask->start();
-                m_selectionTask->handleLeftMouseClick();
+            // 正在选择
+            // 从InputHandler获取光标位置
+            glm::vec2 screenPos = InputHandler::getCursorPosition();
+            // 将屏幕坐标转换为世界坐标
+            glm::dvec3 worldPos = Renderer::getTransformManager().screenToWorld(screenPos);
+            // 设置到输入上下文
+            if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
+                m_pickedPoint = worldPos;
+                m_currentStatus = InputStatus::kPointInput;
+                cmdLinePrint(m_prompt);
             }
+        }
+        else {
+            // 没有活动任务也不在命令中，激活窗口选择任务
+            activateSelectionTask(SelectionMode::kWindow);
         }
     }
 }
@@ -172,7 +192,8 @@ bool InputContext::getNumber(double& value) {
         value = static_cast<double>(m_inputInteger);
         m_currentStatus = InputStatus::kNone;
         return true;
-    } else if (m_currentStatus == InputStatus::kFloatInput) {
+    }
+    else if (m_currentStatus == InputStatus::kFloatInput) {
         value = m_inputFloat;
         m_currentStatus = InputStatus::kNone;
         return true;
@@ -203,7 +224,6 @@ bool InputContext::getKeyword(std::string& keyword) {
     if (m_currentStatus == InputStatus::kKeywordInput) {
         keyword = m_inputKeyword;
         m_currentStatus = InputStatus::kNone;
-        cmdLinePrint(m_prompt);
         return true;
     }
     return false;
@@ -222,7 +242,6 @@ bool InputContext::getSelectedEntities(std::vector<void*>& entities) {
     if (m_currentStatus == InputStatus::kEntitySelection) {
         entities = m_selectedEntities;
         m_currentStatus = InputStatus::kNone;
-        cmdLinePrint(m_prompt);
         return true;
     }
     return false;
@@ -238,19 +257,22 @@ void InputContext::parseInput(const std::string& input) {
         // 所有输入都允许Enter/Space
         m_currentStatus = InputStatus::kEnterInput;
         // 更新命令提示
-        cmdLinePrint(m_prompt);
+        if (!m_prompt.empty()) {
+            cmdLinePrint(m_prompt);
+        }
         return;
     }
     
+    std::string inputPrompt = m_prompt + " " + input;
     // 检查是否是关键字（如果允许关键字输入）
     if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kKeyword) != m_allowedTypes.end()) {
         for (const auto& option : m_keywordOptions) {
             // 忽略大小写比较
             if (StringUtils::equalsIgnoreCase(input, option)) {
-                m_inputKeyword = input;
+                m_inputKeyword = StringUtils::toUpperCase(input);
                 m_currentStatus = InputStatus::kKeywordInput;
                 // 更新命令提示
-                cmdLinePrint(m_prompt);
+                cmdLinePrint(inputPrompt);
                 return;
             }
         }
@@ -265,7 +287,7 @@ void InputContext::parseInput(const std::string& input) {
                 m_inputInteger = intValue;
                 m_currentStatus = InputStatus::kIntegerInput;
                 // 更新命令提示
-                cmdLinePrint(m_prompt);
+                cmdLinePrint(inputPrompt);
                 return;
             }
         } catch (...) {
@@ -282,7 +304,7 @@ void InputContext::parseInput(const std::string& input) {
                 m_inputFloat = floatValue;
                 m_currentStatus = InputStatus::kFloatInput;
                 // 更新命令提示
-                cmdLinePrint(m_prompt);
+                cmdLinePrint(inputPrompt);
                 return;
             }
         } catch (...) {
@@ -295,13 +317,12 @@ void InputContext::parseInput(const std::string& input) {
         m_inputString = input;
         m_currentStatus = InputStatus::kStringInput;
         // 更新命令提示
-        cmdLinePrint(m_prompt);
+        cmdLinePrint(inputPrompt);
         return;
     }
     
     // 没有匹配的类型，输出错误提示
     // 输出提示字符串+输入字符串
-    std::string inputPrompt = m_prompt + " " + input;
     cmdLinePrint(inputPrompt);
     
     // 输出错误提示
@@ -320,10 +341,12 @@ void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
 
 // 处理Enter/Space输入
 void InputContext::handleEnterSpace(const std::string& input) {
-    if (m_inCommandExecution) {
-        // 命令执行中，将输入作为命令参数解析
+    // 选择或者命令执行中，解析输入
+    if ((m_selectionTask && m_selectionTask->isSelecting()) ||
+        m_inCommandExecution) {
         parseInput(input);
-    } else {
+    }
+    else {
         // 命令执行外，作为新命令处理
         // 添加到命令历史
         auto& loc = LocalizationManager::getInstance();
@@ -337,37 +360,22 @@ void InputContext::handleEnterSpace(const std::string& input) {
     }
 }
 
-// 处理回车/空格事件
-void InputContext::handleEnterSpace() {
-    // 检查是否有活动的选择任务
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->handleEnterSpace();
-    }
-}
-
 // 处理Escape输入
 void InputContext::handleEscape(const std::string& input) {
-    if (m_inCommandExecution) {
-        // 命令执行中，设置取消状态
+    if ((m_selectionTask && m_selectionTask->isSelecting()) ||
+        m_inCommandExecution) {
+        // 选择或者命令执行中，设置取消状态
         m_currentStatus = InputStatus::kCanceled;
         // 更新命令提示，添加取消标记和用户输入
         auto& loc = LocalizationManager::getInstance();
-        std::string cancelPrompt = m_prompt + " " + input + loc.get("commandLine.prompt.cancel");
+        std::string cancelPrompt = (m_prompt.empty() ? "" : m_prompt + " ") + input + loc.get("commandLine.prompt.cancel");
         cmdLinePrint(cancelPrompt);
-    } else {
+    }
+    else {
         // 没有命令执行时按下Esc，键入的字符串也会被输出到命令历史
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandLine.prompt.command") + " " + input + loc.get("commandLine.prompt.cancel");
         cmdLinePrint(promptStr);
-    }
-}
-
-// 处理Escape事件
-void InputContext::handleEscape() {
-    // 检查是否有活动的选择任务
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->handleEscape();
-        m_interactionData.isSelectionActive = false;
     }
 }
 
@@ -390,7 +398,8 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kPoint, InputType::kKeyword});
         setKeywordOptions(keywords);
-    } else {
+    }
+    else {
         setAllowedTypes({InputType::kPoint});
     }
     // 设置错误提示 - 从本地化资源加载
@@ -469,7 +478,8 @@ void InputContext::waitForEntity(const std::string& prompt, const std::vector<vo
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kEntitySelection, InputType::kKeyword});
         setKeywordOptions(keywords);
-    } else {
+    }
+    else {
         setAllowedTypes({InputType::kEntitySelection});
     }
     // 设置错误提示 - 从本地化资源加载
@@ -524,7 +534,8 @@ void InputContext::drawInfoWindow() {
         ImGui::Text("%s: %s", 
                    loc.get("window.inputContextInfo.currentStatus").c_str(), 
                    statusIt->second.c_str());
-    } else {
+    }
+    else {
         ImGui::Text("%s: %s(%d)", 
                    loc.get("window.inputContextInfo.currentStatus").c_str(), 
                    loc.get("window.inputContextInfo.unknown").c_str(),
@@ -539,7 +550,8 @@ void InputContext::drawInfoWindow() {
         auto it = inputTypeToString.find(m_allowedTypes[i]);
         if (it != inputTypeToString.end()) {
             ImGui::Text("  [%zu] %s", i, it->second.c_str());
-        } else {
+        }
+        else {
             ImGui::Text("  [%zu] Unknown(%d)", i, static_cast<int>(m_allowedTypes[i]));
         }
     }
@@ -580,7 +592,8 @@ void InputContext::drawInfoWindow() {
         ImGui::Text("  %s: %s", 
                    loc.get("window.inputContextInfo.cursorMode").c_str(), 
                    cursorModeIt->second.c_str());
-    } else {
+    }
+    else {
         ImGui::Text("  %s: Unknown(%d)", 
                    loc.get("window.inputContextInfo.cursorMode").c_str(), 
                    static_cast<int>(m_interactionData.cursorMode));
@@ -606,7 +619,8 @@ void InputContext::drawInfoWindow() {
         ImGui::Text("  %s: %s", 
                    loc.get("window.inputContextInfo.cursorMarker").c_str(), 
                    cursorMarkerIt->second.c_str());
-    } else {
+    }
+    else {
         ImGui::Text("  %s: Unknown(%d)", 
                    loc.get("window.inputContextInfo.cursorMarker").c_str(), 
                    static_cast<int>(m_interactionData.cursorMarker));
@@ -630,7 +644,8 @@ void InputContext::drawInfoWindow() {
         ImGui::Text("  %s: %s", 
                    loc.get("window.inputContextInfo.selectionMode").c_str(), 
                    selectionModeIt->second.c_str());
-    } else {
+    }
+    else {
         ImGui::Text("  %s: Unknown(%d)", 
                    loc.get("window.inputContextInfo.selectionMode").c_str(), 
                    static_cast<int>(m_interactionData.selectionMode));
@@ -643,15 +658,15 @@ void InputContext::drawInfoWindow() {
     
     // 选择框起点
     ImGui::Text("  %s: (%.2f, %.2f)", 
-               loc.get("window.inputContextInfo.selectionBoxStart").c_str(), 
-               m_interactionData.selectionBoxStartWorld.x, 
-               m_interactionData.selectionBoxStartWorld.y);
+               loc.get("window.inputContextInfo.selectionInitialPoint").c_str(), 
+               m_interactionData.selectionInitialPointWorld.x, 
+               m_interactionData.selectionInitialPointWorld.y);
     
     // 选择框当前点
     ImGui::Text("  %s: (%.2f, %.2f)", 
-               loc.get("window.inputContextInfo.selectionBoxCurrent").c_str(), 
-               m_interactionData.selectionBoxCurrentWorld.x, 
-               m_interactionData.selectionBoxCurrentWorld.y);
+               loc.get("window.inputContextInfo.selectionPreviewPoint").c_str(), 
+               m_interactionData.selectionPreviewPointWorld.x, 
+               m_interactionData.selectionPreviewPointWorld.y);
     
     // 选择点数量
     ImGui::Text("  %s: %zu", 
@@ -669,14 +684,20 @@ InteractionData& InputContext::getInteractionData() {
 // 更新输入上下文
 void InputContext::onUpdate() {
     // 更新选择任务
-    if (m_selectionTask) {
+    if (m_selectionTask && m_selectionTask->isSelecting()) {
         m_selectionTask->onUpdate();
         if (m_selectionTask->isCompleted()) {
-            // 选择任务完成，处理选择结果
+            // TODO: 选择任务完成，处理选择结果
             std::vector<void*> selectedEntities;
             // 实际的实体选择逻辑需要在后续实现
             // 根据Shift状态决定是加选还是减选
             setSelectedEntities(selectedEntities);
+            
+            // 如果在命令执行中则需要获取选择返回的状态，以提供给命令来处理
+            if (m_inCommandExecution)
+            {
+                m_currentStatus = m_selectionTask->getInputStatus();
+            }
             
             // 重置选择任务
             m_selectionTask->reset();
@@ -689,12 +710,13 @@ void InputContext::activateSelectionTask(SelectionMode mode) {
     // 重置选择任务
     if (m_selectionTask == nullptr) {
         m_selectionTask = std::make_unique<SelectionTask>();
-    } else {
+    }
+    else {
         m_selectionTask->reset();
     }
     
     // 开始选择任务，传递命令执行状态
-    m_selectionTask->start(isInCommandExecution());
+    m_selectionTask->start(isInCommandExecution(), mode != SelectionMode::kWindow);
     
     // 设置选择模式
     m_interactionData.selectionMode = mode;
@@ -702,13 +724,6 @@ void InputContext::activateSelectionTask(SelectionMode mode) {
     
     // 重置活动任务
     m_activeTask.reset();
-}
-
-// 处理选择任务的关键字输入
-void InputContext::handleSelectionKeyword(const std::string& keyword) {
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->handleKeyword(keyword);
-    }
 }
 
 } // namespace tch

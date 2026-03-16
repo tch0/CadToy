@@ -48,11 +48,23 @@ void CommandManager::executeCommand(const std::string& command) {
 // 取消当前执行的命令，用于比如文档切换、关闭文档、快捷键命令等需要先取消命令的场景
 void CommandManager::cancelCurrentCommand()
 {
-    // 没有命令正在执行、或者有命令正在执行但已经执行完毕
-    if (m_activeCommand == nullptr || (m_activeCommand != nullptr && m_activeCommand->isCompleted())) {
+    InputContext& inputContext = InputContext::getInstance();
+    // 如果有任务正在执行，先取消任务(比如选择任务)，通常来说一次取消已经足够
+    if (inputContext.isAnyCommandOrTaskRunning())
+    {
+        std::string input = Renderer::getAndClearCommandBuffer();
+        inputContext.handleEscape(input);
+    }
+    
+    // 没有任何命令在执行、或者有命令但已经执行完毕
+    if (m_activeCommand == nullptr || (m_activeCommand != nullptr && m_activeCommand->isCompleted()))
+    {
         m_activeCommand = nullptr;
         std::string input = Renderer::getAndClearCommandBuffer();
-        InputContext::getInstance().handleEscape(input);
+        if (!input.empty())
+        {
+            inputContext.handleEscape(input);
+        }
     }
     // 有命令正在执行且没有执行完毕
     else
@@ -60,7 +72,7 @@ void CommandManager::cancelCurrentCommand()
         // 和Esc的行为一样，需要清空缓冲区
         std::string input = Renderer::getAndClearCommandBuffer();
         // 通过调用handleEscape模拟Esc的行为来取消，以正确处理提示
-        InputContext::getInstance().handleEscape(input);
+        inputContext.handleEscape(input);
         // 通过至多三次取消来取消当前执行的命令，一般来说无论什么命令处于哪个分支，三次取消都应该能够结束了
         for (int i = 0; i < 3; i++)
         {
@@ -73,7 +85,7 @@ void CommandManager::cancelCurrentCommand()
             m_activeCommand->onUpdate();
             if (!m_activeCommand->isCompleted())
             {
-                InputContext::getInstance().handleEscape("");
+                inputContext.handleEscape("");
             }
         }
         // 如果取消三次还没有结束，那么就再取消三次，如果六次取消还未结束，那么命令流程大概率出BUG了，就强制结束命令(直接析构掉命令对象)
@@ -83,7 +95,7 @@ void CommandManager::cancelCurrentCommand()
                 "Please check if the command logic is correct and the command flow is necessary.");
             for (int i = 0; i < 3 && !m_activeCommand->isCompleted(); i++)
             {
-                InputContext::getInstance().handleEscape("");
+                inputContext.handleEscape("");
                 // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
                 m_activeCommand->onUpdate();
                 m_activeCommand->onUpdate();
@@ -101,10 +113,10 @@ void CommandManager::cancelCurrentCommand()
         m_activeCommand = nullptr;
         
         // 重置输入上下文为无命令执行状态
-        InputContext::getInstance().setInCommandExecution(false);
+        inputContext.setInCommandExecution(false);
         
         // 最后再输出一个空行
-        InputContext::getInstance().handleEnterSpace("");
+        inputContext.handleEnterSpace("");
     }
 }
 

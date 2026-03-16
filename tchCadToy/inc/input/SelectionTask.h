@@ -12,37 +12,35 @@ class SelectionTask : public Task {
 public:
     SelectionTask();
     ~SelectionTask() override = default;
-    void onUpdate() override;
-    bool isCompleted() const override;
-    void reset() override;
+    
     // 开始选择任务
     void start(bool isCommandActive = false, bool isSingleSelect = false);
-    // 处理鼠标左键点击
-    void handleLeftMouseClick();
-    // 处理键盘输入
-    void handleKeyword(const std::string& keyword);
-    // 处理回车和空格键
-    void handleEnterSpace();
-    // 处理Escape键
-    void handleEscape();
-    // 获取选择模式
-    SelectionMode getSelectionMode() const;
-    // 获取选择点
-    const std::vector<glm::dvec3>& getSelectionPoints() const;
+    // 更新状态机
+    void onUpdate() override;
+    // 选择任务已完成
+    bool isCompleted() const override;
+    // 重置选择任务状态
+    void reset() override;
     // 是否正在选择
     bool isSelecting() const;
+    // 获取输入状态，返回给InputContext处理
+    InputStatus getInputStatus() const;
     
 private:
     // 选择状态
     enum class SelectionState {
-        kIdle,           // 空闲状态
-        kInitialPoint,   // 等待初始点
-        kSingleSelecting, // 单选模式
-        kBoxSelecting,   // 框选模式
-        kLassoSelecting, // 套索选择
-        kPolygonSelecting, // 多边形选择
-        kFenceSelecting,   // 栏选
-        kCompleted       // 完成
+        kIdle,                          // 空闲状态
+        kSingleSelectionEntry,          // 单选模式入口
+        kSingleSelectionQuery,          // 单选模式输入查询
+        kBoxSelectionEntry,             // 框选模式入口
+        kBoxLassoSelectionChoice,       // 框选或套索选择决策
+        kBoxSelectionQuery,             // 框选模式输入查询
+        kLassoSelection,                // 套索选择
+        kFenceSelectionEntry,           // 栏选模式入口
+        kFenceSelectionQuery,           // 栏选模式输入查询
+        kPolygonSelectionEntry,         // 多边形选择入口
+        kPolygonSelectionQuery,         // 多边形选择输入查询
+        kCompleted                      // 完成
     };
     
     // 套索模式循环顺序
@@ -53,27 +51,26 @@ private:
     };
     
     // 成员变量
-    SelectionState m_state;               // 当前选择状态
-    SelectionMode m_selectionMode;         // 当前选择模式
+    SelectionState m_state;                     // 当前选择状态
+    SelectionMode m_selectionMode;              // 当前选择模式
     std::vector<glm::dvec3> m_selectionPointsWorld; // 选择点集合（世界坐标）
     glm::dvec3 m_initialPointWorld;             // 初始点（世界坐标）
     glm::dvec3 m_previewPointWorld;             // 预览点（世界坐标）
-    glm::vec2 m_initialPointScreen;            // 初始点（屏幕坐标）
-    glm::vec2 m_previewPointScreen;            // 预览点（屏幕坐标）
-    glm::vec2 m_lastLassoPointScreen;          // 上一次套索的最后一点（屏幕坐标）
-    bool m_completed;                     // 任务是否完成
-    LassoModeCycle m_lassoModeCycle;      // 套索模式循环状态
-    std::string m_currentPrompt;           // 当前提示信息
-    bool m_isCommandActive;               // 是否在命令中执行
+    glm::vec2 m_initialPointScreen;             // 初始点（屏幕坐标）
+    glm::vec2 m_previewPointScreen;             // 预览点（屏幕坐标）
+    glm::vec2 m_lastLassoPointScreen;           // 上一次套索的最后一点（屏幕坐标）
+    bool m_completed;                           // 任务是否完成
+    LassoModeCycle m_lassoModeCycle;            // 套索模式循环状态
+    std::string m_currentPrompt;                // 当前提示信息
+    bool m_isCommandActive;                     // 是否在命令中执行
+    InputStatus m_inputStatus;                  // 保存输入状态
     
     // 内部方法
-    void handleBoxSelection();            // 处理框选
-    void handleLassoSelection();          // 处理套索选择
-    void handlePolygonSelection();         // 处理多边形选择
-    void handleFenceSelection();           // 处理栏选
-    void switchToMode(SelectionMode mode); // 切换到指定选择模式
-    void finishSelection();                // 结束选择
-    void updatePrompt();                   // 更新提示信息
+    void updateBoxSelection();          // 更新框选预览数据
+    void handleBoxSelection();          // 框选分支处理
+    void updateLassoSelection();        // 处理套索选择
+    void finishSelection();             // 结束选择
+    void cancelSelection();             // 取消选择
 };
 
 } // namespace tch

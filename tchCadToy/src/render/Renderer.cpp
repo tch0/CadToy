@@ -282,6 +282,8 @@ void Renderer::drawSelection() {
     for (const auto& point : interactionData.selectionPointsWorld) {
         interactionData.selectionPointsScreen.push_back(getTransformManager().worldToScreen(point));
     }
+    // 预览点不在列表中，需要添加
+    interactionData.selectionPointsScreen.push_back(getTransformManager().worldToScreen(interactionData.selectionPreviewPointWorld));
     
     // 保存当前矩阵状态
     glMatrixMode(GL_PROJECTION);
@@ -352,8 +354,8 @@ void Renderer::drawWindowSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 获取选择框起点和当前点（世界坐标）
-    glm::dvec3 startWorld = interactionData.selectionBoxStartWorld;
-    glm::dvec3 currentWorld = interactionData.selectionBoxCurrentWorld;
+    glm::dvec3 startWorld = interactionData.selectionInitialPointWorld;
+    glm::dvec3 currentWorld = interactionData.selectionPreviewPointWorld;
     
     // 转换为屏幕坐标
     glm::vec2 start = getTransformManager().worldToScreen(startWorld);
@@ -369,7 +371,8 @@ void Renderer::drawWindowSelection() {
     if (interactionData.selectionMode == SelectionMode::kWindow) {
         // 窗口选择：蓝色填充
         glColor4fv(s_windowSelectionColor);
-    } else if (interactionData.selectionMode == SelectionMode::kCrossing) {
+    }
+    else if (interactionData.selectionMode == SelectionMode::kCrossing) {
         // 交叉选择：绿色填充
         glColor4fv(s_crossingSelectionColor);
     }
@@ -387,7 +390,8 @@ void Renderer::drawWindowSelection() {
         // 窗口选择：实线
         glColor3f(1.0f, 1.0f, 1.0f);
         glDisable(GL_LINE_STIPPLE);
-    } else if (interactionData.selectionMode == SelectionMode::kCrossing) {
+    }
+    else if (interactionData.selectionMode == SelectionMode::kCrossing) {
         // 交叉选择：虚线
         glColor3f(1.0f, 1.0f, 1.0f);
         glEnable(GL_LINE_STIPPLE);
@@ -430,7 +434,8 @@ void Renderer::drawLassoSelection() {
     if (interactionData.selectionMode == SelectionMode::kWindowLasso) {
         // 窗口选择：蓝色填充
         glColor4fv(s_windowSelectionColor);
-    } else if (interactionData.selectionMode == SelectionMode::kCrossingLasso) {
+    }
+    else if (interactionData.selectionMode == SelectionMode::kCrossingLasso) {
         // 交叉选择：绿色填充
         glColor4fv(s_crossingSelectionColor);
     }
@@ -447,7 +452,8 @@ void Renderer::drawLassoSelection() {
         // 交叉选择：虚线
         glEnable(GL_LINE_STIPPLE);
         glLineStipple(1, 0xCCCC); // 2白2透明的虚线模式
-    } else {
+    }
+    else {
         // 窗口选择：实线
         glDisable(GL_LINE_STIPPLE);
     }
@@ -473,7 +479,7 @@ void Renderer::drawPolygonSelection() {
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 检查是否有多边形点
-    if (interactionData.selectionPointsScreen.size() < 3) {
+    if (interactionData.selectionPointsScreen.size() < 2) {
         return;
     }
     
@@ -492,7 +498,8 @@ void Renderer::drawPolygonSelection() {
     if (interactionData.selectionMode == SelectionMode::kWindowPolygon) {
         // 窗口选择：蓝色填充
         glColor4fv(s_windowSelectionColor);
-    } else if (interactionData.selectionMode == SelectionMode::kCrossingPolygon) {
+    }
+    else if (interactionData.selectionMode == SelectionMode::kCrossingPolygon) {
         // 交叉选择：绿色填充
         glColor4fv(s_crossingSelectionColor);
     }
@@ -509,7 +516,8 @@ void Renderer::drawPolygonSelection() {
         // 交叉选择：虚线
         glEnable(GL_LINE_STIPPLE);
         glLineStipple(1, 0xCCCC); // 2白2透明的虚线模式
-    } else {
+    }
+    else {
         // 窗口选择：实线
         glDisable(GL_LINE_STIPPLE);
     }
@@ -873,7 +881,8 @@ void Renderer::drawSelectMarker(const glm::vec2& pos, bool isAdd) {
     // 设置颜色
     if (isAdd) {
         glColor3f(0.0f, 1.0f, 0.0f); // 绿色
-    } else {
+    }
+    else {
         glColor3f(1.0f, 0.0f, 0.0f); // 红色
     }
     
@@ -1299,7 +1308,8 @@ void Renderer::drawGrid() {
         // 设置新的栅格大小
         mainGridSize = testSize;
         subGridSize = mainGridSize / 5.0;
-    } else if (gridScreenSize > 250.0) {
+    }
+    else if (gridScreenSize > 250.0) {
         // 当前栅格太大，需要减少栅格级别
         double testSize = baseGridSize;
         double testScreenSize = gridScreenSize;
@@ -1311,7 +1321,8 @@ void Renderer::drawGrid() {
         // 设置新的栅格大小
         mainGridSize = testSize;
         subGridSize = mainGridSize / 5.0;
-    } else {
+    }
+    else {
         // 栅格大小在合理范围内
         mainGridSize = baseGridSize;
         subGridSize = mainGridSize / 5.0;
@@ -2020,7 +2031,8 @@ void Renderer::drawRenderingInfoWindow() {
     // 根据缩放因子大小决定输出格式
     if (cameraScale < 0.01 || cameraScale >= 1e8) {
         ImGui::Text("  %s: %.8e", loc.get("window.renderingInfo.camera.zoom").c_str(), cameraScale);
-    } else {
+    }
+    else {
         ImGui::Text("  %s: %.8f", loc.get("window.renderingInfo.camera.zoom").c_str(), cameraScale);
     }
     ImGui::Text("  %s: (%.2f, %.2f, %.2f) degrees", loc.get("window.renderingInfo.camera.rotation").c_str(), cameraRot.x, cameraRot.y, cameraRot.z);
@@ -2158,14 +2170,16 @@ void Renderer::drawCommandBar() {
         
         // 显示命令提示信息
         auto& inputContext = InputContext::getInstance();
-        if (inputContext.isInCommandExecution()) {
+        if (inputContext.isAnyCommandOrTaskRunning()) {
             const std::string& prompt = inputContext.getPrompt();
             if (!prompt.empty()) {
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
-            } else {
+            }
+            else {
                 ImGui::Text(loc.get("commandLine.prompt.command").c_str());
             }
-        } else {
+        }
+        else {
             ImGui::Text(loc.get("commandLine.prompt.command").c_str());
         }
         

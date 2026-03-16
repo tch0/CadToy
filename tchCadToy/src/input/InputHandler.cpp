@@ -207,7 +207,6 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_ENTER) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEnterPressed);
-                InputContext::getInstance().handleEnterSpace();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 
@@ -217,7 +216,6 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_SPACE) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kSpacePressed);
-                InputContext::getInstance().handleEnterSpace();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
@@ -226,7 +224,6 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
             else if (key == GLFW_KEY_ESCAPE) {
                 // 传递事件给InputContext
                 InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEscPressed);
-                InputContext::getInstance().handleEscape();
                 // 通知Renderer将焦点移动到命令输入框
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
@@ -237,7 +234,8 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         if (s_callbacks.contains(InputEventType::KEY_PRESS)) {
             s_callbacks[InputEventType::KEY_PRESS]();
         }
-    } else if (action == GLFW_RELEASE) {
+    }
+    else if (action == GLFW_RELEASE) {
         s_keys[key] = false;
         
         // 触发按键释放回调
@@ -287,7 +285,8 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
         // 将鼠标按钮事件传递给输入上下文处理
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             InputContext::getInstance().handleLeftMouseClick();
-        } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+        }
+        else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             InputContext::getInstance().handleRightMouseClick();
         }
         
@@ -295,7 +294,8 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
         if (s_callbacks.contains(InputEventType::MOUSE_PRESS)) {
             s_callbacks[InputEventType::MOUSE_PRESS]();
         }
-    } else if (action == GLFW_RELEASE) {
+    }
+    else if (action == GLFW_RELEASE) {
         // 当鼠标中键被释放时，重置标志
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
             s_mouseMiddleButtonPressedInViewport = false;
@@ -358,7 +358,8 @@ void InputHandler::handleMouseScroll(double xoffset, double yoffset) {
         if (yoffset > 0) {
             // 滚轮向前，放大图形
             Renderer::zoomIn(mousePos);
-        } else if (yoffset < 0) {
+        }
+        else if (yoffset < 0) {
             // 滚轮向后，缩小图形
             Renderer::zoomOut(mousePos);
         }
@@ -375,7 +376,8 @@ void InputHandler::handleMouseEnter(int entered) {
     if (entered) {
         // 鼠标进入窗口，隐藏系统光标
         setMouseCursorVisible(false);
-    } else {
+    }
+    else {
         // 鼠标离开窗口，显示系统光标
         setMouseCursorVisible(true);
     }
@@ -464,7 +466,8 @@ void InputHandler::setMouseCursorVisible(bool visible) {
     if (s_window) {
         if (visible) {
             glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        } else {
+        }
+        else {
             glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         }
     }

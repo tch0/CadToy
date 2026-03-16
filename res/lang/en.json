@@ -76,8 +76,8 @@
   "window.inputContextInfo.cursorMarker": "Cursor Marker",
   "window.inputContextInfo.selectionMode": "Selection Mode",
   "window.inputContextInfo.isSelectionActive": "Is Selection Active",
-  "window.inputContextInfo.selectionBoxStart": "Selection Box Start",
-  "window.inputContextInfo.selectionBoxCurrent": "Selection Box Current",
+  "window.inputContextInfo.selectionInitialPoint": "Selection Initial Point",
+  "window.inputContextInfo.selectionPreviewPoint": "Selection Preview Point",
   "window.inputContextInfo.selectionPointsCount": "Selection Points Count",
 
   "inputContext.generalErrorPrompt.invalidPoint": "*Invalid point*",
