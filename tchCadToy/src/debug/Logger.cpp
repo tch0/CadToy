@@ -77,7 +77,8 @@ void Logger::setAsyncLogging(bool enabled)
         // Enable async logging
         m_config.asyncLogging = true;
         m_logThread = std::make_unique<std::thread>(&Logger::logThreadFunc, this);
-    } else {
+    }
+    else {
         // Disable async logging
         m_config.asyncLogging = false;
         if (m_logThread) {
@@ -427,7 +428,8 @@ void Logger::log(LogLevel level, const std::string& str, const std::source_locat
             m_logQueue.push(msg);
         }
         m_logCondition.notify_one();
-    } else {
+    }
+    else {
         LogMessage msg;
         msg.level = level;
         msg.message = str;

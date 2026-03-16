@@ -83,7 +83,8 @@ bool SaveLoad::saveToFile(const std::string& filePath) {
                     posObj.AddMember("x", pos.x, allocator);
                     posObj.AddMember("y", pos.y, allocator);
                     shapeObj.AddMember("position", posObj, allocator);
-                } else if (auto line = std::dynamic_pointer_cast<Line>(shape)) {
+                }
+                else if (auto line = std::dynamic_pointer_cast<Line>(shape)) {
                     auto start = line->getStart();
                     auto end = line->getEnd();
                     rapidjson::Value startObj(rapidjson::kObjectType);
@@ -95,14 +96,16 @@ bool SaveLoad::saveToFile(const std::string& filePath) {
                     endObj.AddMember("x", end.x, allocator);
                     endObj.AddMember("y", end.y, allocator);
                     shapeObj.AddMember("end", endObj, allocator);
-                } else if (auto circle = std::dynamic_pointer_cast<Circle>(shape)) {
+                }
+                else if (auto circle = std::dynamic_pointer_cast<Circle>(shape)) {
                     auto center = circle->getCenter();
                     rapidjson::Value centerObj(rapidjson::kObjectType);
                     centerObj.AddMember("x", center.x, allocator);
                     centerObj.AddMember("y", center.y, allocator);
                     shapeObj.AddMember("center", centerObj, allocator);
                     shapeObj.AddMember("radius", circle->getRadius(), allocator);
-                } else if (auto rectangle = std::dynamic_pointer_cast<Rectangle>(shape)) {
+                }
+                else if (auto rectangle = std::dynamic_pointer_cast<Rectangle>(shape)) {
                     auto pos = rectangle->getPosition();
                     rapidjson::Value posObj(rapidjson::kObjectType);
                     posObj.AddMember("x", pos.x, allocator);
@@ -208,7 +211,8 @@ bool SaveLoad::loadFromFile(const std::string& filePath) {
                                 float x = posObj["x"].GetFloat();
                                 float y = posObj["y"].GetFloat();
                                 shape = std::make_shared<Point>(glm::vec2(x, y));
-                            } else if (typeName == "LINE") {
+                            }
+                            else if (typeName == "LINE") {
                                 const auto& startObj = shapeObj["start"];
                                 const auto& endObj = shapeObj["end"];
                                 float startX = startObj["x"].GetFloat();
@@ -216,13 +220,15 @@ bool SaveLoad::loadFromFile(const std::string& filePath) {
                                 float endX = endObj["x"].GetFloat();
                                 float endY = endObj["y"].GetFloat();
                                 shape = std::make_shared<Line>(glm::vec2(startX, startY), glm::vec2(endX, endY));
-                            } else if (typeName == "CIRCLE") {
+                            }
+                            else if (typeName == "CIRCLE") {
                                 const auto& centerObj = shapeObj["center"];
                                 float centerX = centerObj["x"].GetFloat();
                                 float centerY = centerObj["y"].GetFloat();
                                 float radius = shapeObj["radius"].GetFloat();
                                 shape = std::make_shared<Circle>(glm::vec2(centerX, centerY), radius);
-                            } else if (typeName == "RECTANGLE") {
+                            }
+                            else if (typeName == "RECTANGLE") {
                                 const auto& posObj = shapeObj["position"];
                                 float x = posObj["x"].GetFloat();
                                 float y = posObj["y"].GetFloat();
@@ -281,15 +287,18 @@ bool SaveLoad::exportToSVG(const std::string& filePath) {
                 if (auto point = std::dynamic_pointer_cast<Point>(shape)) {
                     auto pos = point->getPosition();
                     file << "  <circle cx=\"" << pos.x << "\" cy=\"" << pos.y << "\" r=\"3\" fill=\"" << colorStr << "\" />";
-                } else if (auto line = std::dynamic_pointer_cast<Line>(shape)) {
+                }
+                else if (auto line = std::dynamic_pointer_cast<Line>(shape)) {
                     auto start = line->getStart();
                     auto end = line->getEnd();
                     file << "  <line x1=\"" << start.x << "\" y1=\"" << start.y << "\" x2=\"" << end.x << "\" y2=\"" << end.y << "\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />";
-                } else if (auto circle = std::dynamic_pointer_cast<Circle>(shape)) {
+                }
+                else if (auto circle = std::dynamic_pointer_cast<Circle>(shape)) {
                     auto center = circle->getCenter();
                     float radius = circle->getRadius();
                     file << "  <circle cx=\"" << center.x << "\" cy=\"" << center.y << "\" r=\"" << radius << "\" fill=\"none\" stroke=\"" << colorStr << "\" stroke-width=\"2\" />";
-                } else if (auto rectangle = std::dynamic_pointer_cast<Rectangle>(shape)) {
+                }
+                else if (auto rectangle = std::dynamic_pointer_cast<Rectangle>(shape)) {
                     auto pos = rectangle->getPosition();
                     float width = rectangle->getWidth();
                     float height = rectangle->getHeight();

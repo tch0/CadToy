@@ -29,10 +29,12 @@ Document::Document(const std::string& name, const std::string& path) :
         if (dotPos != std::string::npos) {
             m_fileName = filename.substr(0, dotPos);
             m_fileExtension = filename.substr(dotPos);
-        } else {
+        }
+        else {
             m_fileName = filename;
         }
-    } else {
+    }
+    else {
         // 如果没有路径，直接使用传入的name
         m_fileName = name;
     }
@@ -68,7 +70,8 @@ void Document::setFullPath(const std::string& path) {
     if (dotPos != std::string::npos) {
         m_fileName = filename.substr(0, dotPos);
         m_fileExtension = filename.substr(dotPos);
-    } else {
+    }
+    else {
         m_fileName = filename;
     }
 }

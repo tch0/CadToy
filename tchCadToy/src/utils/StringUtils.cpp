@@ -45,14 +45,16 @@ int StringUtils::compareIgnoreCase(const std::string& str1, const std::string& s
         
         if (c1 < c2) {
             return -1;
-        } else if (c1 > c2) {
+        }
+        else if (c1 > c2) {
             return 1;
         }
     }
     
     if (str1.length() < str2.length()) {
         return -1;
-    } else if (str1.length() > str2.length()) {
+    }
+    else if (str1.length() > str2.length()) {
         return 1;
     }
     

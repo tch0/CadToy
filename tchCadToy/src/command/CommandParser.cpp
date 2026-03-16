@@ -60,53 +60,77 @@ bool CommandParser::executeCommand(const std::string& commandName, const std::ve
     
     if (upperCommandName == "LINE") {
         return executeLineCommand(arguments);
-    } else if (upperCommandName == "CIRCLE") {
+    }
+    else if (upperCommandName == "CIRCLE") {
         return executeCircleCommand(arguments);
-    } else if (upperCommandName == "RECT") {
+    }
+    else if (upperCommandName == "RECT") {
         return executeRectCommand(arguments);
-    } else if (upperCommandName == "TRANSLATE") {
+    }
+    else if (upperCommandName == "TRANSLATE") {
         return executeTranslateCommand(arguments);
-    } else if (upperCommandName == "ROTATE") {
+    }
+    else if (upperCommandName == "ROTATE") {
         return executeRotateCommand(arguments);
-    } else if (upperCommandName == "SCALE") {
+    }
+    else if (upperCommandName == "SCALE") {
         return executeScaleCommand(arguments);
-    } else if (upperCommandName == "LAYER") {
+    }
+    else if (upperCommandName == "LAYER") {
         return executeLayerCommand(arguments);
-    } else if (upperCommandName == "DELETE_LAYER") {
+    }
+    else if (upperCommandName == "DELETE_LAYER") {
         return executeDeleteLayerCommand(arguments);
-    } else if (upperCommandName == "SWITCH_LAYER") {
+    }
+    else if (upperCommandName == "SWITCH_LAYER") {
         return executeSwitchLayerCommand(arguments);
-    } else if (upperCommandName == "COLOR") {
+    }
+    else if (upperCommandName == "COLOR") {
         return executeColorCommand(arguments);
-    } else if (upperCommandName == "UNDO") {
+    }
+    else if (upperCommandName == "UNDO") {
         return executeUndoCommand(arguments);
-    } else if (upperCommandName == "REDO") {
+    }
+    else if (upperCommandName == "REDO") {
         return executeRedoCommand(arguments);
-    } else if (upperCommandName == "SAVE") {
+    }
+    else if (upperCommandName == "SAVE") {
         return executeSaveCommand(arguments);
-    } else if (upperCommandName == "LOAD") {
+    }
+    else if (upperCommandName == "LOAD") {
         return executeLoadCommand(arguments);
-    } else if (upperCommandName == "EXIT" || upperCommandName == "QUIT") {
+    }
+    else if (upperCommandName == "EXIT" || upperCommandName == "QUIT") {
         return executeExitCommand(arguments);
-    } else if (upperCommandName == "HELP") {
+    }
+    else if (upperCommandName == "HELP") {
         return executeHelpCommand(arguments);
-    } else if (upperCommandName == "PROPERTIES") {
+    }
+    else if (upperCommandName == "PROPERTIES") {
         return executePropertiesCommand(arguments);
-    } else if (upperCommandName == "PROPERTIESCLOSE") {
+    }
+    else if (upperCommandName == "PROPERTIESCLOSE") {
         return executePropertiesCloseCommand(arguments);
-    } else if (upperCommandName == "OPTIONS") {
+    }
+    else if (upperCommandName == "OPTIONS") {
         return executeOptionsCommand(arguments);
-    } else if (upperCommandName == "NEW") {
+    }
+    else if (upperCommandName == "NEW") {
         return executeNewCommand(arguments);
-    } else if (upperCommandName == "OPEN") {
+    }
+    else if (upperCommandName == "OPEN") {
         return executeOpenCommand(arguments);
-    } else if (upperCommandName == "SAVE") {
+    }
+    else if (upperCommandName == "SAVE") {
         return executeSaveCommand(arguments);
-    } else if (upperCommandName == "SAVEAS") {
+    }
+    else if (upperCommandName == "SAVEAS") {
         return executeSaveAsCommand(arguments);
-    } else if (upperCommandName == "CLOSE") {
+    }
+    else if (upperCommandName == "CLOSE") {
         return executeCloseCommand(arguments);
-    } else {
+    }
+    else {
         cmdLinePrint("Unknown command: " + commandName);
         return false;
     }
@@ -321,7 +345,8 @@ bool CommandParser::executeDeleteLayerCommand(const std::vector<std::string>& ar
             LayerManager::getInstance().deleteLayer(layer->getId());
             cmdLinePrint("Layer deleted: " + name);
             return true;
-        } else {
+        }
+        else {
             cmdLinePrint("Layer not found: " + name);
         }
     } catch (...) {
@@ -348,7 +373,8 @@ bool CommandParser::executeSwitchLayerCommand(const std::vector<std::string>& ar
             LayerManager::getInstance().setCurrentLayer(layer->getId());
             cmdLinePrint("Switched to layer: " + name);
             return true;
-        } else {
+        }
+        else {
             cmdLinePrint("Layer not found: " + name);
         }
     } catch (...) {
@@ -385,7 +411,8 @@ bool CommandParser::executeUndoCommand(const std::vector<std::string>& arguments
     if (UndoRedoManager::getInstance().undo()) {
         cmdLinePrint("Undo successful");
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Nothing to undo");
         return false;
     }
@@ -396,7 +423,8 @@ bool CommandParser::executeRedoCommand(const std::vector<std::string>& arguments
     if (UndoRedoManager::getInstance().redo()) {
         cmdLinePrint("Redo successful");
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Nothing to redo");
         return false;
     }
@@ -415,7 +443,8 @@ bool CommandParser::executeLoadCommand(const std::vector<std::string>& arguments
         if (SaveLoad::loadFromFile(filePath)) {
             cmdLinePrint("Loaded from file: " + filePath);
             return true;
-        } else {
+        }
+        else {
             cmdLinePrint("Failed to load file: " + filePath);
         }
     } catch (...) {
@@ -502,7 +531,8 @@ bool CommandParser::executeNewCommand(const std::vector<std::string>& arguments)
     if (index < DocManager::getDocumentCount()) {
         cmdLinePrint("New document created: " + DocManager::getDocument(index).getFullFileName());
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to create new document");
         return false;
     }
@@ -520,7 +550,8 @@ bool CommandParser::executeOpenCommand(const std::vector<std::string>& arguments
     if (index < DocManager::getDocumentCount()) {
         cmdLinePrint("Opened file: " + DocManager::getDocument(index).getFullFileName());
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to open file: " + filePath);
         return false;
     }
@@ -532,7 +563,8 @@ bool CommandParser::executeSaveCommand(const std::vector<std::string>& arguments
     if (DocManager::saveFile(currentIndex)) {
         cmdLinePrint("Saved document: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to save document. Use SAVEAS to specify a path.");
         return false;
     }
@@ -550,7 +582,8 @@ bool CommandParser::executeSaveAsCommand(const std::vector<std::string>& argumen
     if (DocManager::saveFileAs(currentIndex, filePath)) {
         cmdLinePrint("Saved document as: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to save document as: " + filePath);
         return false;
     }
@@ -562,7 +595,8 @@ bool CommandParser::executeCloseCommand(const std::vector<std::string>& argument
     if (DocManager::closeDocument(currentIndex)) {
         cmdLinePrint("Closed document. Current document: " + DocManager::getCurrentDocument().getFullFileName());
         return true;
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to close document");
         return false;
     }

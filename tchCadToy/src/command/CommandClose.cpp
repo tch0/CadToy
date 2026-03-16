@@ -16,7 +16,8 @@ void CommandClose::onUpdate() {
     std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
     if (DocManager::closeDocument(currentIndex)) {
         cmdLinePrint("Closed document. Current document: " + DocManager::getCurrentDocument().getFullFileName());
-    } else {
+    }
+    else {
         cmdLinePrint("Failed to close document");
     }
     

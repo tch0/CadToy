@@ -98,7 +98,8 @@ bool LocalizationManager::loadLanguage(const std::string& langCode, const std::s
             if (content[i] == '\n') {
                 line++;
                 column = 1;
-            } else {
+            }
+            else {
                 column++;
             }
         }
@@ -134,7 +135,8 @@ void LocalizationManager::setLanguage(const std::string& langCode) {
     if (m_languages.find(langCode) != m_languages.end()) {
         m_currentLanguage = langCode;
         LOG_INFO("Switched to language: {}", langCode);
-    } else {
+    }
+    else {
         LOG_WARNING("Language not found: {}", langCode);
     }
 }

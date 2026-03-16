@@ -104,15 +104,20 @@ glm::vec3 ColorManager::fromHSV(float h, float s, float v) {
     
     if (h >= 0.0f && h < 60.0f) {
         r = c; g = x; b = 0.0f;
-    } else if (h >= 60.0f && h < 120.0f) {
+    }
+    else if (h >= 60.0f && h < 120.0f) {
         r = x; g = c; b = 0.0f;
-    } else if (h >= 120.0f && h < 180.0f) {
+    }
+    else if (h >= 120.0f && h < 180.0f) {
         r = 0.0f; g = c; b = x;
-    } else if (h >= 180.0f && h < 240.0f) {
+    }
+    else if (h >= 180.0f && h < 240.0f) {
         r = 0.0f; g = x; b = c;
-    } else if (h >= 240.0f && h < 300.0f) {
+    }
+    else if (h >= 240.0f && h < 300.0f) {
         r = x; g = 0.0f; b = c;
-    } else {
+    }
+    else {
         r = c; g = 0.0f; b = x;
     }
     

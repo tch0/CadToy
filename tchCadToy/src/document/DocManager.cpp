@@ -138,7 +138,8 @@ bool DocManager::closeDocument(std::size_t index) {
         // 如果只剩最后一个文档，关闭后创建新文档
         s_documents.clear();
         createNewDocument();
-    } else {
+    }
+    else {
         s_documents.erase(s_documents.begin() + index);
         if (s_currentDocIndex >= index) {
             s_currentDocIndex = std::max(static_cast<std::size_t>(0), s_currentDocIndex - 1);
