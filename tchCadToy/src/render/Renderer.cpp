@@ -1878,7 +1878,7 @@ void Renderer::drawFileBar() {
     static std::size_t s_pendingFileIndexToSwitch = -1;
     
     // 处理上一帧的待切换文档
-    if (s_pendingFileIndexToSwitch != -1) {
+    if (s_pendingFileIndexToSwitch != static_cast<std::size_t>(-1)) {
         DocManager::setCurrentDocumentIndex(s_pendingFileIndexToSwitch);
         // 切换文档后，自动滚动命令历史到最底部
         s_bScrollCommandHistoryToBottom = true;
@@ -1960,7 +1960,7 @@ void Renderer::drawFileBar() {
                 }
             }
             // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
-            if (s_docIndexToBeClosed != -1) {
+            if (s_docIndexToBeClosed != static_cast<std::size_t>(-1)) {
                 CommandManager::getInstance().cancelCurrentCommand();
                 DocManager::closeDocument(s_docIndexToBeClosed);
                 s_docIndexToBeClosed = -1;
