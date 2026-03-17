@@ -96,5 +96,10 @@
   "selection.prompt.lassoCrossing": "Crossing(C) Lasso  Press Space to cycle",
   "selection.prompt.lassoWindow": "Window(W) Lasso  Press Space to cycle",
   "selection.prompt.lassoFence": "Fence(F) Lasso  Press Space to cycle",
-  "selection.prompt.windowInvalid": "Window specification invalid."
+  "selection.prompt.windowInvalid": "Window specification invalid.",
+
+  "command.line.startPoint": "Specify start point:",
+  "command.line.nextPoint": "Specify next point or [Undo(U)]:",
+  "command.line.nextPointWithClose": "Specify next point or [Close(C)/Undo(U)]:",
+  "command.line.abandonedAll": "Abandoned all line segments."
 }

@@ -96,5 +96,10 @@
   "selection.prompt.lassoCrossing": "窗交(C) 套索  按空格键以循环选项",
   "selection.prompt.lassoWindow": "窗口(W) 套索  按空格键以循环选项",
   "selection.prompt.lassoFence": "栏选(F) 套索  按空格键以循环选项",
-  "selection.prompt.windowInvalid": "窗口说明无效。"
+  "selection.prompt.windowInvalid": "窗口说明无效。",
+
+  "command.line.startPoint": "指定起点:",
+  "command.line.nextPoint": "指定下一点或 [放弃(U)]:",
+  "command.line.nextPointWithClose": "指定下一点或 [闭合(C)/放弃(U)]:",
+  "command.line.abandonedAll": "已放弃所有线段。"
 }

@@ -2,6 +2,7 @@
 #include "input/InputContext.h"
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
+#include "utils/LocalizationManager.h"
 #include <glm/glm.hpp>
 #include <imgui.h>
 #include <glad/gl.h>
@@ -18,6 +19,7 @@ CommandLine::CommandLine() :
 
 void CommandLine::onUpdate() {
     auto& ctx = InputContext::getInstance();
+    auto& loc = LocalizationManager::getInstance();
     
     // 检查是否已经完成
     if (isCompleted()) {
@@ -28,7 +30,7 @@ void CommandLine::onUpdate() {
         case CommandLineState::kStartPointEntry:
         {
             // 等待起点输入
-            ctx.waitForPoint("指定起点:");
+            ctx.waitForPoint(loc.get("command.line.startPoint")); // 指定起点:
             m_state = CommandLineState::kStartPointQuery;
             break;
         }
@@ -61,7 +63,15 @@ void CommandLine::onUpdate() {
         {
             // 等待下一点输入
             std::vector<std::string> keywords = {"U"};
-            ctx.waitForPoint("指定下一点 或[放弃(U)]:", m_startPoint, keywords);
+            std::string prompt;
+            if (m_points.size() >= 3) {
+                prompt = loc.get("command.line.nextPointWithClose"); // 指定下一点或 [闭合(C)/放弃(U)]:
+                keywords = {"C", "U"};
+            } else {
+                prompt = loc.get("command.line.nextPoint"); // 指定下一点或 [放弃(U)]:
+                keywords = {"U"};
+            }
+            ctx.waitForPoint(prompt, m_startPoint, keywords);
             m_state = CommandLineState::kNextPointQuery;
             break;
         }
@@ -82,12 +92,18 @@ void CommandLine::onUpdate() {
             else if (status == InputStatus::kKeywordInput) {
                 std::string keyword;
                 ctx.getKeyword(keyword);
-                if (keyword == "U") {
+                if (keyword == "C") {
+                    if (m_points.size() >= 3) {
+                        m_points.push_back(m_points.front());
+                        m_state = CommandLineState::kCompleted;
+                    }
+                }
+                else if (keyword == "U") {
                     // 只有一个点，放弃第一点
                     if (m_points.size() == 1) {
                         m_points.pop_back();
                         m_state = CommandLineState::kStartPointEntry;
-                        cmdLinePrint("已放弃所有线段。");
+                        cmdLinePrint(loc.get("command.line.abandonedAll")); // 已放弃所有线段。
                     }
                     else if (m_points.size() >= 2) {
                         m_points.pop_back();
