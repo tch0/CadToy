@@ -3,6 +3,7 @@
 #include "input/InputContext.h"
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
+#include "utils/LocalizationManager.h"
 #include <glm/glm.hpp>
 
 namespace tch {
@@ -51,6 +52,8 @@ void SelectionTask::onUpdate() {
     if (m_state == SelectionState::kIdle || m_state == SelectionState::kCompleted) {
         return;
     }
+    
+    auto& loc = LocalizationManager::getInstance();
     
     // 获取交互数据
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
@@ -105,7 +108,8 @@ void SelectionTask::onUpdate() {
     switch (m_state) {
         case SelectionState::kSingleSelectionEntry: {
             // 等待单选点，从命令中进入选择的入口
-            InputContext::getInstance().waitForPoint("选择对象:", {"F", "WP", "CP"});
+            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.single"),
+                {"F", "WP", "CP"}); // 选择对象:
             m_state = SelectionState::kSingleSelectionQuery;
             break;
         }
@@ -170,7 +174,8 @@ void SelectionTask::onUpdate() {
         
         case SelectionState::kBoxSelectionEntry:
             // 等待初始点
-            InputContext::getInstance().waitForPoint("指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:", {"F", "WP", "CP"});
+            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.box"),
+                {"F", "WP", "CP"}); // 指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:
             m_state = SelectionState::kBoxLassoSelectionChoice;
             break;
             
@@ -187,12 +192,12 @@ void SelectionTask::onUpdate() {
                     if (m_previewPointWorld.x < m_initialPointWorld.x) {
                         m_selectionMode = SelectionMode::kCrossingLasso;
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
-                        cmdLinePrint("窗交(C) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                     }
                     else {
                         m_selectionMode = SelectionMode::kWindowLasso;
                         m_lassoModeCycle = LassoModeCycle::kWindow;
-                        cmdLinePrint("窗口(W) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                     }
                     m_state = SelectionState::kLassoSelection;
                     m_selectionPointsWorld.clear();
@@ -244,17 +249,17 @@ void SelectionTask::onUpdate() {
                     case LassoModeCycle::kCrossing:
                         m_lassoModeCycle = LassoModeCycle::kWindow;
                         m_selectionMode = SelectionMode::kWindowLasso;
-                        cmdLinePrint("窗口(W) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                         break;
                     case LassoModeCycle::kWindow:
                         m_lassoModeCycle = LassoModeCycle::kFence;
                         m_selectionMode = SelectionMode::kFence;
-                        cmdLinePrint("栏选(F) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
                         break;
                     case LassoModeCycle::kFence:
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
                         m_selectionMode = SelectionMode::kCrossingLasso;
-                        cmdLinePrint("窗交(C) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                         break;
                 }
                 // 更新交互数据
@@ -276,11 +281,11 @@ void SelectionTask::onUpdate() {
             // 根据选择模式设置不同的提示
             std::string prompt;
             if (m_selectionMode == SelectionMode::kFence) {
-                prompt = "指定第一个栏选点或拾取/拖动光标:";
+                prompt = loc.get("selection.prompt.fenceFirst"); // 指定第一个栏选点或拾取/拖动光标:
             } else if (m_selectionMode == SelectionMode::kWindowPolygon) {
-                prompt = "指定第一个圈围点或拾取/拖动光标:";
+                prompt = loc.get("selection.prompt.windowFirst"); // 指定第一个圈围点或拾取/拖动光标:
             } else if (m_selectionMode == SelectionMode::kCrossingPolygon) {
-                prompt = "指定第一个圈交点或拾取/拖动光标:";
+                prompt = loc.get("selection.prompt.crossingFirst"); // 指定第一个圈交点或拾取/拖动光标:
             }
             
             // 等待第一点
@@ -337,15 +342,15 @@ void SelectionTask::onUpdate() {
                     if (m_selectionMode == SelectionMode::kFence) {
                         m_selectionMode = SelectionMode::kFence;
                         m_lassoModeCycle = LassoModeCycle::kFence;
-                        cmdLinePrint("栏选(F) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
                     } else if (m_selectionMode == SelectionMode::kWindowPolygon) {
                         m_selectionMode = SelectionMode::kWindowLasso;
                         m_lassoModeCycle = LassoModeCycle::kWindow;
-                        cmdLinePrint("窗口(W) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                     } else if (m_selectionMode == SelectionMode::kCrossingPolygon) {
                         m_selectionMode = SelectionMode::kCrossingLasso;
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
-                        cmdLinePrint("窗交(C) 套索  按空格键以循环选项");
+                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                     }
                     
                     m_state = SelectionState::kLassoSelection;
@@ -374,7 +379,8 @@ void SelectionTask::onUpdate() {
         
         case SelectionState::kFenceSelectionEntry:
             // 等待栏选点
-            InputContext::getInstance().waitForPoint("指定下一个栏选点或 [放弃(U)]:", {"U"});
+            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.fenceNext"),
+                {"U"}); // 指定下一个栏选点或 [放弃(U)]:
             m_state = SelectionState::kFenceSelectionQuery;
             break;
             
@@ -420,7 +426,8 @@ void SelectionTask::onUpdate() {
         
         case SelectionState::kPolygonSelectionEntry:
             // 等待多边形点
-            InputContext::getInstance().waitForPoint("指定直线的端点或 [放弃(U)]:", {"U"});
+            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.polygonNext"),
+                {"U"}); // 指定直线的端点或 [放弃(U)]:
             m_state = SelectionState::kPolygonSelectionQuery;
             break;
             
@@ -564,8 +571,10 @@ void SelectionTask::handleBoxSelection()
     }
     // Enter
     else if (status == InputStatus::kEnterInput) {
-        cmdLinePrint("窗口说明无效。");
-        InputContext::getInstance().waitForPoint("指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:", {"F", "WP", "CP"});
+        auto& loc = LocalizationManager::getInstance();
+        cmdLinePrint(loc.get("selection.prompt.windowInvalid")); // 窗口说明无效。
+        InputContext::getInstance().waitForPoint(loc.get("selection.prompt.box"),
+            {"F", "WP", "CP"}); // 指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:
         m_state = SelectionState::kBoxSelectionQuery;
     }
     // Esc

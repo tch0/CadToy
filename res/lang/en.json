@@ -84,5 +84,17 @@
   "inputContext.generalErrorPrompt.invalidSelection": "*Invalid selection*",
   "inputContext.generalErrorPrompt.invalidKeyword": "*Invalid keyword*",
   "inputContext.generalErrorPrompt.invalidInteger": "Enter an integer between {0} and {1}.",
-  "inputContext.generalErrorPrompt.invalidNumber": "Enter a number."
+  "inputContext.generalErrorPrompt.invalidNumber": "Enter a number.",
+
+  "selection.prompt.single": "Select objects:",
+  "selection.prompt.box": "Specify corner point or [Fence(F)/Window(WP)/Crossing(CP)]:",
+  "selection.prompt.fenceFirst": "Specify first fence point or pick/drag cursor:",
+  "selection.prompt.windowFirst": "Specify first window point or pick/drag cursor:",
+  "selection.prompt.crossingFirst": "Specify first crossing point or pick/drag cursor:",
+  "selection.prompt.fenceNext": "Specify next fence point or [Undo(U)]:",
+  "selection.prompt.polygonNext": "Specify endpoint or [Undo(U)]:",
+  "selection.prompt.lassoCrossing": "Crossing(C) Lasso  Press Space to cycle",
+  "selection.prompt.lassoWindow": "Window(W) Lasso  Press Space to cycle",
+  "selection.prompt.lassoFence": "Fence(F) Lasso  Press Space to cycle",
+  "selection.prompt.windowInvalid": "Window specification invalid."
 }

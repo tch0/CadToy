@@ -84,5 +84,17 @@
   "inputContext.generalErrorPrompt.invalidSelection": "*无效选择*",
   "inputContext.generalErrorPrompt.invalidKeyword": "*无效关键字*",
   "inputContext.generalErrorPrompt.invalidInteger": "需要输入{0}到{1}的整数。",
-  "inputContext.generalErrorPrompt.invalidNumber": "需要输入数值。"
+  "inputContext.generalErrorPrompt.invalidNumber": "需要输入数值。",
+
+  "selection.prompt.single": "选择对象:",
+  "selection.prompt.box": "指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:",
+  "selection.prompt.fenceFirst": "指定第一个栏选点或拾取/拖动光标:",
+  "selection.prompt.windowFirst": "指定第一个圈围点或拾取/拖动光标:",
+  "selection.prompt.crossingFirst": "指定第一个圈交点或拾取/拖动光标:",
+  "selection.prompt.fenceNext": "指定下一个栏选点或 [放弃(U)]:",
+  "selection.prompt.polygonNext": "指定直线的端点或 [放弃(U)]:",
+  "selection.prompt.lassoCrossing": "窗交(C) 套索  按空格键以循环选项",
+  "selection.prompt.lassoWindow": "窗口(W) 套索  按空格键以循环选项",
+  "selection.prompt.lassoFence": "栏选(F) 套索  按空格键以循环选项",
+  "selection.prompt.windowInvalid": "窗口说明无效。"
 }
