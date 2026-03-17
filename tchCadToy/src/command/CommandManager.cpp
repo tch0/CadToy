@@ -1,10 +1,13 @@
 #include "command/CommandManager.h"
 #include "input/InputContext.h"
+#include "debug/Logger.h"
+#include "utils/GlobalUtils.h"
+#include "utils/StringUtils.h"
+#include "render/Renderer.h"
+
 #include "command/CommandLine.h"
 #include "command/CommandClose.h"
-#include "debug/Logger.h"
-#include "Utils/GlobalUtils.h"
-#include "render/Renderer.h"
+#include "command/CommandTest.h"
 
 namespace tch {
 
@@ -130,13 +133,20 @@ void CommandManager::cancelCurrentCommandAndExecute(const std::string& command)
 // 解析命令
 void CommandManager::parseCommand(const std::string& command) {
     // 简单的命令解析
-    if (command == "line" || command == "l") {
+    if (StringUtils::equalsIgnoreCase(command, "line") ||
+        StringUtils::equalsIgnoreCase(command, "l")) {
         // 创建线段命令并添加到待执行列表
         m_activeCommand = std::make_shared<CommandLine>();
+        m_currentCommandName = "LINE";
     }
-    else if (command == "close") {
+    else if (StringUtils::equalsIgnoreCase(command, "close")) {
         // 创建关闭命令并添加到待执行列表
         m_activeCommand = std::make_shared<CommandClose>();
+        m_currentCommandName = "CLOSE";
+    }
+    else if (StringUtils::equalsIgnoreCase(command, "test")) {
+        m_activeCommand = std::make_shared<CommandTest>();
+        m_currentCommandName = "TEST";
     }
     // 其他命令的解析...
     else {
@@ -167,6 +177,10 @@ void CommandManager::runCommandLoop() {
             InputContext::getInstance().setInCommandExecution(false);
         }
     }
+}
+
+std::string CommandManager::getCommandName() {
+    return m_currentCommandName;
 }
 
 } // namespace tch

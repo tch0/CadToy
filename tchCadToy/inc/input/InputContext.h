@@ -139,6 +139,7 @@ public:
     bool getKeyword(std::string& keyword);
     
     // 实体选择相关
+    // TODO: 暂时占位，实体具体细节还未实现
     void setSelectedEntities(const std::vector<void*>& entities);
     bool getSelectedEntities(std::vector<void*>& entities);
     
@@ -153,9 +154,9 @@ public:
     SpecialKeyEventType getLastSpecialKeyEvent() const;
     void clearSpecialKeyEvent();
     
-    // TODO: 现在两个重载处理不同的事情，当事件来临时两个版本函数都会被调用，后续看是否需要统一起来
-    void handleEnterSpace(const std::string& input);        // 处理Enter/Space输入
-    void handleEscape(const std::string& input);            // 处理Escape输入
+    // 处理Enter/Space/Esc输入
+    void handleEnterSpace(const std::string& input); // 处理Enter/Space输入
+    void handleEscape(const std::string& input); // 处理Escape输入
     
     // 等待点输入（带基点）
     void waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords);
@@ -165,9 +166,11 @@ public:
     
     // 等待数值输入
     void waitForNumber(const std::string& prompt, double min = -DBL_MAX, double max = DBL_MAX);
+    void waitForNumber(const std::string& prompt, double min, double max, const std::vector<std::string>& keywords);
     
     // 等待整数输入
     void waitForInteger(const std::string& prompt, int min = INT_MIN, int max = INT_MAX);
+    void waitForInteger(const std::string& prompt, int min, int max, const std::vector<std::string>& keywords);
     
     // 等待浮点数输入
     void waitForFloat(const std::string& prompt, double min = -DBL_MAX, double max = DBL_MAX);

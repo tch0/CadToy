@@ -1,6 +1,7 @@
 #include "command/CommandLine.h"
 #include "input/InputContext.h"
 #include "render/Renderer.h"
+#include "utils/GlobalUtils.h"
 #include <glm/glm.hpp>
 #include <imgui.h>
 #include <glad/gl.h>
@@ -9,7 +10,7 @@
 namespace tch {
 
 CommandLine::CommandLine() : 
-    m_state(CommandLineState::kWaitForStartPoint),
+    m_state(CommandLineState::kStartPointEntry),
     m_startPoint(glm::dvec3(0, 0, 0)),
     m_currentPoint(glm::dvec3(0, 0, 0)),
     m_points() {
@@ -24,16 +25,15 @@ void CommandLine::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandLineState::kWaitForStartPoint:
+        case CommandLineState::kStartPointEntry:
         {
             // 等待起点输入
-            std::vector<std::string> keywords = {"end", "cancel"};
-            ctx.waitForPoint("指定起点:", keywords);
-            m_state = CommandLineState::kWaitForStartPointInput;
+            ctx.waitForPoint("指定起点:");
+            m_state = CommandLineState::kStartPointQuery;
             break;
         }
             
-        case CommandLineState::kWaitForStartPointInput:
+        case CommandLineState::kStartPointQuery:
         {
             // 检查输入状态
             InputStatus status = ctx.getCurrentStatus();
@@ -44,29 +44,29 @@ void CommandLine::onUpdate() {
             }
             // Esc、Enter和关键字，结束命令
             else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
-                m_state = CommandLineState::kFinishing;
+                m_state = CommandLineState::kCompleted;
             }
             // 获取第一点输入
             else if (status == InputStatus::kPointInput) {
                 if (ctx.getPickedPoint(m_startPoint)) {
                     m_currentPoint = m_startPoint;
                     m_points.push_back(m_startPoint); // 保存起点
-                    m_state = CommandLineState::kWaitForNextPoint;
+                    m_state = CommandLineState::kNextPointEntry;
                 }
             }
             break;
         }
             
-        case CommandLineState::kWaitForNextPoint:
+        case CommandLineState::kNextPointEntry:
         {
             // 等待下一点输入
-            std::vector<std::string> keywords = {"end", "cancel"};
-            ctx.waitForPoint("指定下一点 (按Enter结束，按Esc取消):", m_startPoint, keywords);
-            m_state = CommandLineState::kWaitForNextPointInput;
+            std::vector<std::string> keywords = {"U"};
+            ctx.waitForPoint("指定下一点 或[放弃(U)]:", m_startPoint, keywords);
+            m_state = CommandLineState::kNextPointQuery;
             break;
         }
             
-        case CommandLineState::kWaitForNextPointInput:
+        case CommandLineState::kNextPointQuery:
         {
             // 检查输入状态
             InputStatus status = ctx.getCurrentStatus();
@@ -75,22 +75,38 @@ void CommandLine::onUpdate() {
             if (status == InputStatus::kNone) {
                 break;
             }
-            // Esc、Enter和关键字，进入结束状态
-            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
-                m_state = CommandLineState::kFinishing;
+            // Esc、Enter，进入结束状态
+            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput) {
+                m_state = CommandLineState::kCompleted;
+            }
+            else if (status == InputStatus::kKeywordInput) {
+                std::string keyword;
+                ctx.getKeyword(keyword);
+                if (keyword == "U") {
+                    // 只有一个点，放弃第一点
+                    if (m_points.size() == 1) {
+                        m_points.pop_back();
+                        m_state = CommandLineState::kStartPointEntry;
+                        cmdLinePrint("已放弃所有线段。");
+                    }
+                    else if (m_points.size() >= 2) {
+                        m_points.pop_back();
+                        m_state = CommandLineState::kNextPointEntry;
+                    }
+                }
             }
             // 获取点输入
             else if (status == InputStatus::kPointInput) {
                 if (ctx.getPickedPoint(m_currentPoint)) {
                     m_points.push_back(m_currentPoint); // 保存下一点
                     m_startPoint = m_currentPoint;
-                    m_state = CommandLineState::kWaitForNextPoint;
+                    m_state = CommandLineState::kNextPointEntry;
                 }
             }
             break;
         }
         
-        case CommandLineState::kFinishing:
+        case CommandLineState::kCompleted:
         {
             // 执行统一的结束操作
             finish();
@@ -143,12 +159,12 @@ void CommandLine::drawPreview() {
     }
     
     // 绘制预览线段
-    if (m_state == CommandLineState::kWaitForNextPointInput) {
+    if (m_state == CommandLineState::kNextPointQuery) {
         // 获取当前鼠标位置
         glm::dvec3 mousePos = Renderer::getCursorPosWorld();
         
         // 将世界坐标转换为屏幕坐标
-        glm::vec2 startScreenPos = transformManager.worldToScreen(m_startPoint);
+        glm::vec2 startScreenPos = transformManager.worldToScreen(m_points.empty() ? glm::dvec3() : m_points.back());
         glm::vec2 mouseScreenPos = transformManager.worldToScreen(mousePos);
         
         // 使用黄色绘制预览线段

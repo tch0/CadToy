@@ -2170,9 +2170,15 @@ void Renderer::drawCommandBar() {
         
         // 显示命令提示信息
         auto& inputContext = InputContext::getInstance();
+        // 命令或者选择任务中需要显示提示信息
         if (inputContext.isAnyCommandOrTaskRunning()) {
+            std::string commandName = CommandManager::getInstance().getCommandName();
             const std::string& prompt = inputContext.getPrompt();
-            if (!prompt.empty()) {
+            // 如果在命令中还需要显示当前命令名称
+            if (inputContext.isInCommandExecution()) {
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s: %s", commandName.c_str(), prompt.c_str());
+            }
+            else if (!prompt.empty()) {
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
             }
             else {

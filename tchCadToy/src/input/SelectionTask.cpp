@@ -103,12 +103,12 @@ void SelectionTask::onUpdate() {
     
     // 根据当前状态处理逻辑
     switch (m_state) {
-        case SelectionState::kSingleSelectionEntry:
-            // 等待单选点
+        case SelectionState::kSingleSelectionEntry: {
+            // 等待单选点，从命令中进入选择的入口
             InputContext::getInstance().waitForPoint("选择对象:", {"F", "WP", "CP"});
             m_state = SelectionState::kSingleSelectionQuery;
             break;
-            
+        }
         case SelectionState::kSingleSelectionQuery: {
             // 检查输入状态
             InputStatus status = InputContext::getInstance().getCurrentStatus();
@@ -116,7 +116,9 @@ void SelectionTask::onUpdate() {
             if (status == InputStatus::kPointInput) {
                 glm::vec2 screenPos = InputHandler::getCursorPosition();
                 m_initialPointScreen = screenPos;
-                m_initialPointWorld = Renderer::getTransformManager().screenToWorld(screenPos);
+                glm::dvec3 pickedPoint;
+                InputContext::getInstance().getPickedPoint(pickedPoint);
+                m_initialPointWorld = pickedPoint;
                 
                 // TODO: 检查点击位置是否有实体
                 bool hasEntity = false; // 假设没有实体
@@ -135,26 +137,22 @@ void SelectionTask::onUpdate() {
             }
             // 关键字输入
             else if (status == InputStatus::kKeywordInput) {
-                // TODO: 单选模式下，直接进入分支是没有第一点的，需要从第一点开始指定
-                // 第一点可以点击获取第一点后正常进入F/WP/CP获取后续点的流程
-                // 也可以按住拖动进入对应的套索选择循环的三个状态
-                // 只需要对应再加6个状态对应处理即可：k Fence/Lasso/Polygon FirstPoint Entry/Query
                 std::string keyword;
                 InputContext::getInstance().getKeyword(keyword);
                 if (keyword == "F") {
                         m_selectionMode = SelectionMode::kFence;
                         interactionData.selectionMode = SelectionMode::kFence;
-                        m_state = SelectionState::kFenceSelectionEntry;
+                        m_state = SelectionState::kFWpCpFirstPointEntry;
                     }
                     else if (keyword == "WP") {
                         m_selectionMode = SelectionMode::kWindowPolygon;
                         interactionData.selectionMode = SelectionMode::kWindowPolygon;
-                        m_state = SelectionState::kPolygonSelectionEntry;
+                        m_state = SelectionState::kFWpCpFirstPointEntry;
                     }
                     else if (keyword == "CP") {
                         m_selectionMode = SelectionMode::kCrossingPolygon;
                         interactionData.selectionMode = SelectionMode::kCrossingPolygon;
-                        m_state = SelectionState::kPolygonSelectionEntry;
+                        m_state = SelectionState::kFWpCpFirstPointEntry;
                     }
             }
             // Enter/Space 结束选择
@@ -205,7 +203,7 @@ void SelectionTask::onUpdate() {
                     interactionData.selectionMode = m_selectionMode;
                     interactionData.selectionPointsWorld = m_selectionPointsWorld;
                     
-                    // 套索模式是按住进入的，没有任何交互被接收，需要手动重置输入上下文状态
+                    // 套索模式是按住鼠标左键的状态下通过移动鼠标进入的，没有任何交互被接收，需要手动重置输入上下文状态
                     InputContext::getInstance().resetStatus();
                 }
             }
@@ -261,8 +259,6 @@ void SelectionTask::onUpdate() {
                 }
                 // 更新交互数据
                 interactionData.selectionMode = m_selectionMode;
-                // 这里状态不会切换，回车被接收到之后需要重置输入上下文状态
-                InputContext::getInstance().resetStatus();
             }
             // Esc
             else if (status == InputStatus::kCanceled) {
@@ -272,6 +268,110 @@ void SelectionTask::onUpdate() {
             }
             break;
         }
+        
+        case SelectionState::kFWpCpFirstPointEntry: {
+            // 清空选择点列表
+            m_selectionPointsWorld.clear();
+            
+            // 根据选择模式设置不同的提示
+            std::string prompt;
+            if (m_selectionMode == SelectionMode::kFence) {
+                prompt = "指定第一个栏选点或拾取/拖动光标:";
+            } else if (m_selectionMode == SelectionMode::kWindowPolygon) {
+                prompt = "指定第一个圈围点或拾取/拖动光标:";
+            } else if (m_selectionMode == SelectionMode::kCrossingPolygon) {
+                prompt = "指定第一个圈交点或拾取/拖动光标:";
+            }
+            
+            // 等待第一点
+            InputContext::getInstance().waitForPoint(prompt, {});
+            m_state = SelectionState::kFWpCpFirstPointQuery;
+            break;
+        }
+        
+        case SelectionState::kFWpCpFirstPointQuery: {
+            // 检查输入状态
+            InputStatus status = InputContext::getInstance().getCurrentStatus();
+            // 点输入
+            if (status == InputStatus::kPointInput) {
+                // 获取第一点
+                glm::dvec3 firstPoint;
+                InputContext::getInstance().getPickedPoint(firstPoint);
+                // 记录初始点
+                m_initialPointWorld = firstPoint;
+                m_initialPointScreen = InputHandler::getCursorPosition();
+                m_selectionPointsWorld.push_back(firstPoint);
+                
+                // 更新交互数据
+                interactionData.selectionInitialPointWorld = m_initialPointWorld;
+                interactionData.selectionPointsWorld = m_selectionPointsWorld;
+                
+                // 进入套索选择决策状态
+                m_state = SelectionState::kFWpCpLassoChoice;
+            }
+            // Enter/Space 结束选择
+            else if (status == InputStatus::kEnterInput) {
+                finishSelection();
+                m_inputStatus = InputStatus::kEntitySelection;
+            }
+            // Esc
+            else if (status == InputStatus::kCanceled) {
+                cancelSelection();
+                m_inputStatus = InputStatus::kCanceled;
+            }
+            break;
+        }
+        
+        case SelectionState::kFWpCpLassoChoice: {
+            // 更新预览点
+            m_previewPointScreen = InputHandler::getCursorPosition();
+            m_previewPointWorld = Renderer::getTransformManager().screenToWorld(m_previewPointScreen);
+            interactionData.selectionPreviewPointWorld = m_previewPointWorld;
+            
+            // 处理套索选择的切换
+            if (InputHandler::isLeftMouseButtonPressed()) {
+                float distance = glm::distance(m_previewPointScreen, m_initialPointScreen);
+                const float lassoThreshold = 100.0f;
+                if (distance > lassoThreshold) {
+                    // 切换到套索选择
+                    if (m_selectionMode == SelectionMode::kFence) {
+                        m_selectionMode = SelectionMode::kFence;
+                        m_lassoModeCycle = LassoModeCycle::kFence;
+                        cmdLinePrint("栏选(F) 套索  按空格键以循环选项");
+                    } else if (m_selectionMode == SelectionMode::kWindowPolygon) {
+                        m_selectionMode = SelectionMode::kWindowLasso;
+                        m_lassoModeCycle = LassoModeCycle::kWindow;
+                        cmdLinePrint("窗口(W) 套索  按空格键以循环选项");
+                    } else if (m_selectionMode == SelectionMode::kCrossingPolygon) {
+                        m_selectionMode = SelectionMode::kCrossingLasso;
+                        m_lassoModeCycle = LassoModeCycle::kCrossing;
+                        cmdLinePrint("窗交(C) 套索  按空格键以循环选项");
+                    }
+                    
+                    m_state = SelectionState::kLassoSelection;
+                    m_selectionPointsWorld.clear();
+                    m_selectionPointsWorld.push_back(m_initialPointWorld);
+                    m_lastLassoPointScreen = m_initialPointScreen;
+                    
+                    // 更新交互数据
+                    interactionData.selectionMode = m_selectionMode;
+                    interactionData.selectionPointsWorld = m_selectionPointsWorld;
+                    
+                    // 套索模式是按住鼠标左键的状态下通过移动鼠标进入的，没有任何交互被接收，需要手动重置输入上下文状态
+                    InputContext::getInstance().resetStatus();
+                }
+            }
+            // 鼠标左键已经抬起，进入正常的选择流程
+            else {
+                if (m_selectionMode == SelectionMode::kFence) {
+                    m_state = SelectionState::kFenceSelectionEntry;
+                } else {
+                    m_state = SelectionState::kPolygonSelectionEntry;
+                }
+            }
+            break;
+        }
+        
         case SelectionState::kFenceSelectionEntry:
             // 等待栏选点
             InputContext::getInstance().waitForPoint("指定下一个栏选点或 [放弃(U)]:", {"U"});
@@ -323,8 +423,7 @@ void SelectionTask::onUpdate() {
             InputContext::getInstance().waitForPoint("指定直线的端点或 [放弃(U)]:", {"U"});
             m_state = SelectionState::kPolygonSelectionQuery;
             break;
-        
-        
+            
         case SelectionState::kPolygonSelectionQuery: {
             // 检查输入状态
             InputStatus status = InputContext::getInstance().getCurrentStatus();
@@ -466,7 +565,6 @@ void SelectionTask::handleBoxSelection()
     // Enter
     else if (status == InputStatus::kEnterInput) {
         cmdLinePrint("窗口说明无效。");
-        InputContext::getInstance().resetStatus();
         InputContext::getInstance().waitForPoint("指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:", {"F", "WP", "CP"});
         m_state = SelectionState::kBoxSelectionQuery;
     }

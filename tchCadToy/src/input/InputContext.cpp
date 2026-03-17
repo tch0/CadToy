@@ -77,7 +77,14 @@ void InputContext::setErrorPrompt(const std::string& errorPrompt) {
 
 // 输入状态管理
 InputStatus InputContext::getCurrentStatus() {
-    return m_currentStatus;
+    // 状态获取到之后需要及时清理：
+    //      对于kNone/kEnterInput/kCanceled之外的一切输入状态，都会在对应getXXX调用中清理，waitForxxx之后要得到输入，必须调用getxxx获取输入并清理状态
+    //      但kEnterInput/kCanceled是不需要获取输入的，这个状态本身已经包含了所有信息，命令侧也不应当承担清理状态的责任，所以这里需要清理
+    InputStatus status = m_currentStatus;
+    if (status == InputStatus::kEnterInput || status == InputStatus::kCanceled) {
+        m_currentStatus = InputStatus::kNone;
+    }
+    return status;
 }
 
 void InputContext::resetStatus() {
@@ -123,7 +130,7 @@ bool InputContext::getPickedPoint(glm::dvec3& point) {
 
 // 处理鼠标左键点击事件
 void InputContext::handleLeftMouseClick() {
-    // TODO: 优化统一这里的逻辑，处理命令中的选择
+    // TODO: 命令中与选择中点输入流程完全一致，需不需要统一起来？
     // 检查是否有活动命令
     if (m_inCommandExecution) {
         // 从InputHandler获取光标位置
@@ -138,8 +145,7 @@ void InputContext::handleLeftMouseClick() {
         }
     }
     else {
-        // 检查是否有活动的选择任务，处理选择过程中的点击
-        // TODO: 和命令处理一致，统一起来
+        // 处理选择任务中的点输入
         if (m_selectionTask && m_selectionTask->isSelecting()) {
             // 正在选择
             // 从InputHandler获取光标位置
@@ -153,8 +159,8 @@ void InputContext::handleLeftMouseClick() {
                 cmdLinePrint(m_prompt);
             }
         }
+        // 没有活动任务也不在命令中，激活选择任务，进入框选过程
         else {
-            // 没有活动任务也不在命令中，激活窗口选择任务
             activateSelectionTask(SelectionMode::kWindow);
         }
     }
@@ -347,7 +353,7 @@ void InputContext::handleEnterSpace(const std::string& input) {
         parseInput(input);
     }
     else {
-        // 命令执行外，作为新命令处理
+        // 命令以及任务执行外，作为新命令处理
         // 添加到命令历史
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandLine.prompt.command") + " " + input;
@@ -420,7 +426,23 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
-    // 可以在这里设置数值范围
+    // TODO: 可以在这里设置数值范围
+}
+
+// 等待数值输入，同时允许关键字
+void InputContext::waitForNumber(const std::string& prompt, double min, double max, const std::vector<std::string>& keywords) {
+    setPrompt(prompt);
+    if (!keywords.empty()) {
+        setAllowedTypes({InputType::kInteger, InputType::kFloat, InputType::kKeyword});
+        setKeywordOptions(keywords);
+    }
+    else {
+        setAllowedTypes({InputType::kInteger, InputType::kFloat});
+    }
+    // 设置错误提示 - 从本地化资源加载
+    auto& loc = LocalizationManager::getInstance();
+    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
+    // TODO: 可以在这里设置数值范围
 }
 
 // 等待整数输入
@@ -432,7 +454,25 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max) {
     std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
     // 使用StringUtils::format进行格式化，处理可能的异常
     m_errorPrompt = StringUtils::format(errorTemplate, min, max);
-    // 可以在这里设置整数范围
+    // TODO: 可以在这里设置整数范围，保存起来以供后续检验
+}
+
+// 等待整数输入，同时允许关键字
+void InputContext::waitForInteger(const std::string& prompt, int min, int max, const std::vector<std::string>& keywords) {
+    setPrompt(prompt);
+    if (!keywords.empty()) {
+        setAllowedTypes({InputType::kInteger, InputType::kKeyword});
+        setKeywordOptions(keywords);
+    }
+    else {
+        setAllowedTypes({InputType::kInteger});
+    }
+    // 设置错误提示 - 从本地化资源加载并格式化
+    auto& loc = LocalizationManager::getInstance();
+    std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
+    // 使用StringUtils::format进行格式化，处理可能的异常
+    m_errorPrompt = StringUtils::format(errorTemplate, min, max);
+    // TODO: 可以在这里设置整数范围，保存起来以供后续检验
 }
 
 // 等待浮点数输入
@@ -683,10 +723,21 @@ InteractionData& InputContext::getInteractionData() {
 
 // 更新输入上下文
 void InputContext::onUpdate() {
+    // 如果调用了waitForEntity来选择实体
+    if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
+        // 且选择任务还没有启动，那么此处启动选择任务
+        if (m_selectionTask == nullptr || !m_selectionTask->isSelecting()) {
+            activateSelectionTask(SelectionMode::kSingle);
+        }
+    }
+    
     // 更新选择任务
     if (m_selectionTask && m_selectionTask->isSelecting()) {
         m_selectionTask->onUpdate();
         if (m_selectionTask->isCompleted()) {
+            // 选择任务结束后，重置输入上下文状态
+            resetStatus();
+            
             // TODO: 选择任务完成，处理选择结果
             std::vector<void*> selectedEntities;
             // 实际的实体选择逻辑需要在后续实现
@@ -694,6 +745,7 @@ void InputContext::onUpdate() {
             setSelectedEntities(selectedEntities);
             
             // 如果在命令执行中则需要获取选择返回的状态，以提供给命令来处理
+            // 比如选择中Esc，命令可能直接结束
             if (m_inCommandExecution)
             {
                 m_currentStatus = m_selectionTask->getInputStatus();
@@ -716,7 +768,7 @@ void InputContext::activateSelectionTask(SelectionMode mode) {
     }
     
     // 开始选择任务，传递命令执行状态
-    m_selectionTask->start(isInCommandExecution(), mode != SelectionMode::kWindow);
+    m_selectionTask->start(isInCommandExecution(), mode == SelectionMode::kSingle);
     
     // 设置选择模式
     m_interactionData.selectionMode = mode;

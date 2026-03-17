@@ -6,18 +6,18 @@
 
 namespace tch {
 
-// 线段命令状态枚举
-enum class CommandLineState {
-    kWaitForStartPoint,          // 等待起点
-    kWaitForStartPointInput,     // 等待起点输入
-    kWaitForNextPoint,           // 等待下一点
-    kWaitForNextPointInput,      // 等待下一点输入
-    kFinishing                   // 结束状态
-};
-
 // 线段命令
 class CommandLine : public Command {
 private:
+    // line命令状态枚举
+    enum class CommandLineState {
+        kStartPointEntry,       // 起点入口
+        kStartPointQuery,       // 起点输入查询
+        kNextPointEntry,        // 下一点入口
+        kNextPointQuery,        // 下一点输入查询
+        kCompleted              // 结束状态
+    };
+    
     CommandLineState m_state;    // 命令状态
     glm::dvec3 m_startPoint;     // 起点
     glm::dvec3 m_currentPoint;   // 当前点（用于预览）

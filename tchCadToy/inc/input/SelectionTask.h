@@ -36,6 +36,9 @@ private:
         kBoxLassoSelectionChoice,       // 框选或套索选择决策
         kBoxSelectionQuery,             // 框选模式输入查询
         kLassoSelection,                // 套索选择
+        kFWpCpFirstPointEntry,          // F/WP/CP 第一点入口
+        kFWpCpFirstPointQuery,          // F/WP/CP 第一点查询
+        kFWpCpLassoChoice,              // F/WP/CP 套索选择决策
         kFenceSelectionEntry,           // 栏选模式入口
         kFenceSelectionQuery,           // 栏选模式输入查询
         kPolygonSelectionEntry,         // 多边形选择入口

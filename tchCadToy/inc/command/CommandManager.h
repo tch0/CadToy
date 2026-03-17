@@ -14,6 +14,9 @@ private:
     
     // 活动命令
     std::shared_ptr<Command> m_activeCommand;
+    
+    // TODO: 待优化，实现命令映射表后通过命令映射表来管理
+    std::string m_currentCommandName;
 
 public:
     // 构造函数
@@ -42,6 +45,9 @@ public:
     
     // 运行命令循环
     void runCommandLoop();
+    
+    // 获取当前运行命令的名称，有命令运行时该命令下所有输出前都会显示命令名称
+    std::string getCommandName();
 };
 
 } // namespace tch
