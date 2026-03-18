@@ -1511,7 +1511,8 @@ void Renderer::initializeImGui() {
     LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
     
     // 尝试加载微软雅黑字体，加载完整中文字符集以确保所有汉字都能显示，中文字号略大看起来才和英文匹配
-    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, io.Fonts->GetGlyphRangesChineseFull());
+    // v1.92版本后，按需动态加载字形，能够大幅减少内存占用，不再需要指定字形范围
+    ImFont* msyhFont = io.Fonts->AddFontFromFileTTF(msyhPathStr.c_str(), 22.0f, &config, nullptr);
     
     if (!msyhFont) {
         LOG_WARNING("Failed to load Microsoft YaHei font: {}", msyhPathStr);
@@ -1519,7 +1520,8 @@ void Renderer::initializeImGui() {
     }
     
     // 4. 构建字体图集
-    io.Fonts->Build();
+    // 这一步不再需要了，imgui更新到1.92版本后支持了动态加载字形，需要由imgui自动构建，而不是手动调用
+    // io.Fonts->Build();
     
     LOG_INFO("Font loading completed");
     
@@ -1532,6 +1534,19 @@ void Renderer::initializeImGui() {
     // 初始化ImGui OpenGL3后端
     const char* glsl_version = "#version 330";
     ImGui_ImplOpenGL3_Init(glsl_version);
+    
+    // 修改UI设置
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 4.0f;       // 窗口圆角
+    style.ChildRounding  = 2.0f;       // 子窗口圆角
+    style.FrameRounding  = 4.0f;       // 输入框、按钮圆角
+    style.PopupRounding  = 4.0f;       // 菜单、弹窗圆角
+    style.ScrollbarRounding = 9.0f;    // 滚动条圆角
+    style.GrabRounding   = 2.0f;       // 滑块圆角
+    
+    // 抗锯齿开关（确保开启）
+    style.AntiAliasedLines = true;
+    style.AntiAliasedFill  = true;
 }
 
 // 清理ImGui
