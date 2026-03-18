@@ -416,7 +416,18 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
 
 // 等待点输入（无基点）
 void InputContext::waitForPoint(const std::string& prompt, const std::vector<std::string>& keywords) {
-    waitForPoint(prompt, glm::dvec3(0, 0, 0), keywords);
+    setPrompt(prompt);
+    if (!keywords.empty()) {
+        setAllowedTypes({InputType::kPoint, InputType::kKeyword});
+        setKeywordOptions(keywords);
+    }
+    else {
+        setAllowedTypes({InputType::kPoint});
+    }
+    // 设置错误提示 - 从本地化资源加载
+    auto& loc = LocalizationManager::getInstance();
+    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidPoint"); // *无效点*
+    // 可以在这里使用basePoint进行一些计算或设置
 }
 
 // 等待数值输入
