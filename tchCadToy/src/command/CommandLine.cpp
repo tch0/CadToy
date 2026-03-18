@@ -44,8 +44,8 @@ void CommandLine::onUpdate() {
             if (status == InputStatus::kNone) {
                 break;
             }
-            // Esc、Enter和关键字，结束命令
-            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput || status == InputStatus::kKeywordInput) {
+            // Esc/Enter/Space，结束命令
+            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput) {
                 m_state = CommandLineState::kCompleted;
             }
             // 获取第一点输入

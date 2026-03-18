@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <imgui.h>
 #include "transform/TransformManager.h"
 
 namespace tch {
@@ -93,7 +94,8 @@ public:
     static void drawOptionsDialog(); // 绘制选项对话框
     
     // 焦点检查相关方法
-    static bool focusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口
+    static bool focusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口，通用方法
+    static bool focusIsOnCommandBar(); // 检查焦点是否位于命令栏
     static bool focusIsOnCommandInput(); // 检查焦点是否在命令输入框上
     
     
@@ -128,8 +130,10 @@ private:
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
     static bool s_bCommandBufferModified; // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
     static bool s_bNeedClearCommandBufferInternalCopy; // 是否需要清除命令输入缓冲区的内部副本
-
-
+    static ImGuiID s_commandBarId; // 每一帧记录CommandBar的ID，判断焦点时直接通过此ID比较而不需要任何查找
+    static ImGuiID s_commandInputId; // 每一帧记录CommandInput输入框的ID，判断焦点时直接通过此ID比较而不需要任何查找
+    
+    
     // 辅助方法
     static void drawGrid();                     // 绘制栅格
     static void drawAxes();                     // 绘制XY轴

@@ -50,9 +50,12 @@ bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令
 bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设置到命令输入框
 // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
 bool Renderer::s_bCommandBufferModified = false;
-
 // 是否需要清除ImGui的命令输入缓冲区内部副本
 bool Renderer::s_bNeedClearCommandBufferInternalCopy = false;
+// CommandBar窗口ID，初始化为0，表示无效ID
+ImGuiID Renderer::s_commandBarId = 0;
+// CommandInput输入控件ID，初始化为0，表示无效ID
+ImGuiID Renderer::s_commandInputId = 0;
 
 // 命令栏相关
 static bool s_commandBarVisible = true; // 命令栏是否可见
@@ -218,7 +221,7 @@ void Renderer::endRender() {
             // 另外焦点位于命令栏上时也不释放，因为焦点位于画布(NULL)时有键盘输入进来后本来就会将焦点切到命令栏的命令输入框上进行命令输入，
             // 但不能仅判断焦点位于命令输入框时不释放，因为命令输入框只是一个命令栏上的控件，焦点不是全时保持在其上的，但能够确定的是
             // 在所有的键盘字符交互过程中焦点的归宿就是命令栏，那么如果焦点已经位于命令栏上了当然是不应该释放的。
-            bool bFocusIsOnCommandBar = focusIsOnWindow("CommandBar");
+            bool bFocusIsOnCommandBar = focusIsOnCommandBar();
             
             // 没有悬停在任何窗口上、且没有和任何UI元素进行交互、且焦点在除命令栏外的其他窗口上时，就释放焦点
             if (!mouseOverUI && !isInteracting && !bFocusIsOnCommandBar) {
@@ -2130,6 +2133,9 @@ void Renderer::drawCommandBar() {
     
     auto& loc = LocalizationManager::getInstance();
     if (ImGui::Begin("CommandBar", nullptr, flags)) {
+        // 记录ID
+        s_commandBarId = ImGui::GetCurrentWindow()->RootWindow->ID;
+        
         // 创建区域显示命令历史，添加垂直和水平滚动条，留出空间给命令输入栏
         const float footerReserveHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
         ImGui::BeginChild("CommandHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
@@ -2260,6 +2266,9 @@ void Renderer::drawCommandBar() {
         ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
             ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter, 
             inputTextCallback, nullptr);
+        
+        // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
+        s_commandInputId = ImGui::GetItemID(); 
         
         // 平衡PushItemWidth调用
         ImGui::PopItemWidth();
@@ -2396,8 +2405,17 @@ bool Renderer::focusIsOnWindow(const std::string& windowName) {
     return false;
 }
 
+// 检查焦点是否位于命令栏
+bool Renderer::focusIsOnCommandBar() {
+    ImGuiContext* ctx = ImGui::GetCurrentContext();
+    return ctx && ctx->NavWindow && ctx->NavWindow->RootWindow->ID == s_commandBarId;
+}
+
 // 检查焦点是否在命令输入框上
 bool Renderer::focusIsOnCommandInput() {
+    /*
+    旧的通用实现，能够实现但相比保存ID并直接比较会多一些按字符串查找操作(内部也是哈希之后比较的，对性能并不影响)
+    
     // 获取当前活跃控件的ID
     ImGuiID activeID = ImGui::GetActiveID();
     
@@ -2412,6 +2430,8 @@ bool Renderer::focusIsOnCommandInput() {
         }
     }
     return false;
+    */
+    return s_commandInputId == ImGui::GetActiveID();
 }
 
 } // namespace tch
