@@ -2193,7 +2193,7 @@ void Renderer::drawCommandBar() {
         auto& inputContext = InputContext::getInstance();
         // 命令或者选择任务中需要显示提示信息
         if (inputContext.isAnyCommandOrTaskRunning()) {
-            std::string commandName = CommandManager::getInstance().getCommandName();
+            std::string commandName = CommandManager::getInstance().getRunningCommandName();
             const std::string& prompt = inputContext.getPrompt();
             // 如果在命令中还需要显示当前命令名称
             if (inputContext.isInCommandExecution()) {

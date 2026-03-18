@@ -9,6 +9,8 @@
 #include "command/CommandClose.h"
 #include "command/CommandTest.h"
 
+#include <algorithm>
+
 namespace tch {
 
 // 静态成员初始化
@@ -17,6 +19,29 @@ std::shared_ptr<CommandManager> CommandManager::s_instance = nullptr;
 // 构造函数
 CommandManager::CommandManager() :
     m_activeCommand(nullptr) {
+    // 注册命令
+    registerCommand<CommandLine>("LINE", {"L"});
+    // registerCommand<CommandCircle>("CIRCLE", {"C"});
+    // registerCommand<CommandRect>("RECTANG", {"REC"});
+    // registerCommand<CommandArc>("ARC", {"A"});
+    // registerCommand<CommandEllipse>("ELLIPSE", {"EL"});
+    // registerCommand<CommandErase>("ERASE", {"E"});
+    // registerCommand<CommandMove>("MOVE", {"M"});
+    // registerCommand<CommandCopy>("COPY", {"CO", "CP"});
+    // registerCommand<CommandRotate>("ROTATE", {"RO"});
+    // registerCommand<CommandScale>("SCALE", {"SC"});
+    // registerCommand<CommandZoom>("ZOOM", {"Z"});
+    // registerCommand<CommandPan>("PAN", {"P"});
+    // registerCommand<CommandLayer>("LAYER", {"LA"});
+    // registerCommand<CommandUndo>("UNDO", {"U"});
+    // registerCommand<CommandQuit>("QUIT", {"EXIT"});
+    // registerCommand<CommandProperties>("PROPERTIES", {"PR", "MO"});
+    // registerCommand<CommandOptions>("OPTIONS", {"OP"});
+    registerCommand<CommandClose>("CLOSE", {});
+    registerCommand<CommandTest>("TEST", {});
+    
+    // 所有命令注册完成后，建立补全候选池
+    rebuildCommandCompletionPool();
 }
 
 // 获取单例实例
@@ -25,6 +50,66 @@ CommandManager& CommandManager::getInstance() {
         s_instance = std::make_shared<CommandManager>();
     }
     return *s_instance;
+}
+
+// 注册命令模板实现
+template<typename T>
+void CommandManager::registerCommand(const std::string& fullName, const std::vector<std::string>& aliases) {
+    std::string upperFull = StringUtils::toUpperCase(fullName);
+    m_creators[upperFull] = []() {
+        return std::make_unique<T>();
+    };
+    
+    for (const auto& alias : aliases) {
+        m_aliasMap[StringUtils::toUpperCase(alias)] = upperFull;
+    }
+}
+
+// 重建补全候选池
+void CommandManager::rebuildCommandCompletionPool() {
+    m_commandCompletionPool.clear();
+    
+    // 添加全称
+    for (const auto& [name, _] : m_creators) {
+        m_commandCompletionPool.push_back({name, name, false});
+    }
+    
+    // 添加别名
+    for (const auto& [alias, full] : m_aliasMap) {
+        m_commandCompletionPool.push_back({alias, full, true});
+    }
+    
+    // 按照优先级从大到小排序
+    std::sort(m_commandCompletionPool.begin(), m_commandCompletionPool.end());
+}
+
+// 获取匹配的补全候选列表，按照优先级排序
+std::vector<CommandCompletionItem> CommandManager::getCompletionCandidates(const std::string& partial) const {
+    std::vector<CommandCompletionItem> results;
+    if (partial.empty()) {
+        return results;
+    }
+    
+    std::string search = StringUtils::toUpperCase(partial);
+    for (const auto& item : m_commandCompletionPool) {
+        int cmp = item.key.compare(0, search.size(), search);
+        // 前缀匹配，建立命令补全候选池时就是排好序的，直接按顺序添加结果就是排好序的
+        if (cmp == 0) {
+            results.push_back(item);
+        }
+        // 已过所有匹配项，因补全池已排序，后续肯定不匹配，提前退出
+        else if (cmp > 0) {
+            break;
+        }
+    }
+    return results;
+}
+
+// 查找命令全名
+std::string CommandManager::findFullCommandName(const std::string& command) const {
+    std::string upCommand = StringUtils::toUpperCase(command);
+    auto it = m_aliasMap.find(upCommand);
+    return (it != m_aliasMap.end()) ? it->second : upCommand;
 }
 
 // 检查是否有活动命令
@@ -42,7 +127,15 @@ std::shared_ptr<Command> CommandManager::getActiveCommand() {
 void CommandManager::executeCommand(const std::string& command) {
     tchAssert(m_activeCommand == nullptr, "There should be no active commnd when executing a new command. Please use cancelCurrentCommandAndExecute.");
     
-    parseCommand(command);
+    // 查找命令全名，创建并设置命令对象，记录命令名
+    std::string cmdName = findFullCommandName(command);
+    auto it = m_creators.find(cmdName);
+    if (it != m_creators.end()) {
+        m_activeCommand = it->second();
+        m_currentCommandName = cmdName;
+    } else {
+        cmdLinePrint(std::format("Unknown command: {}", command));
+    }
     
     // 设置输入上下文为命令执行状态，成功解析为了命令那才设置
     InputContext::getInstance().setInCommandExecution(m_activeCommand != nullptr);
@@ -130,30 +223,6 @@ void CommandManager::cancelCurrentCommandAndExecute(const std::string& command)
     executeCommand(command);
 }
 
-// 解析命令
-void CommandManager::parseCommand(const std::string& command) {
-    // 简单的命令解析
-    if (StringUtils::equalsIgnoreCase(command, "line") ||
-        StringUtils::equalsIgnoreCase(command, "l")) {
-        // 创建线段命令并添加到待执行列表
-        m_activeCommand = std::make_shared<CommandLine>();
-        m_currentCommandName = "LINE";
-    }
-    else if (StringUtils::equalsIgnoreCase(command, "close")) {
-        // 创建关闭命令并添加到待执行列表
-        m_activeCommand = std::make_shared<CommandClose>();
-        m_currentCommandName = "CLOSE";
-    }
-    else if (StringUtils::equalsIgnoreCase(command, "test")) {
-        m_activeCommand = std::make_shared<CommandTest>();
-        m_currentCommandName = "TEST";
-    }
-    // 其他命令的解析...
-    else {
-        cmdLinePrint(std::format("Unknown command: {}", command));
-    }
-}
-
 // 运行命令循环
 void CommandManager::runCommandLoop() {
     // 首先更新输入上下文
@@ -179,7 +248,7 @@ void CommandManager::runCommandLoop() {
     }
 }
 
-std::string CommandManager::getCommandName() {
+std::string CommandManager::getRunningCommandName() {
     return m_currentCommandName;
 }
 
