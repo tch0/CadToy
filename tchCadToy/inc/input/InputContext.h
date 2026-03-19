@@ -56,14 +56,20 @@ private:
     // 错误提示信息
     std::string m_errorPrompt;
     
-    // 拾取的点
-    glm::dvec3 m_pickedPoint;
+    // 点输入相关
+    glm::dvec3 m_pickedPoint; // 拾取获取输入的点
+    bool m_bHasBasePoint; // 是否有基点
+    glm::dvec3 m_basePoint; // 点输入的基点，由带基点版本waitForPoint传入
     
     // 输入的整数
     int m_inputInteger;
+    int m_intLimitMin;
+    int m_intLimitMax;
     
-    // 输入的浮点数
+    // 浮点数输入相关
     double m_inputFloat;
+    double m_floatLimitMin;
+    double m_floatLimitMax;
     
     // 输入的字符串
     std::string m_inputString;

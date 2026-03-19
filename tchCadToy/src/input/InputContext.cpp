@@ -23,8 +23,14 @@ InputContext::InputContext() :
     m_prompt(""),
     m_errorPrompt(""),
     m_pickedPoint(glm::dvec3(0, 0, 0)),
+    m_bHasBasePoint(false),
+    m_basePoint(glm::dvec3(0, 0, 0)),
     m_inputInteger(0),
+    m_intLimitMin(INT_MIN),
+    m_intLimitMax(INT_MAX),
     m_inputFloat(0.0),
+    m_floatLimitMin(-DBL_MAX),
+    m_floatLimitMax(DBL_MAX),
     m_inputString(""),
     m_inputKeyword(""),
     m_keywordOptions(),
@@ -93,8 +99,14 @@ void InputContext::resetStatus() {
     m_prompt = "";
     m_errorPrompt = "";
     m_pickedPoint = glm::dvec3(0, 0, 0);
+    m_bHasBasePoint = false;
+    m_basePoint = glm::dvec3(0, 0, 0);
     m_inputInteger = 0;
+    m_intLimitMin = INT_MIN;
+    m_intLimitMax = INT_MAX;
     m_inputFloat = 0.0;
+    m_floatLimitMin = -DBL_MAX;
+    m_floatLimitMax = DBL_MAX;
     m_inputString = "";
     m_inputKeyword = "";
     m_keywordOptions.clear();
@@ -284,17 +296,59 @@ void InputContext::parseInput(const std::string& input) {
         }
     }
     
+    // 尝试解析为点坐标（如果允许点输入）- 支持 "x,y" 格式的二维坐标与距离输入
+    if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
+        size_t pos = input.find(',');
+        // 尝试解析为二维点输入: xpos,ypos -> point = (xpos,ypos,0)
+        if (pos != std::string::npos && pos > 0 && pos < input.length() - 1) {
+            try {
+                std::string xStr = input.substr(0, pos);
+                std::string yStr = input.substr(pos + 1);
+                
+                size_t posX, posY;
+                double x = std::stod(xStr, &posX);
+                double y = std::stod(yStr, &posY);
+                
+                if (posX == xStr.length() && posY == yStr.length()) {
+                    m_pickedPoint = glm::dvec3(x, y, 0.0);
+                    m_currentStatus = InputStatus::kPointInput;
+                    cmdLinePrint(inputPrompt);
+                    return;
+                }
+            } catch (...) {
+                // 解析失败，不是合法点输入
+            }
+        }
+        // 有基点，支持距离输入，尝试解析为距离输入, point = normalized(previewPoint - basePoint) * distance
+        else if (m_bHasBasePoint) {
+            glm::dvec3 previewPointWorld = Renderer::getTransformManager().screenToWorld(InputHandler::getCursorPosition());
+            try {
+                // TODO: 考虑误差和精度，当预览点和基点误差极小时，视为同一点，则获取到的新点直接等于基点
+                double distance = stod(input);
+                m_pickedPoint = m_basePoint + glm::normalize(previewPointWorld - m_basePoint) * distance;
+                m_currentStatus = InputStatus::kPointInput;
+                cmdLinePrint(inputPrompt);
+                return;
+            } catch (...) {
+                // 解析失败，不是合法距离输入
+            }
+        }
+    }
+    
     // 尝试解析为整数（如果允许整数输入）
     if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kInteger) != m_allowedTypes.end()) {
         try {
             size_t pos;
             int intValue = std::stoi(input, &pos);
             if (pos == input.length()) {
-                m_inputInteger = intValue;
-                m_currentStatus = InputStatus::kIntegerInput;
-                // 更新命令提示
-                cmdLinePrint(inputPrompt);
-                return;
+                // 检查范围
+                if (intValue >= m_intLimitMin && intValue <= m_intLimitMax) {
+                    m_inputInteger = intValue;
+                    m_currentStatus = InputStatus::kIntegerInput;
+                    // 更新命令提示
+                    cmdLinePrint(inputPrompt);
+                    return;
+                }
             }
         } catch (...) {
             // 解析失败，继续尝试其他类型
@@ -307,11 +361,14 @@ void InputContext::parseInput(const std::string& input) {
             size_t pos;
             double floatValue = std::stod(input, &pos);
             if (pos == input.length()) {
-                m_inputFloat = floatValue;
-                m_currentStatus = InputStatus::kFloatInput;
-                // 更新命令提示
-                cmdLinePrint(inputPrompt);
-                return;
+                // 检查范围
+                if (floatValue >= m_floatLimitMin && floatValue <= m_floatLimitMax) {
+                    m_inputFloat = floatValue;
+                    m_currentStatus = InputStatus::kFloatInput;
+                    // 更新命令提示
+                    cmdLinePrint(inputPrompt);
+                    return;
+                }
             }
         } catch (...) {
             // 解析失败，继续尝试其他类型
@@ -411,7 +468,9 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidPoint"); // *无效点*
-    // 可以在这里使用basePoint进行一些计算或设置
+    // 保存基点
+    m_basePoint = basePoint;
+    m_bHasBasePoint = true;
 }
 
 // 等待点输入（无基点）
@@ -427,7 +486,8 @@ void InputContext::waitForPoint(const std::string& prompt, const std::vector<std
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidPoint"); // *无效点*
-    // 可以在这里使用basePoint进行一些计算或设置
+    // 没有基点
+    m_bHasBasePoint = false;
 }
 
 // 等待数值输入
@@ -437,7 +497,10 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
-    // TODO: 可以在这里设置数值范围
+    
+    // 数值范围
+    m_floatLimitMin = min;
+    m_floatLimitMax = max;
 }
 
 // 等待数值输入，同时允许关键字
@@ -453,7 +516,10 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
-    // TODO: 可以在这里设置数值范围
+    
+    // 数值范围
+    m_floatLimitMin = min;
+    m_floatLimitMax = max;
 }
 
 // 等待整数输入
@@ -465,7 +531,10 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max) {
     std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
     // 使用StringUtils::format进行格式化，处理可能的异常
     m_errorPrompt = StringUtils::format(errorTemplate, min, max);
-    // TODO: 可以在这里设置整数范围，保存起来以供后续检验
+    
+    // 数值范围
+    m_intLimitMin = min;
+    m_intLimitMax = max;
 }
 
 // 等待整数输入，同时允许关键字
@@ -483,7 +552,10 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max, c
     std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
     // 使用StringUtils::format进行格式化，处理可能的异常
     m_errorPrompt = StringUtils::format(errorTemplate, min, max);
-    // TODO: 可以在这里设置整数范围，保存起来以供后续检验
+    
+    // 数值范围
+    m_intLimitMin = min;
+    m_intLimitMax = max;
 }
 
 // 等待浮点数输入
@@ -493,7 +565,10 @@ void InputContext::waitForFloat(const std::string& prompt, double min, double ma
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
-    // 可以在这里设置浮点数范围
+    
+    // 浮点数范围
+    m_floatLimitMin = min;
+    m_floatLimitMax = max;
 }
 
 // 等待字符串输入
