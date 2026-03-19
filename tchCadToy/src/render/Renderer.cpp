@@ -2226,13 +2226,15 @@ void Renderer::drawCommandBar() {
             ImGui::SetKeyboardFocusHere(0);
             s_bShouldFocusOnCommandInput = false;
             
-            // 重新获得焦点，根据当前输入框中内容重建补全列表
-             std::string currentInput(s_cmdBuffer.data());
-             if (currentInput != s_userInputCommand) {
-                s_userInputCommand = currentInput;
-                s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
-                s_completionSelectedIndex = -1;
-             }
+            // 命令补全: 重新获得焦点，根据当前输入框中内容重建补全列表
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                std::string currentInput(s_cmdBuffer.data());
+                if (currentInput != s_userInputCommand) {
+                   s_userInputCommand = currentInput;
+                   s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+                   s_completionSelectedIndex = -1;
+                }
+            }
         }
         
         // 使用PushItemWidth使输入框占满剩余空间
@@ -2243,20 +2245,23 @@ void Renderer::drawCommandBar() {
         // Enter/Space 提交输入框输入到输入上下文中进行处理
         if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
             // 获取当前 InputText 中的实际内容并清空缓冲区
-            std::string command = getAndClearCommandBuffer();
+            std::string input = getAndClearCommandBuffer();
             
-            // 执行时不是直接执行命令，而是去补全列表找到第一项来执行
-            if (!s_completionCandidates.empty()) {
-                command = s_completionCandidates[0].fullName;
+            // 命令补全
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                // 执行时不是直接执行命令，而是去补全列表找到第一项来执行
+                if (!s_completionCandidates.empty()) {
+                    input = s_completionCandidates[0].fullName;
+                }
+                
+                // 清除补全相关状态
+                s_completionCandidates.clear();
+                s_completionSelectedIndex = -1;
+                s_userInputCommand.clear();
             }
             
-            // 清除补全相关状态
-            s_completionCandidates.clear();
-            s_completionSelectedIndex = -1;
-            s_userInputCommand.clear();
-            
             // 处理输入
-            inputContext.handleEnterSpace(command);
+            inputContext.handleEnterSpace(input);
             // ImGui会内部维护InputText的缓冲区副本，Enter、Esc等事件时由上面的ImGui::SetKeyboardFocusHere所控制焦点会一直维持在命令输入框上，
             // 此时光清空外部缓冲区的话，每次InpuText调用都会把内部的副本重新同步回外部缓冲区来，那么就必须通过文本处理回调函数来清空内部的副本。
             // 而如果焦点已经不在输入框上了，那么单纯清除外部缓冲区就足够了。
@@ -2266,10 +2271,14 @@ void Renderer::drawCommandBar() {
         }
         // Esc 同样提交输入到输入上下文进行处理
         else if (inputEvent == SpecialKeyEventType::kEscPressed) {
-            // 清除补全相关状态
-            s_completionCandidates.clear();
-            s_completionSelectedIndex = -1;
-            s_userInputCommand.clear();
+            
+            // 命令补全
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                // 清除补全相关状态
+                s_completionCandidates.clear();
+                s_completionSelectedIndex = -1;
+                s_userInputCommand.clear();
+            }
             
             // 处理输入并清空缓冲区
             inputContext.handleEscape(getAndClearCommandBuffer());
@@ -2295,18 +2304,22 @@ void Renderer::drawCommandBar() {
             
             // 2. 文本编辑回调 - 重构补全候选列表
             if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-                std::string currentInput(data->Buf, data->BufTextLen);
-                
-                // 输入变化则更新候选列表
-                if (currentInput != s_userInputCommand) {
-                    s_userInputCommand = currentInput;
-                    s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
-                    s_completionSelectedIndex = -1;
+                // 命令补全
+                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                    std::string currentInput(data->Buf, data->BufTextLen);
+                    
+                    // 输入变化则更新候选列表
+                    if (currentInput != s_userInputCommand) {
+                        s_userInputCommand = currentInput;
+                        s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+                        s_completionSelectedIndex = -1;
+                    }
                 }
             }
             
             // 3. 补全回调 - Tab 补全
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion &&
+                !InputContext::getInstance().isAnyCommandOrTaskRunning()) {
                 if (!s_completionCandidates.empty()) {
                     // 循环切换到下一个候选项，-1没选中状态则变为选中第一个
                     s_completionSelectedIndex = (s_completionSelectedIndex + 1) % s_completionCandidates.size();
@@ -2370,8 +2383,9 @@ void Renderer::drawCommandBar() {
         // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
         s_commandInputId = ImGui::GetItemID(); 
         
-        // 绘制候选框
-        if (!s_completionCandidates.empty() && ImGui::IsItemFocused()) {
+        // 命令补全: 绘制候选框
+        if (!InputContext::getInstance().isAnyCommandOrTaskRunning() &&
+            !s_completionCandidates.empty() && ImGui::IsItemFocused()) {
             // 首次计算候选框宽度（40个字符宽度）
             static float completionPopupWidth = ImGui::CalcTextSize("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl").x;
             
@@ -2390,7 +2404,7 @@ void Renderer::drawCommandBar() {
                 
                 bool bItemClicked = false;
                 std::string commandToBeExecuted;
-                for (int i = 0; i < s_completionCandidates.size(); i++) {
+                for (std::size_t i = 0; i < s_completionCandidates.size(); i++) {
                     const auto& item = s_completionCandidates[i];
                     // 别名显示 key (fullName)，全称直接显示
                     std::string displayText = item.isAlias ? (item.key + " (" + item.fullName + ")") : item.key;

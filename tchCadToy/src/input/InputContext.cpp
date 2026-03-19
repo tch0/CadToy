@@ -574,12 +574,17 @@ void InputContext::drawInfoWindow() {
     // 修改窗口标题
     ImGui::Begin(loc.get("window.inputContextInfo.title").c_str(), &m_inputContextInfoVisible);
     
-    // 1. 命令执行状态 - 显示是否正在执行命令
+    // 命令执行状态 - 显示是否正在执行命令
     ImGui::Text("%s: %s", 
                loc.get("window.inputContextInfo.inCommandExecution").c_str(), 
                m_inCommandExecution ? "true" : "false");
+               
+    // 选择任务执行状态 - 显示是否正在进行选择
+    ImGui::Text("%s: %s", 
+                loc.get("window.inputContextInfo.inSelectionTask").c_str(),
+                (m_selectionTask && m_selectionTask->isSelecting()) ? "true" : "false");
     
-    // 2. 当前状态 - 显示输入状态机的当前状态
+    // 当前状态 - 显示输入状态机的当前状态
     auto statusIt = inputStatusToString.find(m_currentStatus);
     if (statusIt != inputStatusToString.end()) {
         ImGui::Text("%s: %s", 
@@ -593,7 +598,7 @@ void InputContext::drawInfoWindow() {
                    static_cast<int>(m_currentStatus));
     }
     
-    // 3. 允许的输入类型 - 显示当前允许的输入类型列表
+    // 允许的输入类型 - 显示当前允许的输入类型列表
     ImGui::Text("%s (%zu):", 
                loc.get("window.inputContextInfo.allowedTypes").c_str(), 
                m_allowedTypes.size());
@@ -607,7 +612,7 @@ void InputContext::drawInfoWindow() {
         }
     }
     
-    // 4. 关键字选项 - 显示可选的关键字列表
+    // 关键字选项 - 显示可选的关键字列表
     ImGui::Text("%s (%zu):", 
                loc.get("window.inputContextInfo.keywordOptions").c_str(), 
                m_keywordOptions.size());
@@ -615,12 +620,12 @@ void InputContext::drawInfoWindow() {
         ImGui::Text("  [%zu] %s", i, m_keywordOptions[i].c_str());
     }
 
-    // 5. 提示信息 - 显示给用户的提示文本
+    // 提示信息 - 显示给用户的提示文本
     ImGui::Text("%s: %s", 
                loc.get("window.inputContextInfo.prompt").c_str(), 
                m_prompt.empty() ? "" : m_prompt.c_str());
     
-    // 6. 错误提示 - 显示错误信息文本
+    // 错误提示 - 显示错误信息文本
     ImGui::Text("%s: %s", 
                loc.get("window.inputContextInfo.errorPrompt").c_str(), 
                m_errorPrompt.empty() ? "" : m_errorPrompt.c_str());
@@ -628,7 +633,7 @@ void InputContext::drawInfoWindow() {
     // 添加分隔线
     ImGui::Separator();
     
-    // 7. 交互数据
+    // 交互数据
     ImGui::Text("%s:", loc.get("window.inputContextInfo.interactionData").c_str());
     
     // 光标模式
@@ -707,13 +712,13 @@ void InputContext::drawInfoWindow() {
                loc.get("window.inputContextInfo.isSelectionActive").c_str(), 
                m_interactionData.isSelectionActive ? "true" : "false");
     
-    // 选择框起点
+    // 选择初始点
     ImGui::Text("  %s: (%.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionInitialPoint").c_str(), 
                m_interactionData.selectionInitialPointWorld.x, 
                m_interactionData.selectionInitialPointWorld.y);
     
-    // 选择框当前点
+    // 选择预览点
     ImGui::Text("  %s: (%.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionPreviewPoint").c_str(), 
                m_interactionData.selectionPreviewPointWorld.x, 

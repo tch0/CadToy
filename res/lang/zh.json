@@ -65,6 +65,7 @@
 
   "window.inputContextInfo.title": "输入上下文信息",
   "window.inputContextInfo.inCommandExecution": "命令执行中",
+  "window.inputContextInfo.inSelectionTask": "选择任务执行中",
   "window.inputContextInfo.currentStatus": "当前输入状态",
   "window.inputContextInfo.allowedTypes": "允许的输入类型",
   "window.inputContextInfo.keywordOptions": "关键字选项",

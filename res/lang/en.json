@@ -65,6 +65,7 @@
 
   "window.inputContextInfo.title": "Input Context Info",
   "window.inputContextInfo.inCommandExecution": "In Command Execution",
+  "window.inputContextInfo.inSelectionTask": "In Selection Task",
   "window.inputContextInfo.currentStatus": "Current Input Status",
   "window.inputContextInfo.allowedTypes": "Allowed Input Types",
   "window.inputContextInfo.keywordOptions": "Keyword Options",
