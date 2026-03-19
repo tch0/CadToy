@@ -9,6 +9,7 @@
 #include "sys/Global.h"
 #include "debug/Logger.h"
 #include "utils/LocalizationManager.h"
+#include "utils/StringUtils.h"
 #include "command/CommandManager.h"
 #include "input/InputHandler.h"
 #include "input/InputContext.h"
@@ -61,6 +62,13 @@ ImGuiID Renderer::s_commandInputId = 0;
 static bool s_commandBarVisible = true; // 命令栏是否可见
 static float s_commandBarHeight = 150.0f; // 命令栏高度
 static std::array<char, 256> s_cmdBuffer{}; // 命令输入缓冲区
+
+// 命令补全、候选框相关
+// 当前用户输入的那一部分命令，比如说输入L，补全为LINE，此时命令缓冲区已经修改为LINE，但s_userInputCommand一直都是L
+// 直到焦点丢失又重新找回或者又通过键盘添加删减了字符才会更新，这个字符串就是补全拿去查找的依据
+static std::string s_userInputCommand;
+static std::vector<CommandCompletionItem> s_completionCandidates; // 补全候选列表
+static int s_completionSelectedIndex = -1; // 选中索引
 
 // 选项对话框相关
 static bool s_optionsDialogVisible = false; // 选项对话框是否可见
@@ -1543,6 +1551,7 @@ void Renderer::initializeImGui() {
     style.PopupRounding  = 4.0f;       // 菜单、弹窗圆角
     style.ScrollbarRounding = 9.0f;    // 滚动条圆角
     style.GrabRounding   = 2.0f;       // 滑块圆角
+    style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f); // 输入框获得焦点后不再显示蓝色边框
     
     // 抗锯齿开关（确保开启）
     style.AntiAliasedLines = true;
@@ -2216,6 +2225,14 @@ void Renderer::drawCommandBar() {
         if (s_bShouldFocusOnCommandInput) {
             ImGui::SetKeyboardFocusHere(0);
             s_bShouldFocusOnCommandInput = false;
+            
+            // 重新获得焦点，根据当前输入框中内容重建补全列表
+             std::string currentInput(s_cmdBuffer.data());
+             if (currentInput != s_userInputCommand) {
+                s_userInputCommand = currentInput;
+                s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+                s_completionSelectedIndex = -1;
+             }
         }
         
         // 使用PushItemWidth使输入框占满剩余空间
@@ -2225,8 +2242,21 @@ void Renderer::drawCommandBar() {
         SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
         // Enter/Space 提交输入框输入到输入上下文中进行处理
         if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
-            // 处理输入并清空缓冲区
-            inputContext.handleEnterSpace(getAndClearCommandBuffer());
+            // 获取当前 InputText 中的实际内容并清空缓冲区
+            std::string command = getAndClearCommandBuffer();
+            
+            // 执行时不是直接执行命令，而是去补全列表找到第一项来执行
+            if (!s_completionCandidates.empty()) {
+                command = s_completionCandidates[0].fullName;
+            }
+            
+            // 清除补全相关状态
+            s_completionCandidates.clear();
+            s_completionSelectedIndex = -1;
+            s_userInputCommand.clear();
+            
+            // 处理输入
+            inputContext.handleEnterSpace(command);
             // ImGui会内部维护InputText的缓冲区副本，Enter、Esc等事件时由上面的ImGui::SetKeyboardFocusHere所控制焦点会一直维持在命令输入框上，
             // 此时光清空外部缓冲区的话，每次InpuText调用都会把内部的副本重新同步回外部缓冲区来，那么就必须通过文本处理回调函数来清空内部的副本。
             // 而如果焦点已经不在输入框上了，那么单纯清除外部缓冲区就足够了。
@@ -2236,6 +2266,11 @@ void Renderer::drawCommandBar() {
         }
         // Esc 同样提交输入到输入上下文进行处理
         else if (inputEvent == SpecialKeyEventType::kEscPressed) {
+            // 清除补全相关状态
+            s_completionCandidates.clear();
+            s_completionSelectedIndex = -1;
+            s_userInputCommand.clear();
+            
             // 处理输入并清空缓冲区
             inputContext.handleEscape(getAndClearCommandBuffer());
             // 同理清除内部副本
@@ -2244,9 +2279,9 @@ void Renderer::drawCommandBar() {
             inputContext.clearSpecialKeyEvent();
         }
         
-        // 回调函数处理文本选择问题、字符过滤与清除缓冲区
+        // 回调函数处理文本选择问题、字符过滤、清除缓冲区与命令补全
         auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
-            // 处理字符过滤逻辑 (只有输入字符时触发)
+            // 1. 字符过滤逻辑(只有输入字符时触发)
             if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
                 if (data->EventChar > 127) {
                     return 1; // 丢弃非 ASCII 字符
@@ -2257,6 +2292,56 @@ void Renderer::drawCommandBar() {
                     return 1;
                 }
             }
+            
+            // 2. 文本编辑回调 - 重构补全候选列表
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+                std::string currentInput(data->Buf, data->BufTextLen);
+                
+                // 输入变化则更新候选列表
+                if (currentInput != s_userInputCommand) {
+                    s_userInputCommand = currentInput;
+                    s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+                    s_completionSelectedIndex = -1;
+                }
+            }
+            
+            // 3. 补全回调 - Tab 补全
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion) {
+                if (!s_completionCandidates.empty()) {
+                    // 循环切换到下一个候选项，-1没选中状态则变为选中第一个
+                    s_completionSelectedIndex = (s_completionSelectedIndex + 1) % s_completionCandidates.size();
+                    
+                    const auto& item = s_completionCandidates[s_completionSelectedIndex];
+                    
+                    // 获取输入的字符串
+                    std::string userInput = StringUtils::toUpperCase(s_userInputCommand);
+                    std::string completionCommand;
+                    
+                    // 输入是命令全名的前缀，那么补全为全名
+                    if (item.fullName.compare(0, userInput.size(), userInput) == 0) {
+                        completionCommand = item.fullName;
+                    }
+                    // 虽然大部分别名都是命令全名的一个前缀，但有可能不是，此时输入如果是别名的前缀，那么将补全为别名而非全名
+                    else if (item.key.compare(0, userInput.size(), userInput) == 0) {
+                        completionCommand = item.key;
+                    }
+                    // 既不是别名前缀也不是全名前缀，那么可能是新实现的模糊匹配之类，直接补全为全名
+                    else {
+                        completionCommand = item.fullName;
+                    }
+                    
+                    // 清除当前内容，插入补全内容
+                    data->DeleteChars(0, data->BufTextLen);
+                    data->InsertChars(0, completionCommand.c_str());
+                    
+                    // 将通过补全填入的字符置于选中状态，同时光标置于末尾，方便用户通过一次Backspace就轻松删除
+                    data->SelectionStart = static_cast<int>(userInput.size());
+                    data->SelectionEnd = data->BufTextLen;
+                    data->CursorPos = data->BufTextLen;
+                }
+            }
+            
+            // 4. Always 回调 - 处理缓冲区修改标志
             if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
                 // 命令输入缓冲区被修改，那么就解除选中并移动光标到末尾
                 if (s_bCommandBufferModified) {
@@ -2279,11 +2364,72 @@ void Renderer::drawCommandBar() {
         };
 
         ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
-            ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter, 
+            ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackCompletion, 
             inputTextCallback, nullptr);
         
         // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
         s_commandInputId = ImGui::GetItemID(); 
+        
+        // 绘制候选框
+        if (!s_completionCandidates.empty() && ImGui::IsItemFocused()) {
+            // 首次计算候选框宽度（40个字符宽度）
+            static float completionPopupWidth = ImGui::CalcTextSize("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl").x;
+            
+            ImVec2 inputMin = ImGui::GetItemRectMin();
+            float itemHeight = ImGui::GetTextLineHeightWithSpacing();
+            float popupHeight = s_completionCandidates.size() * itemHeight + ImGui::GetStyle().WindowPadding.y * 2;
+            ImVec2 popupPos(inputMin.x, inputMin.y - popupHeight - 2);
+            
+            ImGui::SetNextWindowPos(popupPos);
+            ImGui::SetNextWindowSize(ImVec2(completionPopupWidth, popupHeight));
+            ImGui::SetNextWindowBgAlpha(0.95f);
+            
+            if (ImGui::Begin("##CompletionPopup", nullptr, 
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings)) {
+                
+                bool bItemClicked = false;
+                std::string commandToBeExecuted;
+                for (int i = 0; i < s_completionCandidates.size(); i++) {
+                    const auto& item = s_completionCandidates[i];
+                    // 别名显示 key (fullName)，全称直接显示
+                    std::string displayText = item.isAlias ? (item.key + " (" + item.fullName + ")") : item.key;
+                    
+                    // 还没有通过Tab来选择补全项，那么以一种不同的颜色高亮第一项，表示现在直接回车将默认执行的命令
+                    if (s_completionSelectedIndex == -1 && i == 0) {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+                        ImGui::Selectable(displayText.c_str(), false);
+                        ImGui::PopStyleColor();
+                    }
+                    // 通过Tab选中的当前补全项
+                    else if (i == s_completionSelectedIndex) {
+                        ImGui::Selectable(displayText.c_str(), true);
+                    }
+                    // 未选中
+                    else {
+                        ImGui::Selectable(displayText.c_str(), false);
+                    }
+                    
+                    // 通过鼠标点击
+                    if (ImGui::IsItemClicked()) {
+                        bItemClicked = true;
+                        commandToBeExecuted = s_completionCandidates[i].fullName;
+                    }
+                }
+                // 鼠标点击补全项则直接执行命令
+                if (bItemClicked) {
+                    // 清空命令缓冲区
+                    getAndClearCommandBuffer();
+                    // 清除补全相关状态
+                    s_completionCandidates.clear();
+                    s_completionSelectedIndex = -1;
+                    s_userInputCommand.clear();
+                    // 采用通用流程处理，将命令全名发送个InputContext执行
+                    inputContext.handleEnterSpace(commandToBeExecuted);
+                }
+                ImGui::End();
+            }
+        }
         
         // 平衡PushItemWidth调用
         ImGui::PopItemWidth();
