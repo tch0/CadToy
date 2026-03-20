@@ -39,8 +39,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/publish)
 #-------------------------------------------------------------------------------------#
 #                    Project
 #-------------------------------------------------------------------------------------#
-project(CadToyVideCodingVersion
-    DESCRIPTION "An OpenGL Example"
+project(CadToy
+    DESCRIPTION "A cross-platform CAD-Like toy program based on OpenGL."
     VERSION "0.1"
     LANGUAGES CXX
 )
