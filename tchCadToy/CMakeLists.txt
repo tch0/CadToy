@@ -24,6 +24,13 @@ target_link_libraries(tchCadToy
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_main_sources} ${tch_main_headers})
 
+# For Windows: compile to Win32 GUI application for Release config, console application for Debug config
+if (WIN32)
+    set_target_properties(tchCadToy PROPERTIES
+        WIN32_EXECUTABLE "$<BOOL:$<CONFIG:Release>>"
+    )
+endif()
+
 #-------------------------------------------------------------------------------------#
 #            copy resources to build directory
 #-------------------------------------------------------------------------------------#
