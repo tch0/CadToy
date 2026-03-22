@@ -1,9 +1,15 @@
+// 对应头文件
 #include "document/DocManager.h"
-#include "document/Document.h"
 
-#include "debug/Logger.h"
-#include <fstream>
+// C++ 标准库
 #include <algorithm>
+#include <fstream>
+
+// 第三方库
+
+// 项目头文件
+#include "document/Document.h"
+#include "debug/Logger.h"
 
 namespace tch {
 

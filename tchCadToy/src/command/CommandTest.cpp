@@ -1,11 +1,18 @@
-#include "common/CommonTypes.h"
+// 对应头文件
 #include "command/CommandTest.h"
-#include "input/InputContext.h"
-#include "utils/GlobalUtils.h"
+
+// C++ 标准库
 #include <format>
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
+
+// 第三方库
+
+// 项目头文件
+#include "common/CommonTypes.h"
+#include "input/InputContext.h"
+#include "utils/GlobalUtils.h"
 
 namespace tch {
 

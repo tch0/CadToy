@@ -1,8 +1,14 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <Geometry.h>
-#include <vector>
+
+// C++ 标准库
 #include <memory>
+#include <vector>
+
+// 第三方库
+#include <glm/glm.hpp>
+
+// 项目头文件
+#include "Geometry.h"
 
 namespace tch {
 

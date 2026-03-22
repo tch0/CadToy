@@ -1,9 +1,14 @@
 #pragma once
-#include <string>
-#include <source_location>
 
+// C++ 标准库
+#include <source_location>
+#include <string>
+
+// 第三方库
 #include <glad/gl.h>
 #include <glm/glm.hpp>
+
+// 项目头文件
 
 class Shader
 {
@@ -13,14 +18,14 @@ public:
     Shader();
     Shader(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader = "",
            const std::source_location& loc = std::source_location::current());
-    Shader(const std::string& vertexShader, const std::string tessellationCtrlShader, const std::string& tessellationEvalShader,
+    Shader(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
            const std::string& fragmentShader, const std::string& geometryShader = "",
            const std::source_location& loc = std::source_location::current());
     Shader(const Shader& shader);
     Shader& operator=(const Shader& shader);
     void setShaderSource(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader = "",
                          const std::source_location& loc = std::source_location::current());
-    void setShaderSource(const std::string& vertexShader, const std::string tessellationCtrlShader, const std::string& tessellationEvalShader,
+    void setShaderSource(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
                          const std::string& fragmentShader, const std::string& geometryShader = "",
                          const std::source_location& loc = std::source_location::current());
     GLuint getShaderId() const;

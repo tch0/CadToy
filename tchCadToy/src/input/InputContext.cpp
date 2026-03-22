@@ -1,14 +1,21 @@
+// 对应头文件
 #include "input/InputContext.h"
+
+// C++ 标准库
+#include <algorithm>
+#include <memory>
+
+// 第三方库
+#include <glm/glm.hpp>
+#include <imgui.h>
+
+// 项目头文件
+#include "command/CommandManager.h"
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
-#include "command/CommandManager.h"
-#include "utils/LocalizationManager.h"
 #include "utils/GlobalUtils.h"
+#include "utils/LocalizationManager.h"
 #include "utils/StringUtils.h"
-#include <glm/glm.hpp>
-#include <memory>
-#include <algorithm>
-#include <imgui.h>
 
 namespace tch {
 

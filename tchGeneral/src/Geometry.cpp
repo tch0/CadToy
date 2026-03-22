@@ -1,7 +1,14 @@
+// 对应头文件
 #include "Geometry.h"
+
+// C++ 标准库
+#include <cmath>
+
+// 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#include <cmath>
+
+// 项目头文件
 
 namespace tch {
 

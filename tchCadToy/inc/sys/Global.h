@@ -1,10 +1,15 @@
 #pragma once
-#include <string>
-#include <filesystem>
 
-#include <glm/glm.hpp>
+// C++ 标准库
+#include <filesystem>
+#include <string>
+
+// 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+
+// 项目头文件
 
 // global variables
 

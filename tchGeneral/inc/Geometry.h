@@ -1,9 +1,16 @@
 #pragma once
+
+// _USE_MATH_DEFINES 必须在 cmath 之前定义
 #define _USE_MATH_DEFINES
+
+// C++ 标准库
 #include <cmath>
+#include <vector>
+
+// 第三方库
 #include <glm/glm.hpp>
 
-#include <vector>
+// 项目头文件
 
 namespace tch {
 

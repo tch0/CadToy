@@ -1,15 +1,22 @@
-#include "render/Renderer.h"
-#include "document/DocManager.h"
+// 对应头文件
 #include "command/CommandParser.h"
+
+// C++ 标准库
+#include <algorithm>
+#include <sstream>
+
+// 第三方库
+
+// 项目头文件
+#include "Color.h"
+#include "document/DocManager.h"
 #include "Geometry.h"
 #include "Layer.h"
-#include "Transform.h"
-#include "Color.h"
-#include "UndoRedo.h"
+#include "render/Renderer.h"
 #include "SaveLoad.h"
+#include "Transform.h"
+#include "UndoRedo.h"
 #include "utils/GlobalUtils.h"
-#include <sstream>
-#include <algorithm>
 
 namespace tch {
 

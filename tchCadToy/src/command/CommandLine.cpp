@@ -1,12 +1,19 @@
+// 对应头文件
 #include "command/CommandLine.h"
+
+// C++ 标准库
+
+// 第三方库
+#include <glm/glm.hpp>
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+#include <imgui.h>
+
+// 项目头文件
 #include "input/InputContext.h"
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
 #include "utils/LocalizationManager.h"
-#include <glm/glm.hpp>
-#include <imgui.h>
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
 
 namespace tch {
 

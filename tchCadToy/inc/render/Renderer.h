@@ -1,9 +1,15 @@
 #pragma once
+
+// C++ 标准库
 #include <string>
+
+// 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <imgui.h>
+
+// 项目头文件
 #include "transform/TransformManager.h"
 
 namespace tch {

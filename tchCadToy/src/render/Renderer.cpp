@@ -1,22 +1,29 @@
-#include "common/CommonTypes.h"
+// 对应头文件
 #include "render/Renderer.h"
-#include "document/DocManager.h"
-#include "Layer.h"
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include "sys/Global.h"
-#include "debug/Logger.h"
-#include "utils/LocalizationManager.h"
-#include "utils/StringUtils.h"
-#include "command/CommandManager.h"
-#include "input/InputHandler.h"
-#include "input/InputContext.h"
+
+// C++ 标准库
 #include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
+
+// 第三方库
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_internal.h>
+
+// 项目头文件
+#include "common/CommonTypes.h"
+#include "command/CommandManager.h"
+#include "debug/Logger.h"
+#include "document/DocManager.h"
+#include "input/InputContext.h"
+#include "input/InputHandler.h"
+#include "Layer.h"
+#include "sys/Global.h"
+#include "utils/LocalizationManager.h"
+#include "utils/StringUtils.h"
 
 namespace tch {
 

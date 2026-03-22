@@ -1,7 +1,12 @@
 #pragma once
 
-#include <glm/glm.hpp>
+// C++ 标准库
 #include <vector>
+
+// 第三方库
+#include <glm/glm.hpp>
+
+// 项目头文件
 
 namespace tch {
 

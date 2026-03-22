@@ -1,7 +1,13 @@
 #pragma once
-#include <glm/glm.hpp>
+
+// C++ 标准库
 #include <string>
 #include <unordered_map>
+
+// 第三方库
+#include <glm/glm.hpp>
+
+// 项目头文件
 
 namespace tch {
 

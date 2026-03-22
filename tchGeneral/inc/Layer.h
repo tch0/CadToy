@@ -1,9 +1,15 @@
 #pragma once
-#include "Geometry.h"
-#include <string>
-#include <vector>
-#include <unordered_map>
+
+// C++ 标准库
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+// 第三方库
+
+// 项目头文件
+#include "Geometry.h"
 
 namespace tch {
 

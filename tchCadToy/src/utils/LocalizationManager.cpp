@@ -1,11 +1,18 @@
+// 对应头文件
 #include "utils/LocalizationManager.h"
-#include "sys/Global.h"
-#include "debug/Logger.h"
-#include "rapidjson/document.h"
-#include "rapidjson/error/en.h"
+
+// C++ 标准库
 #include <fstream>
 #include <sstream>
 #include <vector>
+
+// 第三方库
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+
+// 项目头文件
+#include "debug/Logger.h"
+#include "sys/Global.h"
 
 namespace tch {
 

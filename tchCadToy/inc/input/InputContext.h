@@ -1,12 +1,17 @@
 #pragma once
 
+// C++ 标准库
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
+
+// 第三方库
 #include <glm/glm.hpp>
-#include "input/Task.h"
-#include "input/SelectionTask.h"
+
+// 项目头文件
 #include "common/CommonTypes.h"
+#include "input/SelectionTask.h"
+#include "input/Task.h"
 
 namespace tch {
 

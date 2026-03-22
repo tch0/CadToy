@@ -1,6 +1,12 @@
+// 对应头文件
+#include "gl/Shader.h"
+
+// C++ 标准库
+
+// 第三方库
 #include <glm/ext.hpp>
 
-#include "gl/Shader.h"
+// 项目头文件
 #include "gl/GLFuncs.h"
 
 
@@ -11,7 +17,7 @@ Shader::Shader(const std::string& vertexShader, const std::string& fragmentShade
 {
     m_Id = createShaderProgramFromSource(vertexShader, fragmentShader, geometryShader, loc);
 }
-Shader::Shader(const std::string& vertexShader, const std::string tessellationCtrlShader, const std::string& tessellationEvalShader,
+Shader::Shader(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
                const std::string& fragmentShader, const std::string& geometryShader,
                const std::source_location& loc)
 {
@@ -30,7 +36,7 @@ void Shader::setShaderSource(const std::string& vertexShader, const std::string&
 {
     *this = Shader(vertexShader, fragmentShader, geometryShader, loc);
 }
-void Shader::setShaderSource(const std::string& vertexShader, const std::string tessellationCtrlShader, const std::string& tessellationEvalShader,
+void Shader::setShaderSource(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
                      const std::string& fragmentShader, const std::string& geometryShader,
                      const std::source_location& loc)
 {

@@ -1,10 +1,14 @@
 #pragma once
 
-#include <string>
+// C++ 标准库
 #include <source_location>
+#include <string>
 
+// 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+
+// 项目头文件
 
 // init glad/glfw, create glfw window
 void openglInit();

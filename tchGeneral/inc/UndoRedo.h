@@ -1,10 +1,16 @@
 #pragma once
+
+// C++ 标准库
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
+
+// 第三方库
+#include <glm/glm.hpp>
+
+// 项目头文件
 #include "Geometry.h"
 #include "Layer.h"
-#include <glm/glm.hpp>
 
 namespace tch {
 

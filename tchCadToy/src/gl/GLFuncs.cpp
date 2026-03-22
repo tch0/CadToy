@@ -1,14 +1,19 @@
+// 对应头文件
+#include "gl/GLFuncs.h"
+
+// C++ 标准库
 #include <cstdlib>
 #include <fstream>
 
+// 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <soil2/SOIL2.h>
 
+// 项目头文件
 #include "SysConfig.h"
-#include "gl/GLFuncs.h"
-#include "sys/Global.h"
 #include "debug/Logger.h"
+#include "sys/Global.h"
 
 using namespace tch;
 using namespace std::string_literals;
