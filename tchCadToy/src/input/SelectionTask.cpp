@@ -183,6 +183,8 @@ void SelectionTask::onUpdate() {
             // 等待初始点
             InputContext::getInstance().waitForPoint(loc.get("selection.prompt.box"),
                 {"F", "WP", "CP"}); // 指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:
+            // 覆盖默认的错误提示
+            InputContext::getInstance().setErrorPrompt(loc.get("selection.prompt.windowInvalid")); // 窗口说明无效。
             m_state = SelectionState::kBoxLassoSelectionChoice;
             break;
             
@@ -578,10 +580,9 @@ void SelectionTask::handleBoxSelection()
     }
     // Enter
     else if (status == InputStatus::kEnterInput) {
+        // Enter作为分支中进行处理的合法输入，InputContext不会输出错误提示，所以这里需要进行手动输出
         auto& loc = LocalizationManager::getInstance();
         cmdLinePrint(loc.get("selection.prompt.windowInvalid")); // 窗口说明无效。
-        InputContext::getInstance().waitForPoint(loc.get("selection.prompt.box"),
-            {"F", "WP", "CP"}); // 指定对角点或 [栏选(F)/圈围(WP)/圈交(CP)]:
         m_state = SelectionState::kBoxSelectionQuery;
     }
     // Esc
