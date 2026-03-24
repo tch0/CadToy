@@ -27,6 +27,7 @@
   
   "commandLine.prompt.command": "Command:",
   "commandLine.prompt.cancel": "*Cancel*",
+  "commandLine.prompt.unknownCommand": "Unknown command: \"{}\", press F1 for help.",
   "commandLine.inputPrompt": "Input Command Here",
 
   "propertyBar.title": "Properties",

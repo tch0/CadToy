@@ -2557,6 +2557,11 @@ std::string Renderer::getAndClearCommandBuffer()
 {
     std::string buffer = s_cmdBuffer.data();
     std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+    // 如果焦点就在命令输入框上，那么还需要同时设置标记以便在字符回调中清空内部缓冲区
+    // 如果焦点不在，则不能设置，因为不会进入回调，设置了反而会导致下一次得到焦点时在绘图区输入的第一个字符被吞掉
+    if (focusIsOnCommandInput()) {
+        s_bNeedClearCommandBufferInternalCopy = true;
+    }
     return buffer;
 }
 

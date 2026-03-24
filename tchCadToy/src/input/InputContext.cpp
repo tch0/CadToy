@@ -417,14 +417,14 @@ void InputContext::handleEnterSpace(const std::string& input) {
         parseInput(input);
     }
     else {
-        // 命令以及任务执行外，作为新命令处理
-        // 添加到命令历史
-        auto& loc = LocalizationManager::getInstance();
-        std::string promptStr = loc.get("commandLine.prompt.command") + " " + input;
-        cmdLinePrint(promptStr);
-        // 不为空则解析为新命令，为空就是单纯敲了一个回车或者空格
-        if (!input.empty())
+        // 输入为空则输出一个空行
+        if (input.empty())
         {
+            auto& loc = LocalizationManager::getInstance();
+            cmdLinePrint(loc.get("commandLine.prompt.command"));
+        }
+        // 不为空则解析为新命令，输出当前执行的命令的操作会在executeCommand中做
+        else {
             CommandManager::getInstance().executeCommand(input);
         }
     }

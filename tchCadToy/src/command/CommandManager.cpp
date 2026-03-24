@@ -17,6 +17,7 @@
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
 #include "utils/StringUtils.h"
+#include "utils/LocalizationManager.h"
 
 namespace tch {
 
@@ -135,6 +136,10 @@ std::shared_ptr<Command> CommandManager::getActiveCommand() {
 void CommandManager::executeCommand(const std::string& command) {
     tchAssert(m_activeCommand == nullptr, "There should be no active commnd when executing a new command. Please use cancelCurrentCommandAndExecute.");
     
+    // 输出当前执行的命令的提示
+    auto& loc = LocalizationManager::getInstance();
+    cmdLinePrint(loc.get("commandLine.prompt.command") + " " + command);
+    
     // 查找命令全名，创建并设置命令对象，记录命令名
     std::string cmdName = findFullCommandName(command);
     auto it = m_creators.find(cmdName);
@@ -142,7 +147,7 @@ void CommandManager::executeCommand(const std::string& command) {
         m_activeCommand = it->second();
         m_currentCommandName = cmdName;
     } else {
-        cmdLinePrint(std::format("Unknown command: {}", command));
+        cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
     }
     
     // 设置输入上下文为命令执行状态，成功解析为了命令那才设置
@@ -153,21 +158,21 @@ void CommandManager::executeCommand(const std::string& command) {
 void CommandManager::cancelCurrentCommand()
 {
     InputContext& inputContext = InputContext::getInstance();
-    // 如果有任务正在执行，先取消任务(比如选择任务)，通常来说一次取消已经足够
-    if (inputContext.isAnyCommandOrTaskRunning())
-    {
-        std::string input = Renderer::getAndClearCommandBuffer();
-        inputContext.handleEscape(input);
-    }
-    
     // 没有任何命令在执行、或者有命令但已经执行完毕
     if (m_activeCommand == nullptr || (m_activeCommand != nullptr && m_activeCommand->isCompleted()))
     {
         m_activeCommand = nullptr;
         std::string input = Renderer::getAndClearCommandBuffer();
-        if (!input.empty())
+        if (!input.empty() || inputContext.isAnyCommandOrTaskRunning())
         {
+            // 如果没有命令但却有任务在执行，那么一次Esc应该足以取消任务
+            // 如果后续实现了深分支的无法通过一次Esc取消的任务，那么这里需要对应修改
             inputContext.handleEscape(input);
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
         }
     }
     // 有命令正在执行且没有执行完毕
@@ -175,13 +180,18 @@ void CommandManager::cancelCurrentCommand()
     {
         // 和Esc的行为一样，需要清空缓冲区
         std::string input = Renderer::getAndClearCommandBuffer();
-        // 通过调用handleEscape模拟Esc的行为来取消，以正确处理提示
+        // 通过调用handleEscape模拟Esc的行为来取消
         inputContext.handleEscape(input);
-        // 通过至多三次取消来取消当前执行的命令，一般来说无论什么命令处于哪个分支，三次取消都应该能够结束了
+        // 通过至多3次取消来取消当前执行的命令，一般来说无论什么命令处于哪个分支，3次取消都应该能够结束了
         for (int i = 0; i < 3; i++)
         {
             // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
-            // onUpdate也本身都是可重复调用的，在等待输入的时候多次调用几乎没有代价
+            // onUpdate本身都是可重复调用的，在等待输入的状态时多次调用几乎没有任何代价
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
+            inputContext.onUpdate();
             m_activeCommand->onUpdate();
             m_activeCommand->onUpdate();
             m_activeCommand->onUpdate();
@@ -192,7 +202,7 @@ void CommandManager::cancelCurrentCommand()
                 inputContext.handleEscape("");
             }
         }
-        // 如果取消三次还没有结束，那么就再取消三次，如果六次取消还未结束，那么命令流程大概率出BUG了，就强制结束命令(直接析构掉命令对象)
+        // 如果取消3次还没有结束，那么就再尝试取消3次，如果6次取消还未结束，那么命令流程大概率出BUG了，就强制结束命令(直接析构掉命令对象)
         if (!m_activeCommand->isCompleted())
         {
             LOG_WARNING("The current command has not ended after 3 cancellations. "
@@ -200,7 +210,11 @@ void CommandManager::cancelCurrentCommand()
             for (int i = 0; i < 3 && !m_activeCommand->isCompleted(); i++)
             {
                 inputContext.handleEscape("");
-                // 多调用几次以确保命令切实执行到了等待输入的状态，而不是在可以连续执行的不需要等待输入的状态之间输出多个提示
+                inputContext.onUpdate();
+                inputContext.onUpdate();
+                inputContext.onUpdate();
+                inputContext.onUpdate();
+                inputContext.onUpdate();
                 m_activeCommand->onUpdate();
                 m_activeCommand->onUpdate();
                 m_activeCommand->onUpdate();

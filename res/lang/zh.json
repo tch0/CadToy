@@ -27,6 +27,7 @@
 
   "commandLine.prompt.command": "命令:",
   "commandLine.prompt.cancel": "*取消*",
+  "commandLine.prompt.unknownCommand": "未知命令: \"{}\"，按 F1 查看帮助。",
   "commandLine.inputPrompt": "在此输入命令",
 
   "propertyBar.title": "属性",
