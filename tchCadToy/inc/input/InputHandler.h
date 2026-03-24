@@ -111,6 +111,9 @@ private:
     // 注册默认快捷键
     static void registerDefaultShortcuts();
 
+    // 执行快捷键（统一入口，内部处理 Ctrl+Z 的特殊情况）
+    static void executeShortcut(const ShortcutItem& shortcut);
+
 private:
     // 窗口指针
     static GLFWwindow* s_window;

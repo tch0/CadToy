@@ -10,6 +10,8 @@
 #include "command/CommandClose.h"
 #include "command/CommandLine.h"
 #include "command/CommandTest.h"
+#include "command/CommandUndo.h"
+#include "command/CommandU.h"
 #include "debug/Logger.h"
 #include "input/InputContext.h"
 #include "render/Renderer.h"
@@ -25,7 +27,11 @@ std::shared_ptr<CommandManager> CommandManager::s_instance = nullptr;
 CommandManager::CommandManager() :
     m_activeCommand(nullptr) {
     // 注册命令
+    registerCommand<CommandTest>("TEST", {});
     registerCommand<CommandLine>("LINE", {"L"});
+    registerCommand<CommandClose>("CLOSE", {});
+    registerCommand<CommandUndo>("UNDO", {});
+    registerCommand<CommandU>("U", {});
     // registerCommand<CommandCircle>("CIRCLE", {"C"});
     // registerCommand<CommandRect>("RECTANG", {"REC"});
     // registerCommand<CommandArc>("ARC", {"A"});
@@ -38,12 +44,9 @@ CommandManager::CommandManager() :
     // registerCommand<CommandZoom>("ZOOM", {"Z"});
     // registerCommand<CommandPan>("PAN", {"P"});
     // registerCommand<CommandLayer>("LAYER", {"LA"});
-    // registerCommand<CommandUndo>("UNDO", {"U"});
     // registerCommand<CommandQuit>("QUIT", {"EXIT"});
     // registerCommand<CommandProperties>("PROPERTIES", {"PR", "MO"});
     // registerCommand<CommandOptions>("OPTIONS", {"OP"});
-    registerCommand<CommandClose>("CLOSE", {});
-    registerCommand<CommandTest>("TEST", {});
     
     // 所有命令注册完成后，建立补全候选池
     rebuildCommandCompletionPool();

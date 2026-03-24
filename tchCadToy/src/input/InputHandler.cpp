@@ -33,40 +33,40 @@ std::vector<ShortcutItem> InputHandler::s_shortcuts;
 // 注册默认快捷键
 void InputHandler::registerDefaultShortcuts() {
     // Ctrl+N new
-    registerCtrlShortcut(GLFW_KEY_N, "new", "New", "N");
+    registerCtrlShortcut(GLFW_KEY_N, "new", "New", "Ctrl+N");
     
     // Ctrl+O open
-    registerCtrlShortcut(GLFW_KEY_O, "open", "Open", "O");
+    registerCtrlShortcut(GLFW_KEY_O, "open", "Open", "Ctrl+O");
     
     // Ctrl+S save
-    registerCtrlShortcut(GLFW_KEY_S, "save", "Save", "S");
+    registerCtrlShortcut(GLFW_KEY_S, "save", "Save", "Ctrl+S");
     
     // Ctrl+Shift+S saveas
-    registerCtrlShiftShortcut(GLFW_KEY_S, "saveas", "Save As", "S");
+    registerCtrlShiftShortcut(GLFW_KEY_S, "saveas", "Save As", "Ctrl+Shift+S");
     
     // Ctrl+W close
-    registerCtrlShortcut(GLFW_KEY_W, "close", "Close", "W");
+    registerCtrlShortcut(GLFW_KEY_W, "close", "Close", "Ctrl+W");
     
     // Ctrl+Q quit
-    registerCtrlShortcut(GLFW_KEY_Q, "quit", "Quit", "Q");
+    registerCtrlShortcut(GLFW_KEY_Q, "quit", "Quit", "Ctrl+Q");
     
     // Ctrl+Z undo
-    registerCtrlShortcut(GLFW_KEY_Z, "undo", "Undo", "Z");
+    registerCtrlShortcut(GLFW_KEY_Z, "u", "Undo", "Ctrl+Z");
     
     // Ctrl+Y redo
-    registerCtrlShortcut(GLFW_KEY_Y, "redo", "Redo", "Y");
+    registerCtrlShortcut(GLFW_KEY_Y, "redo", "Redo", "Ctrl+Y");
     
     // Ctrl+X cutclip
-    registerCtrlShortcut(GLFW_KEY_X, "cut", "Cut", "X");
+    registerCtrlShortcut(GLFW_KEY_X, "cut", "Cut", "Ctrl+X");
     
     // Ctrl+C copyclip
-    registerCtrlShortcut(GLFW_KEY_C, "copy", "Copy", "C");
+    registerCtrlShortcut(GLFW_KEY_C, "copy", "Copy", "Ctrl+C");
     
     // Ctrl+V pasteclip
-    registerCtrlShortcut(GLFW_KEY_V, "paste", "Paste", "V");
+    registerCtrlShortcut(GLFW_KEY_V, "paste", "Paste", "Ctrl+V");
     
     // Ctrl+A selectall
-    registerCtrlShortcut(GLFW_KEY_A, "selectall", "Select All", "A");
+    registerCtrlShortcut(GLFW_KEY_A, "selectall", "Select All", "Ctrl+A");
     
     // DEL erase
     registerShortcut(GLFW_KEY_DELETE, "erase", "Erase", "Del");
@@ -150,8 +150,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         if (ctrlShiftPressed) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_SHIFT_KEY && shortcut.key == key) {
-                    LOG_INFO("Executing shortcut: Ctrl+Shift+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
+                    executeShortcut(shortcut);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -168,8 +167,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         if (ctrlPressed && !ctrlShiftPressed) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::CTRL_KEY && shortcut.key == key) {
-                    LOG_INFO("Executing shortcut: Ctrl+{} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
+                    executeShortcut(shortcut);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -186,8 +184,7 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
         if (noModifiers) {
             for (const auto& shortcut : s_shortcuts) {
                 if (shortcut.type == ShortcutType::SINGLE_KEY && shortcut.key == key) {
-                    LOG_INFO("Executing shortcut: {} ({}, command: {})", shortcut.keyString, shortcut.name, shortcut.commandName);
-                    CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
+                    executeShortcut(shortcut);
                     // 标记当前按键已被快捷键消耗
                     s_keyWasConsumedByShortcut = true;
                     // 触发按键按下回调
@@ -477,6 +474,34 @@ void InputHandler::setMouseCursorVisible(bool visible) {
         else {
             glfwSetInputMode(s_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         }
+    }
+}
+
+// 执行快捷键
+void InputHandler::executeShortcut(const ShortcutItem& shortcut) {
+    // 特殊快捷键：类似于输入字符 + 回车，不取消当前命令
+    // 将命令名称的每个字符依次添加到命令输入框，然后模拟回车
+    // 目前只有Ctrl+Z
+    if (shortcut.key == GLFW_KEY_Z && shortcut.type == ShortcutType::CTRL_KEY) {
+        // 1. 确保焦点在命令输入框
+        Renderer::setShouldFocusOnCommandInput(true);
+        
+        // 2. 将命令名称的每个字符添加到输入框
+        for (char c : shortcut.commandName) {
+            Renderer::addInputChar(static_cast<unsigned int>(c));
+        }
+        
+        // 3. 模拟回车键按下
+        InputContext::getInstance().setSpecialKeyEvent(SpecialKeyEventType::kEnterPressed);
+        
+        LOG_INFO("[SPECIAL] Executing shortcut: {} ({}, command: {})", 
+            shortcut.keyString, shortcut.name, shortcut.commandName);
+    }
+    else {
+        // 其他快捷键：正常当做命令执行，先取消当前命令
+        CommandManager::getInstance().cancelCurrentCommandAndExecute(shortcut.commandName);
+        LOG_INFO("[NORMAL] Executing shortcut: {} ({}, command: {})", 
+            shortcut.keyString, shortcut.name, shortcut.commandName);
     }
 }
 
