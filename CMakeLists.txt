@@ -158,6 +158,10 @@ target_compile_options(general_cxx_compiler_flags
         >>
 )
 
+# generate Position Independent Code for Linux system
+set_target_properties(general_cxx_compiler_flags PROPERTIES 
+    INTERFACE_POSITION_INDEPENDENT_CODE ON
+)
 
 #-------------------------------------------------------------------------------------#
 #            macros that help to collect headers and sources
@@ -233,7 +237,10 @@ add_subdirectory(3rdparty/glfw EXCLUDE_FROM_ALL)
 
 if (WIN32)
     list(APPEND essential_libs opengl32)
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
+    list(APPEND essential_libs GL X11 dl pthread)
+elseif(APPLE)
+    # todo
 endif()
 
 add_subdirectory(imgui)

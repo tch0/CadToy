@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(3rdpartyProj)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # generate position independent code
 set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/../3rdparty-install)
 
 # add glfw target to CMakeLists.txt, not here.
