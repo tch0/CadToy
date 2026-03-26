@@ -2185,14 +2185,14 @@ void Renderer::drawCommandBar() {
         // }
         // clipper.End();
         
-        const auto& CommandLineHistory = DocManager::getCurrentDocumentCommandLineHistory();
-        for (std::size_t i = 0; i < CommandLineHistory.size(); i++)
+        const auto& cmdLineHistory = DocManager::getCurrentDocumentCommandLineHistory();
+        for (std::size_t i = 0; i < cmdLineHistory.size(); i++)
         {
-            ImGui::TextUnformatted(CommandLineHistory[i].c_str());
+            ImGui::TextUnformatted(cmdLineHistory[i].c_str());
         }
         
         // 根据标志决定是否滚动到最后，在绘制项目之前执行
-        if (!CommandLineHistory.empty() && s_bScrollCommandLineHistoryToBottom) {
+        if (!cmdLineHistory.empty() && s_bScrollCommandLineHistoryToBottom) {
             ImGui::SetScrollHereY(1.0f);
             s_bScrollCommandLineHistoryToBottom = false;
         }
