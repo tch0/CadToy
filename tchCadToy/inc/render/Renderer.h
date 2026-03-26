@@ -72,7 +72,7 @@ public:
     
     // 命令栏相关方法
     static void drawCommandBar(); // 绘制命令栏
-    static void addContentToCommandHistory(const std::string& command); // 添加内容到命令历史记录
+    static void addContentToCommandLineHistory(const std::string& content); // 添加内容到命令行历史
     static void setShouldFocusOnCommandInput(bool shouldFocus); // 设置是否应该将焦点设置到命令输入框
     static void removeLastCharFromCommandInput(); // 从命令输入缓冲区中删除最后一个字符
     static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
@@ -132,7 +132,7 @@ private:
     static float s_statusBarHeight;            // 状态栏高度
     
     // 命令栏相关
-    static bool s_bScrollCommandHistoryToBottom; // 是否应该将命令历史滚动到底部
+    static bool s_bScrollCommandLineHistoryToBottom; // 是否应该将命令历史滚动到底部
     static bool s_bShouldFocusOnCommandInput; // 是否应该将焦点设置到命令输入框
     static bool s_bCommandBufferModified; // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
     static bool s_bNeedClearCommandBufferInternalCopy; // 是否需要清除命令输入缓冲区的内部副本

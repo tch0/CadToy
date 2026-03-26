@@ -281,25 +281,25 @@ void DocManager::addToRecentFiles(const std::string& filePath) {
 }
 
 // 获取当前文档的命令历史
-const std::vector<std::string>& DocManager::getCurrentDocumentCommandHistory() {
+const std::vector<std::string>& DocManager::getCurrentDocumentCommandLineHistory() {
     static std::vector<std::string> emptyHistory;
     if (s_currentDocIndex < s_documents.size()) {
-        return s_documents[s_currentDocIndex].getCommandHistory();
+        return s_documents[s_currentDocIndex].getCommandLineHistory();
     }
     return emptyHistory;
 }
 
 // 向当前文档添加命令历史
-void DocManager::addToCurrentDocumentCommandHistory(const std::string& command) {
+void DocManager::addToCurrentDocumentCommandLineHistory(const std::string& content) {
     if (s_currentDocIndex < s_documents.size()) {
-        s_documents[s_currentDocIndex].addToCommandHistory(command);
+        s_documents[s_currentDocIndex].addToCommandLineHistory(content);
     }
 }
 
 // 清除当前文档的命令历史
-void DocManager::clearCurrentDocumentCommandHistory() {
+void DocManager::clearCurrentDocumentCommandLineHistory() {
     if (s_currentDocIndex < s_documents.size()) {
-        s_documents[s_currentDocIndex].clearCommandHistory();
+        s_documents[s_currentDocIndex].clearCommandLineHistory();
     }
 }
 

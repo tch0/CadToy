@@ -57,9 +57,9 @@ public:
     static void addToRecentFiles(const std::string& filePath);      // 添加到最近文件
     
     // 命令历史相关方法
-    static const std::vector<std::string>& getCurrentDocumentCommandHistory();  // 获取当前文档的命令历史
-    static void addToCurrentDocumentCommandHistory(const std::string& command); // 向当前文档添加命令历史
-    static void clearCurrentDocumentCommandHistory();                           // 清除当前文档的命令历史
+    static const std::vector<std::string>& getCurrentDocumentCommandLineHistory();  // 获取当前文档的命令历史
+    static void addToCurrentDocumentCommandLineHistory(const std::string& content); // 向当前文档添加命令历史
+    static void clearCurrentDocumentCommandLineHistory();                           // 清除当前文档的命令历史
 };
 
 } // namespace tch

@@ -120,19 +120,19 @@ void Document::markSaved(bool isSaved) {
     }
 }
 
-// 获取命令历史
-const std::vector<std::string>& Document::getCommandHistory() const {
-    return m_commandHistory;
+// 获取命令行历史
+const std::vector<std::string>& Document::getCommandLineHistory() const {
+    return m_commandLineHistory;
 }
 
-// 添加命令到历史
-void Document::addToCommandHistory(const std::string& command) {
-    m_commandHistory.push_back(command);
+// 添加行到命令行历史
+void Document::addToCommandLineHistory(const std::string& content) {
+    m_commandLineHistory.push_back(content);
 }
 
-// 清除命令历史
-void Document::clearCommandHistory() {
-    m_commandHistory.clear();
+// 清除命令行历史
+void Document::clearCommandLineHistory() {
+    m_commandLineHistory.clear();
 }
 
 // 获取变换管理器

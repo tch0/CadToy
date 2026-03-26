@@ -52,8 +52,8 @@ float Renderer::s_menuBarHeight = 30.0f;              // 菜单栏高度
 float Renderer::s_fileBarHeight = 30.0f;              // 文件栏高度
 float Renderer::s_statusBarHeight = 35.0f;            // 状态栏高度
 
-// 命令历史滚动控制
-bool Renderer::s_bScrollCommandHistoryToBottom = false; // 是否应该将命令历史滚动到底部
+// 命令行历史滚动控制
+bool Renderer::s_bScrollCommandLineHistoryToBottom = false; // 是否应该将命令行历史滚动到底部
 // 命令输入框焦点控制
 bool Renderer::s_bShouldFocusOnCommandInput = false; // 是否应该将焦点设置到命令输入框
 // 命令输入缓冲区是否被修改，通过非命令输入栏的字符输入或者退格
@@ -1914,8 +1914,8 @@ void Renderer::drawFileBar() {
     // 处理上一帧的待切换文档
     if (s_pendingFileIndexToSwitch != static_cast<std::size_t>(-1)) {
         DocManager::setCurrentDocumentIndex(s_pendingFileIndexToSwitch);
-        // 切换文档后，自动滚动命令历史到最底部
-        s_bScrollCommandHistoryToBottom = true;
+        // 切换文档后，自动滚动命令行历史到最底部
+        s_bScrollCommandLineHistoryToBottom = true;
         // 重置待切换标记
         s_pendingFileIndexToSwitch = -1;
     }
@@ -2167,34 +2167,34 @@ void Renderer::drawCommandBar() {
         // 记录ID
         s_commandBarId = ImGui::GetCurrentWindow()->RootWindow->ID;
         
-        // 创建区域显示命令历史，添加垂直和水平滚动条，留出空间给命令输入栏
+        // 创建区域显示命令行历史，添加垂直和水平滚动条，留出空间给命令输入栏
         const float footerReserveHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        ImGui::BeginChild("CommandHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("CommandLineHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
         
         // TODO：使用ImGuiListClipper会导致滚动条的行为变得奇怪，无法自动滚动到末尾，暂不使用
         // // 使用静态的ImGuiListClipper来优化渲染，只绘制可见区域，提升历史条目过多时的性能
         // static ImGuiListClipper clipper;
         // float itemHeight = ImGui::GetTextLineHeight();
-        // clipper.Begin(s_commandHistory.size(), itemHeight);
+        // clipper.Begin(s_CommandLineHistory.size(), itemHeight);
         
         // while (clipper.Step()) {
         //     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-        //         // 绘制每一条命令历史
-        //         ImGui::TextUnformatted(s_commandHistory[i].c_str());
+        //         // 绘制每一条命令行历史
+        //         ImGui::TextUnformatted(s_CommandLineHistory[i].c_str());
         //     }
         // }
         // clipper.End();
         
-        const auto& commandHistory = DocManager::getCurrentDocumentCommandHistory();
-        for (std::size_t i = 0; i < commandHistory.size(); i++)
+        const auto& CommandLineHistory = DocManager::getCurrentDocumentCommandLineHistory();
+        for (std::size_t i = 0; i < CommandLineHistory.size(); i++)
         {
-            ImGui::TextUnformatted(commandHistory[i].c_str());
+            ImGui::TextUnformatted(CommandLineHistory[i].c_str());
         }
         
         // 根据标志决定是否滚动到最后，在绘制项目之前执行
-        if (!commandHistory.empty() && s_bScrollCommandHistoryToBottom) {
+        if (!CommandLineHistory.empty() && s_bScrollCommandLineHistoryToBottom) {
             ImGui::SetScrollHereY(1.0f);
-            s_bScrollCommandHistoryToBottom = false;
+            s_bScrollCommandLineHistoryToBottom = false;
         }
 
         ImGui::EndChild();
@@ -2515,10 +2515,10 @@ void Renderer::drawCommandBar() {
 }
 
 // 添加内容到命令历史记录
-void Renderer::addContentToCommandHistory(const std::string& command) {
-    DocManager::addToCurrentDocumentCommandHistory(command);
+void Renderer::addContentToCommandLineHistory(const std::string& content) {
+    DocManager::addToCurrentDocumentCommandLineHistory(content);
     // 设置滚动标志为true，确保新命令添加后会滚动到最底部
-    s_bScrollCommandHistoryToBottom = true;
+    s_bScrollCommandLineHistoryToBottom = true;
 }
 
 // 设置是否应该将焦点设置到命令输入框
