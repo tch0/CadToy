@@ -32,7 +32,9 @@ enum class SpecialKeyEventType {
     kNone,              // 无事件
     kEnterPressed,      // 回车键按下
     kSpacePressed,      // 空格键按下
-    kEscPressed         // Esc键按下
+    kEscPressed,        // Esc键按下
+    kUpPressed,         // Up键按下，用于命令执行历史功能
+    kDownPressed        // Down键按下，用于命令执行历史功能
 };
 
 // 输入上下文类，用于命令状态机模式的输入管理

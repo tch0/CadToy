@@ -13,6 +13,7 @@
 #include "command/CommandUndo.h"
 #include "command/CommandU.h"
 #include "debug/Logger.h"
+#include "document/DocManager.h"
 #include "input/InputContext.h"
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
@@ -141,11 +142,13 @@ void CommandManager::executeCommand(const std::string& command) {
     cmdLinePrint(loc.get("commandLine.prompt.command") + " " + command);
     
     // 查找命令全名，创建并设置命令对象，记录命令名
-    std::string cmdName = findFullCommandName(command);
-    auto it = m_creators.find(cmdName);
+    std::string cmdFullName = findFullCommandName(command);
+    auto it = m_creators.find(cmdFullName);
     if (it != m_creators.end()) {
         m_activeCommand = it->second();
-        m_currentCommandName = cmdName;
+        m_currentCommandName = cmdFullName;
+        
+        DocManager::getCurrentDocument().addToCommandExecutionHistory(cmdFullName);
     } else {
         cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
     }

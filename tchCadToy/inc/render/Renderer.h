@@ -78,6 +78,11 @@ public:
     static void addInputChar(unsigned int codepoint); // 添加输入字符到命令输入框
     static std::string getAndClearCommandBuffer(); // 获取输入缓冲区内容，并清空输入缓冲区
     
+    // 命令历史导航相关方法
+    static bool isInCommandHistoryNavigationMode();
+    static std::string navigateCommandHistoryAndGetExpectedCommand(bool isUp);
+    static void exitCommandHistoryNavigationMode();
+    
     // 实时渲染信息窗口相关方法
     static void drawRenderingInfoWindow(); // 绘制实时渲染信息窗口
     
@@ -138,6 +143,7 @@ private:
     static bool s_bNeedClearCommandBufferInternalCopy; // 是否需要清除命令输入缓冲区的内部副本
     static ImGuiID s_commandBarId; // 每一帧记录CommandBar的ID，判断焦点时直接通过此ID比较而不需要任何查找
     static ImGuiID s_commandInputId; // 每一帧记录CommandInput输入框的ID，判断焦点时直接通过此ID比较而不需要任何查找
+    static int s_commandHistoryNavigationIndex; // 命令历史导航索引，-1 表示不在导航模式
     
     
     // 辅助方法

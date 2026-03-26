@@ -64,6 +64,8 @@ bool Renderer::s_bNeedClearCommandBufferInternalCopy = false;
 ImGuiID Renderer::s_commandBarId = 0;
 // CommandInput输入控件ID，初始化为0，表示无效ID
 ImGuiID Renderer::s_commandInputId = 0;
+// 命令历史导航索引，-1 表示不在命令历史导航模式
+int Renderer::s_commandHistoryNavigationIndex = -1;
 
 // 命令栏相关
 static bool s_commandBarVisible = true; // 命令栏是否可见
@@ -2287,10 +2289,42 @@ void Renderer::drawCommandBar() {
                 s_userInputCommand.clear();
             }
             
-            // 处理输入并清空缓冲区
-            inputContext.handleEscape(getAndClearCommandBuffer());
+            // 如果在命令历史导航模式，Esc会退出导航模式，清空输入并且什么也不输出
+            if (isInCommandHistoryNavigationMode()) {
+                exitCommandHistoryNavigationMode();
+                getAndClearCommandBuffer();
+            }
+            // 否则就正常处理输入并清空缓冲区
+            else {
+                inputContext.handleEscape(getAndClearCommandBuffer());
+            }
+            
             // 同理清除内部副本
             s_bNeedClearCommandBufferInternalCopy = true;
+            // 清除特殊按键事件
+            inputContext.clearSpecialKeyEvent();
+        }
+        // Up/Down 键：命令历史导航
+        else if (inputEvent == SpecialKeyEventType::kUpPressed || inputEvent == SpecialKeyEventType::kDownPressed) {
+            // 只有不在命令执行或任务中时才处理
+            if (!inputContext.isAnyCommandOrTaskRunning()) {
+                // 在命令历史中进行导航并获取对应的命令
+                bool isUp = (inputEvent == SpecialKeyEventType::kUpPressed);
+                std::string command = navigateCommandHistoryAndGetExpectedCommand(isUp);
+                
+                // 修改外部缓冲区
+                if (!command.empty()) {
+                    std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+                    for (size_t i = 0; i < command.size() && i < s_cmdBuffer.size() - 1; ++i) {
+                        s_cmdBuffer[i] = command[i];
+                    }
+                    s_bCommandBufferModified = true;
+                }
+                // 退出了命令历史导航模式，清空输入
+                else {
+                    getAndClearCommandBuffer();
+                }
+            }
             // 清除特殊按键事件
             inputContext.clearSpecialKeyEvent();
         }
@@ -2309,8 +2343,35 @@ void Renderer::drawCommandBar() {
                 }
             }
             
-            // 2. 文本编辑回调 - 重构补全候选列表
+            // 2. 命令历史导航，Up/Down按下触发
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
+                // 只有不在命令执行或任务中时才进行导航
+                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                    // 检查 EventKey 来判断是 Up 还是 Down
+                    if (data->EventKey == ImGuiKey_UpArrow || data->EventKey == ImGuiKey_DownArrow) {
+                        std::string command = navigateCommandHistoryAndGetExpectedCommand(data->EventKey == ImGuiKey_UpArrow);
+                        
+                        // 修改内部缓冲区
+                        if (!command.empty()) {
+                            data->DeleteChars(0, data->BufTextLen);
+                            data->InsertChars(0, command.c_str());
+                            data->CursorPos = data->BufTextLen;
+                        }
+                        // 退出了命令历史导航模式，清空缓冲区
+                        if (command.empty() || !isInCommandHistoryNavigationMode()) {
+                            data->DeleteChars(0, data->BufTextLen);
+                        }
+                    }
+                }
+            }
+            
+            // 3. 文本编辑回调 - 重构补全候选列表 + 退出导航模式
             if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+                // 如果在导航模式，任何编辑都会退出导航模式
+                if (isInCommandHistoryNavigationMode()) {
+                    exitCommandHistoryNavigationMode();
+                }
+                
                 // 命令补全
                 if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
                     std::string currentInput(data->Buf, data->BufTextLen);
@@ -2324,7 +2385,7 @@ void Renderer::drawCommandBar() {
                 }
             }
             
-            // 3. 补全回调 - Tab 补全
+            // 4. 补全回调 - Tab 补全
             if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion &&
                 !InputContext::getInstance().isAnyCommandOrTaskRunning()) {
                 if (!s_completionCandidates.empty()) {
@@ -2361,7 +2422,7 @@ void Renderer::drawCommandBar() {
                 }
             }
             
-            // 4. Always 回调 - 处理缓冲区修改标志
+            // 5. Always 回调 - 处理缓冲区修改标志、补充清空补全信息
             if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
                 // 命令输入缓冲区被修改，那么就解除选中并移动光标到末尾
                 if (s_bCommandBufferModified) {
@@ -2379,20 +2440,34 @@ void Renderer::drawCommandBar() {
                     // 重置标记
                     s_bNeedClearCommandBufferInternalCopy = false;
                 }
+                
+                // 命令补全
+                // 某些情况下会无法清空补全信息(极少数corner case)，导致输入清空了还会显示补全框，这里做一个补充清空
+                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                    // 如果输入已经空了，那么无条件清空
+                    if (data->BufTextLen == 0) {
+                        s_userInputCommand.clear();
+                        s_completionCandidates.clear();
+                        s_completionSelectedIndex = -1;
+                    }
+                }
             }
             return 0;
         };
 
         ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
-            ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackCompletion, 
+            ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackCompletion, 
             inputTextCallback, nullptr);
         
         // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
         s_commandInputId = ImGui::GetItemID(); 
         
-        // 命令补全: 绘制候选框
+        // 命令补全相关: 绘制候选框
+        // 条件：没有命令或者任务执行时也就是输入的是命令、且补全列表有东西且输入框有焦点才绘制
+        //      另外命令历史导航模式下也不进行补全
         if (!InputContext::getInstance().isAnyCommandOrTaskRunning() &&
-            !s_completionCandidates.empty() && ImGui::IsItemFocused()) {
+            !s_completionCandidates.empty() && ImGui::IsItemFocused() &&
+            !isInCommandHistoryNavigationMode()) {
             // 首次计算候选框宽度（40个字符宽度）
             static float completionPopupWidth = ImGui::CalcTextSize("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl").x;
             
@@ -2562,7 +2637,59 @@ std::string Renderer::getAndClearCommandBuffer()
     if (focusIsOnCommandInput()) {
         s_bNeedClearCommandBufferInternalCopy = true;
     }
+    
+    // 清空缓冲区时，同时退出命令历史导航模式，这在内部调用时或许不必要，但通过cancelCurrentCommand调用则必须有
+    exitCommandHistoryNavigationMode();
+    
     return buffer;
+}
+
+// 检查是否在命令历史导航模式
+bool Renderer::isInCommandHistoryNavigationMode() {
+    return s_commandHistoryNavigationIndex >= 0;
+}
+
+// 在命令历史中进行导航，返回应该填充的命令，为空则表示已经退出了命令历史导航模式(比如命令历史是空的，当前已经是最新一条然后按下Down)
+std::string Renderer::navigateCommandHistoryAndGetExpectedCommand(bool isUp) {
+    auto& doc = DocManager::getCurrentDocument();
+    auto& history = doc.getCommandExecutionHistory();
+    
+    if (history.empty()) {
+        return "";
+    }
+    
+    if (isUp) {
+        if (s_commandHistoryNavigationIndex == -1) {
+            s_commandHistoryNavigationIndex = static_cast<int>(history.size()) - 1;
+        }
+        else if (s_commandHistoryNavigationIndex > 0) {
+            s_commandHistoryNavigationIndex--;
+        }
+    }
+    else {
+        if (s_commandHistoryNavigationIndex == -1) {
+            return "";
+        }
+        
+        if (s_commandHistoryNavigationIndex < static_cast<int>(history.size()) - 1) {
+            s_commandHistoryNavigationIndex++;
+        }
+        else {
+            s_commandHistoryNavigationIndex = -1;
+            return "";
+        }
+    }
+    
+    if (s_commandHistoryNavigationIndex >= 0 && s_commandHistoryNavigationIndex < static_cast<int>(history.size())) {
+        return history[s_commandHistoryNavigationIndex];
+    }
+    
+    return "";
+}
+
+// 退出命令历史导航模式
+void Renderer::exitCommandHistoryNavigationMode() {
+    s_commandHistoryNavigationIndex = -1;
 }
 
 // 获取属性栏是否可见

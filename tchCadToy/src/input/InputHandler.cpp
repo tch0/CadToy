@@ -232,6 +232,19 @@ void InputHandler::handleKeyPress(int key, int scancode, int action, int mods) {
                 Renderer::setShouldFocusOnCommandInput(true);
                 s_keyWasConsumedByShortcut = true;
             }
+            // Up/Down
+            else if (key == GLFW_KEY_UP || key == GLFW_KEY_DOWN) {
+                // 焦点不在命令输入框上时才记录事件，在命令输入框上则由输入框的回调自行处理
+                if (!bFocusIsOnCommandInput) {
+                    InputContext::getInstance().setSpecialKeyEvent(key == GLFW_KEY_UP ? SpecialKeyEventType::kUpPressed : SpecialKeyEventType::kDownPressed);
+                    // 焦点在命令行输出历史子窗口上时，命令行输出历史也是支持up/down滚动的，此时命令行输入历史以及命令输入框同时响应
+                    // (这是不阉割掉命令行输出历史的上下键滚动以及兼顾命令执行历史的一种妥协，但也是最好的实践)
+                    if (!bFocusIsOnCommandBar) {
+                        Renderer::setShouldFocusOnCommandInput(true);
+                    }
+                    s_keyWasConsumedByShortcut = true;
+                }
+            }
         }
         
         // 触发按键按下回调

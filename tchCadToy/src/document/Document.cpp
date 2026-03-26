@@ -2,6 +2,7 @@
 #include "document/Document.h"
 
 // C++ 标准库
+#include <algorithm>
 #include <filesystem>
 
 // 第三方库
@@ -133,6 +134,28 @@ void Document::addToCommandLineHistory(const std::string& content) {
 // 清除命令行历史
 void Document::clearCommandLineHistory() {
     m_commandLineHistory.clear();
+}
+
+// 获取命令执行历史
+const std::vector<std::string>& Document::getCommandExecutionHistory() const {
+    return m_commandExecutionHistory;
+}
+
+// 添加命令到执行历史
+void Document::addToCommandExecutionHistory(const std::string& content) {
+    // 命令执行历史不重复，如果已经存在，那么先删除之后再添加到末尾
+    auto it = std::find(m_commandExecutionHistory.begin(), m_commandExecutionHistory.end(), content);
+    
+    if (it != m_commandExecutionHistory.end()) {
+        m_commandExecutionHistory.erase(it);
+    }
+    
+    m_commandExecutionHistory.push_back(content);
+}
+
+// 清除命令执行历史
+void Document::clearCommandExecutionHistory() {
+    m_commandExecutionHistory.clear();
 }
 
 // 获取变换管理器
