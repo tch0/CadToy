@@ -14,6 +14,7 @@
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
 #include "utils/LocalizationManager.h"
+#include "Input/InputHandler.h"
 
 namespace tch {
 
@@ -184,7 +185,7 @@ void CommandLine::drawPreview() {
     // 绘制预览线段
     if (m_state == CommandLineState::kNextPointQuery) {
         // 获取当前鼠标位置
-        glm::dvec3 mousePos = Renderer::getCursorPosWorld();
+        glm::dvec3 mousePos = transformManager.screenToWorld(InputHandler::getCursorPosition());
         
         // 将世界坐标转换为屏幕坐标
         glm::vec2 startScreenPos = transformManager.worldToScreen(m_points.empty() ? glm::dvec3() : m_points.back());

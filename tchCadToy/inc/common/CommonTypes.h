@@ -81,7 +81,6 @@ struct InteractionData {
     glm::dvec3 selectionInitialPointWorld = glm::dvec3(0.0, 0.0, 0.0); // 所有选择的初始点
     glm::dvec3 selectionPreviewPointWorld = glm::dvec3(0.0, 0.0, 0.0); // 所有选择的当前预览点
     std::vector<glm::dvec3> selectionPointsWorld; // 选择点集合（世界坐标，用于套索、多边形、栏选等）
-    std::vector<glm::vec2> selectionPointsScreen; // 选择点集合（屏幕坐标，用于绘制），绘制时先计算了存在这里
     
     // 后续可添加的其他数据
     // 例如：
@@ -106,7 +105,6 @@ struct InteractionData {
         selectionInitialPointWorld = glm::dvec3(0.0, 0.0, 0.0);
         selectionPreviewPointWorld = glm::dvec3(0.0, 0.0, 0.0);
         selectionPointsWorld.clear();
-        selectionPointsScreen.clear();
     }
     
     // 重置所有状态

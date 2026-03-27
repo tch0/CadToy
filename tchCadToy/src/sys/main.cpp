@@ -115,9 +115,6 @@ int main(int argc, char* argv[])
         // 绘制所有图形
         Renderer::drawAll();
         
-        // 绘制光标
-        Renderer::drawCursor();
-        
         // 绘制命令栏
         Renderer::drawCommandBar();
         
