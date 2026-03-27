@@ -1148,10 +1148,10 @@ void Renderer::drawCursorTestWindow() {
             interactionData.cursorMarker = static_cast<CursorMarker>(currentMarker);
         }
         
-        // 光标尺寸拖动条（范围10~100）
+        // 光标尺寸拖动条（范围10~200）
         static int crossCursorSizeInt = static_cast<int>(s_crossCursorSize);
         ImGui::PushItemWidth(300);
-        if (ImGui::SliderInt("Cursor Size", &crossCursorSizeInt, 10, 100, "%d")) {
+        if (ImGui::SliderInt("Cursor Size", &crossCursorSizeInt, 10, 200, "%d")) {
             s_crossCursorSize = static_cast<float>(crossCursorSizeInt);
         }
         ImGui::PopItemWidth();
@@ -1654,9 +1654,9 @@ void Renderer::drawOptionsDialog() {
                     ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
                     ImGui::Spacing();
                     
-                    // 滑块控件，范围10-100，使用整数，长度设为500
+                    // 滑块控件，范围10-200，使用整数，长度设为500
                     ImGui::PushItemWidth(500); // 设置滑块宽度为500
-                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 100, "%d");
+                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 200, "%d");
                     ImGui::PopItemWidth();
                     
                     ImGui::EndTabItem();
@@ -2444,7 +2444,7 @@ void Renderer::drawCommandBar() {
                 // 命令补全
                 // 某些情况下会无法清空补全信息(极少数corner case)，导致输入清空了还会显示补全框，这里做一个补充清空
                 if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                    // 如果输入已经空了，那么无条件清空
+                    // 如果输入已经空了，那么无条件清空补全信息
                     if (data->BufTextLen == 0) {
                         s_userInputCommand.clear();
                         s_completionCandidates.clear();
