@@ -13,10 +13,12 @@
 Shader::Shader() : m_Id(0)
 {
 }
+
 Shader::Shader(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader, const std::source_location& loc)
 {
     m_Id = createShaderProgramFromSource(vertexShader, fragmentShader, geometryShader, loc);
 }
+
 Shader::Shader(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
                const std::string& fragmentShader, const std::string& geometryShader,
                const std::source_location& loc)
@@ -24,23 +26,47 @@ Shader::Shader(const std::string& vertexShader, const std::string& tessellationC
     m_Id = createShaderProgramFromSource(vertexShader, tessellationCtrlShader, tessellationEvalShader, fragmentShader, geometryShader, loc);
 }
 
-Shader::Shader(const Shader& shader) : m_Id(shader.m_Id)
+Shader::Shader(Shader&& other) noexcept : m_Id(other.m_Id)
 {
+    other.m_Id = 0;
 }
-Shader& Shader::operator=(const Shader& shader)
+
+Shader& Shader::operator=(Shader&& other) noexcept
 {
-    m_Id = shader.m_Id;
+    if (this != &other) {
+        if (m_Id != 0) {
+            glDeleteProgram(m_Id);
+        }
+        m_Id = other.m_Id;
+        other.m_Id = 0;
+    }
     return *this;
 }
+
+Shader::~Shader()
+{
+    if (m_Id != 0) {
+        glDeleteProgram(m_Id);
+        m_Id = 0;
+    }
+}
+
 void Shader::setShaderSource(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader, const std::source_location& loc)
 {
-    *this = Shader(vertexShader, fragmentShader, geometryShader, loc);
+    if (m_Id != 0) {
+        glDeleteProgram(m_Id);
+    }
+    m_Id = createShaderProgramFromSource(vertexShader, fragmentShader, geometryShader, loc);
 }
+
 void Shader::setShaderSource(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
                      const std::string& fragmentShader, const std::string& geometryShader,
                      const std::source_location& loc)
 {
-    *this = Shader(vertexShader, tessellationCtrlShader, tessellationEvalShader, fragmentShader, geometryShader, loc);
+    if (m_Id != 0) {
+        glDeleteProgram(m_Id);
+    }
+    m_Id = createShaderProgramFromSource(vertexShader, tessellationCtrlShader, tessellationEvalShader, fragmentShader, geometryShader, loc);
 }
 
 GLuint Shader::getShaderId() const

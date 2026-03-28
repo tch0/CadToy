@@ -10,13 +10,57 @@
 #include "common/CommonTypes.h"
 #include "debug/Logger.h"
 #include "document/DocManager.h"
-#include "gl/GLFuncs.h"
 #include "input/InputContext.h"
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
-#include "sys/Global.h"
 
 namespace tch {
+
+// Canvas顶点着色器
+static const char* CANVAS_VERTEX_SHADER = R"(
+#version 330 core
+
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec4 aColor;
+layout (location = 2) in float aTexCoord;
+
+uniform mat4 uProjection;
+
+out vec4 vColor;
+out float vTexCoord;
+
+void main()
+{
+    gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
+    vColor = aColor;
+    vTexCoord = aTexCoord;
+}
+)";
+
+// Canvas片段着色器
+static const char* CANVAS_FRAGMENT_SHADER = R"(
+#version 330 core
+
+uniform sampler1D uDashTexture;
+uniform int uIsDashed;
+uniform float uDashScale;
+
+in vec4 vColor;
+in float vTexCoord;
+out vec4 FragColor;
+
+void main()
+{
+    if (uIsDashed == 0) {
+        FragColor = vColor;
+    } else {
+        float texPos = vTexCoord * uDashScale;
+        float alpha = texture(uDashTexture, texPos).r;
+        if (alpha < 0.5) discard;
+        FragColor = vColor;
+    }
+}
+)";
 
 // 栅格颜色常量
 static glm::vec4 s_mainGridColor(54.0f/255.0f, 61.0f/255.0f, 78.0f/255.0f, 1.0f);   // 主栅格颜色 RGB: 54,61,78
@@ -92,6 +136,41 @@ void StencilFillGuard::setupFill() {
     glStencilMask(0x00);
 }
 
+// AAGuard实现
+AAGuard::AAGuard(bool enable) {
+    m_lineSmoothEnabled = glIsEnabled(GL_LINE_SMOOTH);
+    m_polygonSmoothEnabled = glIsEnabled(GL_POLYGON_SMOOTH);
+    m_multisampleEnabled = glIsEnabled(GL_MULTISAMPLE);
+    
+    if (enable) {
+        glEnable(GL_LINE_SMOOTH);
+        glEnable(GL_POLYGON_SMOOTH);
+        glEnable(GL_MULTISAMPLE);
+    } else {
+        glDisable(GL_LINE_SMOOTH);
+        glDisable(GL_POLYGON_SMOOTH);
+        glDisable(GL_MULTISAMPLE);
+    }
+}
+
+AAGuard::~AAGuard() {
+    if (m_lineSmoothEnabled) {
+        glEnable(GL_LINE_SMOOTH);
+    } else {
+        glDisable(GL_LINE_SMOOTH);
+    }
+    if (m_polygonSmoothEnabled) {
+        glEnable(GL_POLYGON_SMOOTH);
+    } else {
+        glDisable(GL_POLYGON_SMOOTH);
+    }
+    if (m_multisampleEnabled) {
+        glEnable(GL_MULTISAMPLE);
+    } else {
+        glDisable(GL_MULTISAMPLE);
+    }
+}
+
 // 构造函数
 CanvasRenderer::CanvasRenderer() 
     : m_vao(0)
@@ -125,23 +204,8 @@ void CanvasRenderer::initDashTexture() {
 
 // 初始化渲染器
 bool CanvasRenderer::initialize() {
-    std::filesystem::path vertPath = g_pathCwd / "res" / "shaders" / "canvas_shader.vert";
-    std::filesystem::path fragPath = g_pathCwd / "res" / "shaders" / "canvas_shader.frag";
-    
-    LOG_INFO("Loading canvas shader from: {}", vertPath.string());
-    LOG_INFO("Loading canvas shader from: {}", fragPath.string());
-    
-    std::string vertSrc = readShaderSource(vertPath.string());
-    std::string fragSrc = readShaderSource(fragPath.string());
-    
-    if (vertSrc.empty() || fragSrc.empty()) {
-        LOG_ERROR("Failed to load canvas shader sources: vert={}, frag={}", 
-                  vertSrc.empty() ? "empty" : "loaded", 
-                  fragSrc.empty() ? "empty" : "loaded");
-        return false;
-    }
-    
-    m_canvasShader.setShaderSource(vertSrc, fragSrc);
+    // 使用嵌入的着色器源码
+    m_canvasShader.setShaderSource(CANVAS_VERTEX_SHADER, CANVAS_FRAGMENT_SHADER);
     
     GLuint shaderId = m_canvasShader.getShaderId();
     
@@ -326,6 +390,8 @@ void CanvasRenderer::drawPolygonFill(const std::vector<glm::vec2>& points, const
 
 // 绘制栅格
 void CanvasRenderer::drawGrid() {
+    AAGuard aaGuard(false);
+    
     // 检查是否显示栅格
     auto& doc = DocManager::getCurrentDocument();
     if (!doc.isShowGrid()) {
@@ -449,6 +515,8 @@ void CanvasRenderer::drawGrid() {
 
 // 绘制XY坐标轴
 void CanvasRenderer::drawAxes() {
+    AAGuard aaGuard(false);
+    
     // 检查是否显示坐标轴
     auto& doc = DocManager::getCurrentDocument();
     if (!doc.isShowAxes()) {
@@ -509,6 +577,10 @@ void CanvasRenderer::drawCursor() {
     // 获取光标尺寸配置
     float crossCursorSize = Renderer::getCrossCursorSize();
     float pickBoxSize = Renderer::getPickBoxSize();
+    
+    // 手掌光标需要抗锯齿，其他光标禁用抗锯齿
+    bool needAA = (interactionData.cursorMode == CursorMode::kPanning);
+    AAGuard aaGuard(needAA);
     
     switch (interactionData.cursorMode) {
         case CursorMode::kDefault:
@@ -574,9 +646,49 @@ void CanvasRenderer::drawCursor() {
             addVertex(glm::vec2(cursorScreenPos.x - halfSize + 0.5f, cursorScreenPos.y - halfSize + 0.5f), cursorColor);
             break;
         }
-        case CursorMode::kPanning:
-            // 平移模式：不绘制任何光标
+        case CursorMode::kPanning: {
+            // 平移模式：绘制手掌光标（启用抗锯齿）
+            float handSize = 25.0f;
+            float x = cursorScreenPos.x + 0.5f;
+            float y = cursorScreenPos.y + 0.5f;
+            
+            // 手掌轮廓（LINE_LOOP 转换为 LINES：每相邻两点连线，最后闭合）
+            // 点序列：底部左 -> 底部右 -> 右侧 -> 顶部右 -> 顶部中 -> 顶部左 -> 左侧 -> 底部左(闭合)
+            glm::vec2 p0(x - handSize * 0.4f, y + handSize * 0.2f);  // 底部左
+            glm::vec2 p1(x + handSize * 0.4f, y + handSize * 0.2f);  // 底部右
+            glm::vec2 p2(x + handSize * 0.3f, y - handSize * 0.3f);  // 右侧
+            glm::vec2 p3(x + handSize * 0.1f, y - handSize * 0.4f);  // 顶部右
+            glm::vec2 p4(x, y - handSize * 0.45f);                   // 顶部中
+            glm::vec2 p5(x - handSize * 0.1f, y - handSize * 0.4f);  // 顶部左
+            glm::vec2 p6(x - handSize * 0.3f, y - handSize * 0.3f);  // 左侧
+            
+            // LINE_LOOP: p0-p1, p1-p2, p2-p3, p3-p4, p4-p5, p5-p6, p6-p0
+            addVertex(p0, cursorColor); addVertex(p1, cursorColor);
+            addVertex(p1, cursorColor); addVertex(p2, cursorColor);
+            addVertex(p2, cursorColor); addVertex(p3, cursorColor);
+            addVertex(p3, cursorColor); addVertex(p4, cursorColor);
+            addVertex(p4, cursorColor); addVertex(p5, cursorColor);
+            addVertex(p5, cursorColor); addVertex(p6, cursorColor);
+            addVertex(p6, cursorColor); addVertex(p0, cursorColor);  // 闭合
+            
+            // 手指（GL_LINES）
+            // 拇指
+            addVertex(glm::vec2(x - handSize * 0.25f, y + handSize * 0.1f), cursorColor);
+            addVertex(glm::vec2(x - handSize * 0.35f, y + handSize * 0.15f), cursorColor);
+            // 食指
+            addVertex(glm::vec2(x + handSize * 0.25f, y - handSize * 0.1f), cursorColor);
+            addVertex(glm::vec2(x + handSize * 0.3f, y - handSize * 0.35f), cursorColor);
+            // 中指
+            addVertex(glm::vec2(x + handSize * 0.08f, y - handSize * 0.15f), cursorColor);
+            addVertex(glm::vec2(x + handSize * 0.12f, y - handSize * 0.4f), cursorColor);
+            // 无名指
+            addVertex(glm::vec2(x - handSize * 0.08f, y - handSize * 0.15f), cursorColor);
+            addVertex(glm::vec2(x - handSize * 0.04f, y - handSize * 0.4f), cursorColor);
+            // 小指
+            addVertex(glm::vec2(x - handSize * 0.25f, y - handSize * 0.1f), cursorColor);
+            addVertex(glm::vec2(x - handSize * 0.2f, y - handSize * 0.35f), cursorColor);
             break;
+        }
     }
     
     flushVertices();
@@ -601,6 +713,8 @@ void CanvasRenderer::drawCursor() {
 
 // 绘制光标标记
 void CanvasRenderer::drawCursorMarker() {
+    AAGuard aaGuard(false);
+    
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     // 检查是否有标记需要绘制
@@ -741,7 +855,7 @@ void CanvasRenderer::drawCursorMarker() {
             addVertex(glm::vec2(markerPos.x + rectSize * 0.5f + offset + 0.5f, markerPos.y + rectSize * 0.5f + offset + 0.5f + 1.0f), markerColor);
             addVertex(glm::vec2(markerPos.x + rectSize * 0.5f + offset - rectSize + 0.5f, markerPos.y + rectSize * 0.5f + offset + 0.5f + 1.0f), markerColor);
             // 垂直线段
-            addVertex(glm::vec2(markerPos.x + rectSize * 0.5f + offset + 0.5f, markerPos.y + rectSize * 0.5f + offset + 0.5f + 2.0f), markerColor);
+            addVertex(glm::vec2(markerPos.x + rectSize * 0.5f + offset + 0.5f, markerPos.y + rectSize * 0.5f + offset + 0.5f + 1.0f), markerColor);
             addVertex(glm::vec2(markerPos.x + rectSize * 0.5f + offset + 0.5f, markerPos.y + rectSize * 0.5f + offset - rectSize + 0.5f + 2.0f), markerColor);
             
             flushVertices();
@@ -754,7 +868,7 @@ void CanvasRenderer::drawCursorMarker() {
         case CursorMarker::kMove: {
             // 移动标记：四向箭头，表示可以向四个方向移动
             float lineLength = 8.0f;   // 线段长度
-            float arrowLength = 2.0f;  // 箭头长度
+            float arrowLength = 3.0f;  // 箭头长度
             
             // 绘制上部分线段
             addVertex(glm::vec2(markerPos.x + 0.5f, markerPos.y - lineLength + 0.5f), markerColor);
@@ -994,6 +1108,8 @@ void CanvasRenderer::drawCursorMarker() {
 
 // 绘制选择区域
 void CanvasRenderer::drawSelection() {
+    AAGuard aaGuard(false);
+    
     InteractionData& interactionData = InputContext::getInstance().getInteractionData();
     
     if (!interactionData.isSelectionActive) {

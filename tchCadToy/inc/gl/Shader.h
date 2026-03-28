@@ -14,6 +14,7 @@ class Shader
 {
 private:
     GLuint m_Id;
+    
 public:
     Shader();
     Shader(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader = "",
@@ -21,8 +22,18 @@ public:
     Shader(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,
            const std::string& fragmentShader, const std::string& geometryShader = "",
            const std::source_location& loc = std::source_location::current());
-    Shader(const Shader& shader);
-    Shader& operator=(const Shader& shader);
+    
+    // 禁用拷贝
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+    
+    // 移动语义
+    Shader(Shader&& other) noexcept;
+    Shader& operator=(Shader&& other) noexcept;
+    
+    // 析构函数
+    ~Shader();
+    
     void setShaderSource(const std::string& vertexShader, const std::string& fragmentShader, const std::string& geometryShader = "",
                          const std::source_location& loc = std::source_location::current());
     void setShaderSource(const std::string& vertexShader, const std::string& tessellationCtrlShader, const std::string& tessellationEvalShader,

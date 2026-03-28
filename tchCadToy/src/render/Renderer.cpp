@@ -21,7 +21,6 @@
 #include "document/DocManager.h"
 #include "input/InputContext.h"
 #include "input/InputHandler.h"
-#include "Layer.h"
 #include "sys/Global.h"
 #include "utils/LocalizationManager.h"
 #include "utils/StringUtils.h"
@@ -32,6 +31,7 @@ namespace tch {
 bool Renderer::s_initialized = false;
 GLFWwindow* Renderer::s_window = nullptr;
 CanvasRenderer Renderer::s_canvasRenderer;
+EntityRenderer Renderer::s_entityRenderer;
 float Renderer::s_crossCursorSize = 50.0f;
 float Renderer::s_pickBoxSize = 5.0f;      // 拾取框大小，默认值为5
 bool Renderer::s_cursorTestWindowVisible = false;
@@ -85,6 +85,9 @@ static bool s_metricsWindowVisible = false;  // Metrics/Debugger窗口是否可�
 // 实时渲染信息窗口相关
 static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否可见
 
+// 背景颜色常量 RGB: 33,40,48
+static glm::vec4 s_backgroundColor(33.0f/255.0f, 40.0f/255.0f, 48.0f/255.0f, 1.0f);
+
 
 
 
@@ -92,9 +95,6 @@ static bool s_renderingInfoVisible = false;  // 实时渲染信息窗口是否�
 void Renderer::initialize(GLFWwindow* window) {
     s_window = window;
     s_initialized = true;
-    
-    // 设置默认背景颜色为RGB: 33,40,48
-    setBackgroundColor(33.0f/255.0f, 40.0f/255.0f, 48.0f/255.0f, 1.0f);
     
     // 获取窗口尺寸并设置视口
     int width, height;
@@ -118,10 +118,23 @@ void Renderer::initialize(GLFWwindow* window) {
     if (!s_canvasRenderer.initialize()) {
         LOG_ERROR("Failed to initialize CanvasRenderer");
     }
+    
+    // 初始化EntityRenderer
+    if (!s_entityRenderer.initialize()) {
+        LOG_ERROR("Failed to initialize EntityRenderer");
+    }
+    
+    // 禁用抗锯齿，需要时再启用
+    glDisable(GL_LINE_SMOOTH);
+    glDisable(GL_POLYGON_SMOOTH);
+    glDisable(GL_MULTISAMPLE);
 }
 
 // 清理渲染器
 void Renderer::cleanup() {
+    // 清理EntityRenderer
+    s_entityRenderer.cleanup();
+    
     // 清理CanvasRenderer
     s_canvasRenderer.cleanup();
     
@@ -255,11 +268,6 @@ void Renderer::endRender() {
     glfwSwapBuffers(s_window);
 }
 
-// 设置背景颜色
-void Renderer::setBackgroundColor(float r, float g, float b, float a) {
-    glClearColor(r, g, b, a);
-}
-
 // 绘制所有图形
 void Renderer::drawAll() {
     if (!s_initialized || !s_window) {
@@ -269,6 +277,9 @@ void Renderer::drawAll() {
     // 获取窗口大小
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
+    
+    // 更新 EntityRenderer 窗口尺寸
+    s_entityRenderer.updateWindowSize(width, height);
     
     // 设置投影矩阵（屏幕坐标系，Y轴向下）
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(width), 
@@ -280,17 +291,21 @@ void Renderer::drawAll() {
     glm::mat4 view = glm::mat4(1.0f);
     s_canvasRenderer.setView(view);
     
-    // 使用 CanvasRenderer 绘制栅格和坐标轴
+    // 1. 清除默认帧缓冲
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+    glClearColor(s_backgroundColor.r, s_backgroundColor.g, s_backgroundColor.b, s_backgroundColor.a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    
+    // 2. 背景层（CanvasRenderer）
     s_canvasRenderer.drawGrid();
     s_canvasRenderer.drawAxes();
     
-    // 绘制所有图层（保留原有逻辑）
-    LayerManager::getInstance().draw();
+    // 3. 实体层（EntityRenderer）
+    s_entityRenderer.drawEntities();
     
-    // 使用 CanvasRenderer 绘制选择
+    // 4. 前景层（CanvasRenderer）
     s_canvasRenderer.drawSelection();
-    
-    // 使用 CanvasRenderer 绘制光标
     s_canvasRenderer.drawCursor();
     s_canvasRenderer.drawCursorMarker();
     

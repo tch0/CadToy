@@ -11,6 +11,7 @@
 
 // 项目头文件
 #include "render/CanvasRenderer.h"
+#include "render/EntityRenderer.h"
 #include "transform/TransformManager.h"
 
 namespace tch {
@@ -35,9 +36,6 @@ public:
     
     // 结束渲染
     static void endRender();
-    
-    // 设置背景颜色
-    static void setBackgroundColor(float r, float g, float b, float a = 1.0f);
     
     // 绘制所有图形
     static void drawAll();
@@ -116,6 +114,9 @@ private:
     
     // CanvasRenderer 实例
     static CanvasRenderer s_canvasRenderer;     // 画布渲染器
+    
+    // EntityRenderer 实例
+    static EntityRenderer s_entityRenderer;     // 实体渲染器
     
     // 光标相关
     static float s_crossCursorSize;             // 十字光标大小（包含拾取框的总大小，线段长度为十字光标大小减去拾取框大小）

@@ -35,6 +35,20 @@ private:
     GLboolean m_blendEnabled;
 };
 
+// RAII状态守卫：控制抗锯齿状态
+// enable=true时启用抗锯齿，enable=false时禁用抗锯齿
+// 析构时恢复原始状态
+class AAGuard {
+public:
+    explicit AAGuard(bool enable);
+    ~AAGuard();
+    
+private:
+    GLboolean m_lineSmoothEnabled;
+    GLboolean m_polygonSmoothEnabled;
+    GLboolean m_multisampleEnabled;
+};
+
 // 画布渲染器类
 // 负责使用现代OpenGL shader渲染栅格、坐标轴、光标、选择区域等画布元素
 class CanvasRenderer {
