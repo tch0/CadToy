@@ -14,7 +14,7 @@
 #include "render/Renderer.h"
 #include "utils/GlobalUtils.h"
 #include "utils/LocalizationManager.h"
-#include "Input/InputHandler.h"
+#include "input/InputHandler.h"
 
 namespace tch {
 
