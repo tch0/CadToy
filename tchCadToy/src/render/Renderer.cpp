@@ -23,6 +23,7 @@
 #include "input/InputHandler.h"
 #include "sys/Global.h"
 #include "utils/DisplayConfigManager.h"
+#include "utils/GlobalUtils.h"
 #include "utils/LocalizationManager.h"
 #include "utils/StringUtils.h"
 
@@ -322,6 +323,7 @@ void Renderer::drawAll() {
 // 绘制光标测试窗口
 void Renderer::drawCursorTestWindow() {
     if (s_cursorTestWindowVisible) {
+        float uiScale = getUIScaleFactor();
         ImGui::Begin("Cursor Test Window", &s_cursorTestWindowVisible);
         
         // 获取交互数据
@@ -343,7 +345,7 @@ void Renderer::drawCursorTestWindow() {
         
         // 光标尺寸拖动条（范围10~200）
         static int crossCursorSizeInt = static_cast<int>(s_crossCursorSize);
-        ImGui::PushItemWidth(300);
+        ImGui::PushItemWidth(300 * uiScale);
         if (ImGui::SliderInt("Cursor Size", &crossCursorSizeInt, 10, 200, "%d")) {
             s_crossCursorSize = static_cast<float>(crossCursorSizeInt);
         }
@@ -351,7 +353,7 @@ void Renderer::drawCursorTestWindow() {
         
         // 拾取框尺寸拖动条（范围0~50）
         static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
-        ImGui::PushItemWidth(300);
+        ImGui::PushItemWidth(300 * uiScale);
         if (ImGui::SliderInt("Pickbox Size", &pickBoxSizeInt, 0, 50, "%d")) {
             s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
         }
@@ -491,6 +493,9 @@ void Renderer::drawStatusBar() {
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
     
+    // 更新状态栏高度：一行文本的高度 + 内边距
+    s_statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().WindowPadding.y * 2;
+    
     // 计算状态栏位置和大小
     float statusBarHeight = s_statusBarHeight;
     ImVec2 statusBarPos(0, height - statusBarHeight);
@@ -510,6 +515,7 @@ void Renderer::drawStatusBar() {
     // 计算世界坐标，保存并显示
     s_cursorPosWorld = getTransformManager().screenToWorld(InputHandler::getCursorPosition());
     ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosWorld.x, s_cursorPosWorld.y, s_cursorPosWorld.z);
+    
     ImGui::End();
 }
 
@@ -519,14 +525,13 @@ void Renderer::drawOptionsDialog() {
         return;
     }
     auto& loc = LocalizationManager::getInstance();
+    float uiScale = getUIScaleFactor();
+    
     // 使用BeginPopupModal创建真正的模态对话框
     ImGui::OpenPopup("Options");
     
     // 设置对话框位置为屏幕中央
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    
-    // 不强制设置对话框大小，让ImGui从ini文件读取
-    // ImGui::SetNextWindowSize(ImVec2(400, 300));
     
     // 使用模态对话框标志，允许调整大小
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | 
@@ -564,8 +569,8 @@ void Renderer::drawOptionsDialog() {
                 ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
                 ImGui::Spacing();
                 
-                // 滑块控件，范围10-200，使用整数，长度设为500
-                ImGui::PushItemWidth(500); // 设置滑块宽度为500
+                // 滑块控件，范围10-200，使用整数
+                ImGui::PushItemWidth(500.0f * uiScale);
                 ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 200, "%d");
                 ImGui::PopItemWidth();
                 
@@ -583,7 +588,7 @@ void Renderer::drawOptionsDialog() {
                 ImGui::BeginGroup();
                 
                 // 创建一个更大的预览区域，确保最大拾取框也能完全显示
-                ImVec2 previewSize(120, 120);
+                ImVec2 previewSize(120.0f, 120.0f);
                 ImGui::BeginChild("Preview", previewSize, true);
                 
                 // 计算预览框的位置和大小
@@ -604,10 +609,10 @@ void Renderer::drawOptionsDialog() {
                 ImGui::EndGroup();
                 
                 // 然后在左侧绘制滑块，对齐到预览框底部
-                ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
+                ImGui::SameLine(0.0f, 20.0f);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 50.0f);
                 
-                ImGui::PushItemWidth(250); // 设置滑块宽度为250
+                ImGui::PushItemWidth(250.0f * uiScale);
                 ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
                 ImGui::PopItemWidth();
                 
@@ -651,11 +656,11 @@ void Renderer::drawOptionsDialog() {
                 ImGui::Text(loc.get("optionsDialog.fontSize").c_str());
                 ImGui::Spacing();
                 
-                ImGui::PushItemWidth(300);
+                ImGui::PushItemWidth(300.0f * uiScale);
                 ImGui::SliderInt("##FontSize", &fontSize, 18, 50, "%d");
                 ImGui::PopItemWidth();
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth(60);
+                ImGui::SetNextItemWidth(60.0f * uiScale);
                 ImGui::InputInt("##FontSizeInput", &fontSize, 0, 0);
                 fontSize = std::clamp(fontSize, 18, 50);
                 
@@ -672,7 +677,7 @@ void Renderer::drawOptionsDialog() {
         
         // 垂直填充空间，将按钮推到底部上方一定距离
         float availHeight = ImGui::GetContentRegionAvail().y;
-        float buttonAreaHeight = 100.0f;
+        float buttonAreaHeight = 100.0f * uiScale;
         if (availHeight > buttonAreaHeight) {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + availHeight - buttonAreaHeight);
         }
@@ -681,16 +686,20 @@ void Renderer::drawOptionsDialog() {
         ImGui::Separator();
         
         // 右对齐按钮
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 260);
+        float buttonWidth = 80.0f * uiScale;
+        float buttonHeight = 30.0f * uiScale;
+        float buttonSpacing = ImGui::GetStyle().ItemSpacing.x;
+        float totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - totalButtonWidth - ImGui::GetStyle().WindowPadding.x);
         
         // 应用
-        bool applyClicked = ImGui::Button(loc.get("optionsDialog.apply").c_str(), ImVec2(80, 30));
+        bool applyClicked = ImGui::Button(loc.get("optionsDialog.apply").c_str(), ImVec2(buttonWidth, buttonHeight));
         // 确认
         ImGui::SameLine();
-        bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(80, 30));
+        bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(buttonWidth, buttonHeight));
         // 取消
         ImGui::SameLine();
-        bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(80, 30));
+        bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(buttonWidth, buttonHeight));
         
         if (applyClicked || okClicked) {
             DocManager::getCurrentDocument().setShowGrid(showGrid);
@@ -824,20 +833,19 @@ void Renderer::drawPropertyBar() {
     
     // 使用ImGui的原生窗口功能，支持拖动调整大小和关闭按钮
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
-                             ImGuiWindowFlags_NoBringToFrontOnFocus;
+                             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNav;
     
     auto& loc = LocalizationManager::getInstance();
     // 使用ImGui的命名机制，##前面的内容显示在界面上，##后面的内容作为内部标识符
     std::string windowName = loc.get("propertyBar.title") + "##PropertyBar";
-    if (ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags)) {
-        // 预留空白区域，等待添加实际属性
-        
-        // 监听属性栏宽度变化
-        ImVec2 currentSize = ImGui::GetWindowSize();
-        s_propertyBarWidth = currentSize.x;
-        
-        ImGui::End();
-    }
+    ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags);
+    
+    // 等待添加实际属性
+    
+    // 监听属性栏宽度变化
+    s_propertyBarWidth = ImGui::GetWindowSize().x;
+    
+    ImGui::End();
 }
 
 // 绘制文件栏
@@ -860,88 +868,96 @@ void Renderer::drawFileBar() {
     
     // 计算文件栏位置和大小
     ImVec2 fileBarPos(0, s_menuBarHeight);
-    ImVec2 fileBarSize(width*1.0f, s_fileBarHeight);
+    ImVec2 fileBarSize(width*1.0f, 0); // 高度为0表示使用自适应高度
     
     // 绘制文件栏背景
     ImGui::SetNextWindowPos(fileBarPos);
     ImGui::SetNextWindowSize(fileBarSize);
     ImGui::SetNextWindowBgAlpha(0.9f);
     
-    // 使用参考实现中的窗口标志
     ImGuiWindowFlags tabWindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | 
                                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav | 
                                      ImGuiWindowFlags_NoSavedSettings;
+    // 在 Begin 之前 Push 样式变量
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15.0f, 3.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20.0f, 4.0f));
     
-    if (ImGui::Begin("FileBar", nullptr, tabWindowFlags)) {
-        // 使用参考实现中的TabBar标志
-        ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | 
-                                      ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
-                                      ImGuiTabBarFlags_FittingPolicyScroll;
-        
-        if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
+    // 文件栏子窗口
+    ImGui::Begin("FileBar", nullptr, tabWindowFlags);
+    // 隐藏 TabBar 下方的分割线
+    ImGui::PushStyleVar(ImGuiStyleVar_TabBarBorderSize, 0.0f);
+    
+    // 文件栏绘制在子窗口中
+    ImGuiTabBarFlags tabBarFlags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | 
+                                   ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
+                                   ImGuiTabBarFlags_FittingPolicyScroll;
+    if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
+        // 创建新文档
+        if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
             // 创建新文档
-            if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
-                // 创建新文档
-                std::size_t newFileIndex = DocManager::createNewDocument();
-                // 新建文档并切换也需要取消当前命令
-                CommandManager::getInstance().cancelCurrentCommand();
-                // 设置待切换的文件索引，在下一帧执行切换
-                s_pendingFileIndexToSwitch = newFileIndex;
-            }
-            
-            // 遍历文档列表，绘制每一个打开文档
-            std::size_t documentCount = DocManager::getDocumentCount();
-            // 待关闭的文件索引，-1表示无文件待关闭
-            static std::size_t s_docIndexToBeClosed = -1;
-            for (std::size_t i = 0; i < documentCount; i++) {
-                // 获取文件名
-                std::string tabText = DocManager::getFileName(i);
-                
-                // 设置标签项标志
-                ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
-                if (DocManager::isDocumentModified(i)) {
-                    tabItemFlags |= ImGuiTabItemFlags_UnsavedDocument;
-                }
-                
-                bool tabOpen = true;
-                if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
-                    // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
-                    if (DocManager::getCurrentDocumentIndex() != i) {
-                        // 切换文档时，取消当前命令执行
-                        CommandManager::getInstance().cancelCurrentCommand();
-                        // 设置待切换的文档索引，在下一帧执行切换
-                        s_pendingFileIndexToSwitch = i;
-                    }
-                    ImGui::EndTabItem();
-                }
-                
-                // 添加工具提示
-                if (ImGui::IsItemHovered()) {
-                    const std::string& fullFileName = DocManager::getFullFileName(i);
-                    const std::string& filePath = DocManager::getFilePath(i);
-                    ImGui::SetTooltip(filePath.empty() ? fullFileName.c_str() : filePath.c_str());
-                }
-                
-                // 处理标签关闭
-                if (!tabOpen) {
-                    s_docIndexToBeClosed = i;
-                }
-            }
-            // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
-            if (s_docIndexToBeClosed != static_cast<std::size_t>(-1)) {
-                CommandManager::getInstance().cancelCurrentCommand();
-                DocManager::closeDocument(s_docIndexToBeClosed);
-                s_docIndexToBeClosed = -1;
-            }
-            
-            ImGui::EndTabBar();
+            std::size_t newFileIndex = DocManager::createNewDocument();
+            // 新建文档并切换也需要取消当前命令
+            CommandManager::getInstance().cancelCurrentCommand();
+            // 设置待切换的文件索引，在下一帧执行切换
+            s_pendingFileIndexToSwitch = newFileIndex;
         }
         
-        // 更新文件栏高度
-        s_fileBarHeight = ImGui::GetWindowSize().y;
+        // 遍历文档列表，绘制每一个打开文档
+        std::size_t documentCount = DocManager::getDocumentCount();
+        // 待关闭的文件索引，-1表示无文件待关闭
+        static std::size_t s_docIndexToBeClosed = -1;
+        for (std::size_t i = 0; i < documentCount; i++) {
+            // 获取文件名
+            std::string tabText = DocManager::getFileName(i);
+            
+            // 设置标签项标志
+            ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
+            if (DocManager::isDocumentModified(i)) {
+                tabItemFlags |= ImGuiTabItemFlags_UnsavedDocument;
+            }
+            
+            bool tabOpen = true;
+            if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
+                // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
+                if (DocManager::getCurrentDocumentIndex() != i) {
+                    // 切换文档时，取消当前命令执行
+                    CommandManager::getInstance().cancelCurrentCommand();
+                    // 设置待切换的文档索引，在下一帧执行切换
+                    s_pendingFileIndexToSwitch = i;
+                }
+                ImGui::EndTabItem();
+            }
+            
+            // 添加工具提示
+            if (ImGui::IsItemHovered()) {
+                const std::string& fullFileName = DocManager::getFullFileName(i);
+                const std::string& filePath = DocManager::getFilePath(i);
+                ImGui::SetTooltip(filePath.empty() ? fullFileName.c_str() : filePath.c_str());
+            }
+            
+            // 处理标签关闭
+            if (!tabOpen) {
+                s_docIndexToBeClosed = i;
+            }
+        }
+        // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
+        if (s_docIndexToBeClosed != static_cast<std::size_t>(-1)) {
+            CommandManager::getInstance().cancelCurrentCommand();
+            DocManager::closeDocument(s_docIndexToBeClosed);
+            s_docIndexToBeClosed = -1;
+        }
         
-        ImGui::End();
+        ImGui::EndTabBar();
     }
+    // Pop TabBarBorderSize
+    ImGui::PopStyleVar();
+    
+    // 更新文件栏高度
+    s_fileBarHeight = ImGui::GetWindowSize().y;
+    
+    ImGui::End();
+    // Pop WindowPadding 和 FramePadding
+    ImGui::PopStyleVar(2);
 }
 
 // 获取变换管理器
@@ -1097,381 +1113,380 @@ void Renderer::drawCommandBar() {
                              ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     
     auto& loc = LocalizationManager::getInstance();
-    if (ImGui::Begin("CommandBar", nullptr, flags)) {
-        // 记录ID
-        s_commandBarId = ImGui::GetCurrentWindow()->RootWindow->ID;
-        
-        // 创建区域显示命令行历史，添加垂直和水平滚动条，留出空间给命令输入栏
-        const float footerReserveHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        ImGui::BeginChild("CommandLineHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
-        
-        // TODO：使用ImGuiListClipper会导致滚动条的行为变得奇怪，无法自动滚动到末尾，暂不使用
-        // // 使用静态的ImGuiListClipper来优化渲染，只绘制可见区域，提升历史条目过多时的性能
-        // static ImGuiListClipper clipper;
-        // float itemHeight = ImGui::GetTextLineHeight();
-        // clipper.Begin(s_CommandLineHistory.size(), itemHeight);
-        
-        // while (clipper.Step()) {
-        //     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-        //         // 绘制每一条命令行历史
-        //         ImGui::TextUnformatted(s_CommandLineHistory[i].c_str());
-        //     }
-        // }
-        // clipper.End();
-        
-        const auto& cmdLineHistory = DocManager::getCurrentDocumentCommandLineHistory();
-        for (std::size_t i = 0; i < cmdLineHistory.size(); i++)
-        {
-            ImGui::TextUnformatted(cmdLineHistory[i].c_str());
+    ImGui::Begin("CommandBar", nullptr, flags);
+    // 记录ID
+    s_commandBarId = ImGui::GetCurrentWindow()->RootWindow->ID;
+    
+    // 创建区域显示命令行历史，添加垂直和水平滚动条，留出空间给命令输入栏
+    const float footerReserveHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    ImGui::BeginChild("CommandLineHistory", ImVec2(0, -footerReserveHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
+    
+    // TODO：使用ImGuiListClipper会导致滚动条的行为变得奇怪，无法自动滚动到末尾，暂不使用
+    // // 使用静态的ImGuiListClipper来优化渲染，只绘制可见区域，提升历史条目过多时的性能
+    // static ImGuiListClipper clipper;
+    // float itemHeight = ImGui::GetTextLineHeight();
+    // clipper.Begin(s_CommandLineHistory.size(), itemHeight);
+    
+    // while (clipper.Step()) {
+    //     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+    //         // 绘制每一条命令行历史
+    //         ImGui::TextUnformatted(s_CommandLineHistory[i].c_str());
+    //     }
+    // }
+    // clipper.End();
+    
+    const auto& cmdLineHistory = DocManager::getCurrentDocumentCommandLineHistory();
+    for (std::size_t i = 0; i < cmdLineHistory.size(); i++)
+    {
+        ImGui::TextUnformatted(cmdLineHistory[i].c_str());
+    }
+    
+    // 根据标志决定是否滚动到最后，在绘制项目之前执行
+    if (!cmdLineHistory.empty() && s_bScrollCommandLineHistoryToBottom) {
+        ImGui::SetScrollHereY(1.0f);
+        s_bScrollCommandLineHistoryToBottom = false;
+    }
+    ImGui::EndChild();
+    // 命令输入栏部分
+    ImGui::Separator();
+    
+    // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
+    ImGui::AlignTextToFramePadding();
+    
+    // 显示命令提示信息
+    auto& inputContext = InputContext::getInstance();
+    // 命令或者选择任务中需要显示提示信息
+    if (inputContext.isAnyCommandOrTaskRunning()) {
+        std::string commandName = CommandManager::getInstance().getRunningCommandName();
+        const std::string& prompt = inputContext.getPrompt();
+        // 如果在命令中还需要显示当前命令名称
+        if (inputContext.isInCommandExecution()) {
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s: %s", commandName.c_str(), prompt.c_str());
         }
-        
-        // 根据标志决定是否滚动到最后，在绘制项目之前执行
-        if (!cmdLineHistory.empty() && s_bScrollCommandLineHistoryToBottom) {
-            ImGui::SetScrollHereY(1.0f);
-            s_bScrollCommandLineHistoryToBottom = false;
-        }
-
-        ImGui::EndChild();
-
-        // 命令输入栏部分
-        ImGui::Separator();
-        
-        // 调整布局：Command提示在左边，上下居中，输入框占满剩余空间
-        ImGui::AlignTextToFramePadding();
-        
-        // 显示命令提示信息
-        auto& inputContext = InputContext::getInstance();
-        // 命令或者选择任务中需要显示提示信息
-        if (inputContext.isAnyCommandOrTaskRunning()) {
-            std::string commandName = CommandManager::getInstance().getRunningCommandName();
-            const std::string& prompt = inputContext.getPrompt();
-            // 如果在命令中还需要显示当前命令名称
-            if (inputContext.isInCommandExecution()) {
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s: %s", commandName.c_str(), prompt.c_str());
-            }
-            else if (!prompt.empty()) {
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
-            }
-            else {
-                ImGui::Text(loc.get("commandLine.prompt.command").c_str());
-            }
+        else if (!prompt.empty()) {
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", prompt.c_str());
         }
         else {
             ImGui::Text(loc.get("commandLine.prompt.command").c_str());
         }
+    }
+    else {
+        ImGui::Text(loc.get("commandLine.prompt.command").c_str());
+    }
+    
+    ImGui::SameLine();
+    
+    // 如果需要设置焦点到命令输入框
+    if (s_bShouldFocusOnCommandInput) {
+        ImGui::SetKeyboardFocusHere(0);
+        s_bShouldFocusOnCommandInput = false;
         
-        ImGui::SameLine();
-        
-        // 如果需要设置焦点到命令输入框
-        if (s_bShouldFocusOnCommandInput) {
-            ImGui::SetKeyboardFocusHere(0);
-            s_bShouldFocusOnCommandInput = false;
-            
-            // 命令补全: 重新获得焦点，根据当前输入框中内容重建补全列表
-            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                std::string currentInput(s_cmdBuffer.data());
-                if (currentInput != s_userInputCommand) {
-                   s_userInputCommand = currentInput;
-                   s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
-                   s_completionSelectedIndex = -1;
-                }
+        // 命令补全: 重新获得焦点，根据当前输入框中内容重建补全列表
+        if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+            std::string currentInput(s_cmdBuffer.data());
+            if (currentInput != s_userInputCommand) {
+               s_userInputCommand = currentInput;
+               s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+               s_completionSelectedIndex = -1;
             }
         }
+    }
+    
+    // 使用PushItemWidth使输入框占满剩余空间
+    ImGui::PushItemWidth(-1);
+    // 检查InputContext的特殊按键事件
+    SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
+    // Enter/Space 提交输入框输入到输入上下文中进行处理
+    if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
+        // 获取当前 InputText 中的实际内容并清空缓冲区
+        std::string input = getAndClearCommandBuffer();
         
-        // 使用PushItemWidth使输入框占满剩余空间
-        ImGui::PushItemWidth(-1);
-
-        // 检查InputContext的特殊按键事件
-        SpecialKeyEventType inputEvent = inputContext.getLastSpecialKeyEvent();
-        // Enter/Space 提交输入框输入到输入上下文中进行处理
-        if (inputEvent == SpecialKeyEventType::kEnterPressed || inputEvent == SpecialKeyEventType::kSpacePressed) {
-            // 获取当前 InputText 中的实际内容并清空缓冲区
-            std::string input = getAndClearCommandBuffer();
-            
-            // 命令补全
-            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                // 执行时不是直接执行命令，而是去补全列表找到第一项来执行
-                if (!s_completionCandidates.empty()) {
-                    input = s_completionCandidates[0].fullName;
-                }
-                
-                // 清除补全相关状态
-                s_completionCandidates.clear();
-                s_completionSelectedIndex = -1;
-                s_userInputCommand.clear();
+        // 命令补全
+        if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+            // 执行时不是直接执行命令，而是去补全列表找到第一项来执行
+            if (!s_completionCandidates.empty()) {
+                input = s_completionCandidates[0].fullName;
             }
             
-            // 处理输入
-            inputContext.handleEnterSpace(input);
-            // ImGui会内部维护InputText的缓冲区副本，Enter、Esc等事件时由上面的ImGui::SetKeyboardFocusHere所控制焦点会一直维持在命令输入框上，
-            // 此时光清空外部缓冲区的话，每次InpuText调用都会把内部的副本重新同步回外部缓冲区来，那么就必须通过文本处理回调函数来清空内部的副本。
-            // 而如果焦点已经不在输入框上了，那么单纯清除外部缓冲区就足够了。
-            s_bNeedClearCommandBufferInternalCopy = true;
-            // 清除特殊按键事件
-            inputContext.clearSpecialKeyEvent();
+            // 清除补全相关状态
+            s_completionCandidates.clear();
+            s_completionSelectedIndex = -1;
+            s_userInputCommand.clear();
         }
-        // Esc 同样提交输入到输入上下文进行处理
-        else if (inputEvent == SpecialKeyEventType::kEscPressed) {
+        
+        // 处理输入
+        inputContext.handleEnterSpace(input);
+        // ImGui会内部维护InputText的缓冲区副本，Enter、Esc等事件时由上面的ImGui::SetKeyboardFocusHere所控制焦点会一直维持在命令输入框上，
+        // 此时光清空外部缓冲区的话，每次InpuText调用都会把内部的副本重新同步回外部缓冲区来，那么就必须通过文本处理回调函数来清空内部的副本。
+        // 而如果焦点已经不在输入框上了，那么单纯清除外部缓冲区就足够了。
+        s_bNeedClearCommandBufferInternalCopy = true;
+        // 清除特殊按键事件
+        inputContext.clearSpecialKeyEvent();
+    }
+    // Esc 同样提交输入到输入上下文进行处理
+    else if (inputEvent == SpecialKeyEventType::kEscPressed) {
+        
+        // 命令补全
+        if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+            // 清除补全相关状态
+            s_completionCandidates.clear();
+            s_completionSelectedIndex = -1;
+            s_userInputCommand.clear();
+        }
+        
+        // 如果在命令历史导航模式，Esc会退出导航模式，清空输入并且什么也不输出
+        if (isInCommandHistoryNavigationMode()) {
+            exitCommandHistoryNavigationMode();
+            getAndClearCommandBuffer();
+        }
+        // 否则就正常处理输入并清空缓冲区
+        else {
+            inputContext.handleEscape(getAndClearCommandBuffer());
+        }
+        
+        // 同理清除内部副本
+        s_bNeedClearCommandBufferInternalCopy = true;
+        // 清除特殊按键事件
+        inputContext.clearSpecialKeyEvent();
+    }
+    // Up/Down 键：命令历史导航
+    else if (inputEvent == SpecialKeyEventType::kUpPressed || inputEvent == SpecialKeyEventType::kDownPressed) {
+        // 只有不在命令执行或任务中时才处理
+        if (!inputContext.isAnyCommandOrTaskRunning()) {
+            // 在命令历史中进行导航并获取对应的命令
+            bool isUp = (inputEvent == SpecialKeyEventType::kUpPressed);
+            std::string command = navigateCommandHistoryAndGetExpectedCommand(isUp);
             
-            // 命令补全
-            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                // 清除补全相关状态
-                s_completionCandidates.clear();
-                s_completionSelectedIndex = -1;
-                s_userInputCommand.clear();
+            // 修改外部缓冲区
+            if (!command.empty()) {
+                std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
+                for (size_t i = 0; i < command.size() && i < s_cmdBuffer.size() - 1; ++i) {
+                    s_cmdBuffer[i] = command[i];
+                }
+                s_bCommandBufferModified = true;
             }
-            
-            // 如果在命令历史导航模式，Esc会退出导航模式，清空输入并且什么也不输出
-            if (isInCommandHistoryNavigationMode()) {
-                exitCommandHistoryNavigationMode();
+            // 退出了命令历史导航模式，清空输入
+            else {
                 getAndClearCommandBuffer();
             }
-            // 否则就正常处理输入并清空缓冲区
-            else {
-                inputContext.handleEscape(getAndClearCommandBuffer());
+        }
+        // 清除特殊按键事件
+        inputContext.clearSpecialKeyEvent();
+    }
+    
+    // 回调函数处理文本选择问题、字符过滤、清除缓冲区与命令补全
+    auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
+        // 1. 字符过滤逻辑(只有输入字符时触发)
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
+            if (data->EventChar > 127) {
+                return 1; // 丢弃非 ASCII 字符
+            }
+            // Space执行命令，这里直接丢弃，InputHandler中已经将按键事件转发给InputContext
+            else if (data->EventChar == ' ')
+            {
+                return 1;
+            }
+        }
+        
+        // 2. 命令历史导航，Up/Down按下触发
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
+            // 只有不在命令执行或任务中时才进行导航
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                // 检查 EventKey 来判断是 Up 还是 Down
+                if (data->EventKey == ImGuiKey_UpArrow || data->EventKey == ImGuiKey_DownArrow) {
+                    std::string command = navigateCommandHistoryAndGetExpectedCommand(data->EventKey == ImGuiKey_UpArrow);
+                    
+                    // 修改内部缓冲区
+                    if (!command.empty()) {
+                        data->DeleteChars(0, data->BufTextLen);
+                        data->InsertChars(0, command.c_str());
+                        data->CursorPos = data->BufTextLen;
+                    }
+                    // 退出了命令历史导航模式，清空缓冲区
+                    if (command.empty() || !isInCommandHistoryNavigationMode()) {
+                        data->DeleteChars(0, data->BufTextLen);
+                    }
+                }
+            }
+        }
+        
+        // 3. 文本编辑回调 - 重构补全候选列表 + 退出导航模式
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
+            // 如果在导航模式，任何编辑都会退出导航模式
+            if (isInCommandHistoryNavigationMode()) {
+                exitCommandHistoryNavigationMode();
             }
             
-            // 同理清除内部副本
-            s_bNeedClearCommandBufferInternalCopy = true;
-            // 清除特殊按键事件
-            inputContext.clearSpecialKeyEvent();
-        }
-        // Up/Down 键：命令历史导航
-        else if (inputEvent == SpecialKeyEventType::kUpPressed || inputEvent == SpecialKeyEventType::kDownPressed) {
-            // 只有不在命令执行或任务中时才处理
-            if (!inputContext.isAnyCommandOrTaskRunning()) {
-                // 在命令历史中进行导航并获取对应的命令
-                bool isUp = (inputEvent == SpecialKeyEventType::kUpPressed);
-                std::string command = navigateCommandHistoryAndGetExpectedCommand(isUp);
+            // 命令补全
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                std::string currentInput(data->Buf, data->BufTextLen);
                 
-                // 修改外部缓冲区
-                if (!command.empty()) {
-                    std::fill(s_cmdBuffer.begin(), s_cmdBuffer.end(), 0);
-                    for (size_t i = 0; i < command.size() && i < s_cmdBuffer.size() - 1; ++i) {
-                        s_cmdBuffer[i] = command[i];
-                    }
-                    s_bCommandBufferModified = true;
+                // 输入变化则更新候选列表
+                if (currentInput != s_userInputCommand) {
+                    s_userInputCommand = currentInput;
+                    s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
+                    s_completionSelectedIndex = -1;
                 }
-                // 退出了命令历史导航模式，清空输入
+            }
+        }
+        
+        // 4. 补全回调 - Tab 补全
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion &&
+            !InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+            if (!s_completionCandidates.empty()) {
+                // 循环切换到下一个候选项，-1没选中状态则变为选中第一个
+                s_completionSelectedIndex = (s_completionSelectedIndex + 1) % s_completionCandidates.size();
+                
+                const auto& item = s_completionCandidates[s_completionSelectedIndex];
+                
+                // 获取输入的字符串
+                std::string userInput = StringUtils::toUpperCase(s_userInputCommand);
+                std::string completionCommand;
+                
+                // 输入是命令全名的前缀，那么补全为全名
+                if (item.fullName.compare(0, userInput.size(), userInput) == 0) {
+                    completionCommand = item.fullName;
+                }
+                // 虽然大部分别名都是命令全名的一个前缀，但有可能不是，此时输入如果是别名的前缀，那么将补全为别名而非全名
+                else if (item.key.compare(0, userInput.size(), userInput) == 0) {
+                    completionCommand = item.key;
+                }
+                // 既不是别名前缀也不是全名前缀，那么可能是新实现的模糊匹配之类，直接补全为全名
                 else {
-                    getAndClearCommandBuffer();
+                    completionCommand = item.fullName;
                 }
+                
+                // 清除当前内容，插入补全内容
+                data->DeleteChars(0, data->BufTextLen);
+                data->InsertChars(0, completionCommand.c_str());
+                
+                // 将通过补全填入的字符置于选中状态，同时光标置于末尾，方便用户通过一次Backspace就轻松删除
+                data->SelectionStart = static_cast<int>(userInput.size());
+                data->SelectionEnd = data->BufTextLen;
+                data->CursorPos = data->BufTextLen;
             }
-            // 清除特殊按键事件
-            inputContext.clearSpecialKeyEvent();
         }
         
-        // 回调函数处理文本选择问题、字符过滤、清除缓冲区与命令补全
-        auto inputTextCallback = [](ImGuiInputTextCallbackData* data) -> int {
-            // 1. 字符过滤逻辑(只有输入字符时触发)
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
-                if (data->EventChar > 127) {
-                    return 1; // 丢弃非 ASCII 字符
-                }
-                // Space执行命令，这里直接丢弃，InputHandler中已经将按键事件转发给InputContext
-                else if (data->EventChar == ' ')
-                {
-                    return 1;
-                }
+        // 5. Always 回调 - 处理缓冲区修改标志、补充清空补全信息
+        if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
+            // 命令输入缓冲区被修改，那么就解除选中并移动光标到末尾
+            if (s_bCommandBufferModified) {
+                // 直接修改外部缓冲区后，多出来的字符在下一帧可能处于选中状态，所以需要取消其选中状态
+                data->SelectionStart = data->SelectionEnd = data->BufTextLen;
+                // 焦点丢失后，其他位置的输入总是追加到末尾，所以总是移动光标到末尾，不管焦点丢失前光标在什么位置
+                data->CursorPos = data->BufTextLen;
+                // 重置标记
+                s_bCommandBufferModified = false;
+            }
+            // 需要清除命令输入缓冲区的内部副本
+            if (s_bNeedClearCommandBufferInternalCopy) {
+                data->DeleteChars(0, data->BufTextLen); // 强制抹除 ImGui 内部的副本
+                data->CursorPos = 0;
+                // 重置标记
+                s_bNeedClearCommandBufferInternalCopy = false;
             }
             
-            // 2. 命令历史导航，Up/Down按下触发
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory) {
-                // 只有不在命令执行或任务中时才进行导航
-                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                    // 检查 EventKey 来判断是 Up 还是 Down
-                    if (data->EventKey == ImGuiKey_UpArrow || data->EventKey == ImGuiKey_DownArrow) {
-                        std::string command = navigateCommandHistoryAndGetExpectedCommand(data->EventKey == ImGuiKey_UpArrow);
-                        
-                        // 修改内部缓冲区
-                        if (!command.empty()) {
-                            data->DeleteChars(0, data->BufTextLen);
-                            data->InsertChars(0, command.c_str());
-                            data->CursorPos = data->BufTextLen;
-                        }
-                        // 退出了命令历史导航模式，清空缓冲区
-                        if (command.empty() || !isInCommandHistoryNavigationMode()) {
-                            data->DeleteChars(0, data->BufTextLen);
-                        }
-                    }
-                }
-            }
-            
-            // 3. 文本编辑回调 - 重构补全候选列表 + 退出导航模式
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackEdit) {
-                // 如果在导航模式，任何编辑都会退出导航模式
-                if (isInCommandHistoryNavigationMode()) {
-                    exitCommandHistoryNavigationMode();
-                }
-                
-                // 命令补全
-                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                    std::string currentInput(data->Buf, data->BufTextLen);
-                    
-                    // 输入变化则更新候选列表
-                    if (currentInput != s_userInputCommand) {
-                        s_userInputCommand = currentInput;
-                        s_completionCandidates = CommandManager::getInstance().getCompletionCandidates(currentInput);
-                        s_completionSelectedIndex = -1;
-                    }
-                }
-            }
-            
-            // 4. 补全回调 - Tab 补全
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion &&
-                !InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                if (!s_completionCandidates.empty()) {
-                    // 循环切换到下一个候选项，-1没选中状态则变为选中第一个
-                    s_completionSelectedIndex = (s_completionSelectedIndex + 1) % s_completionCandidates.size();
-                    
-                    const auto& item = s_completionCandidates[s_completionSelectedIndex];
-                    
-                    // 获取输入的字符串
-                    std::string userInput = StringUtils::toUpperCase(s_userInputCommand);
-                    std::string completionCommand;
-                    
-                    // 输入是命令全名的前缀，那么补全为全名
-                    if (item.fullName.compare(0, userInput.size(), userInput) == 0) {
-                        completionCommand = item.fullName;
-                    }
-                    // 虽然大部分别名都是命令全名的一个前缀，但有可能不是，此时输入如果是别名的前缀，那么将补全为别名而非全名
-                    else if (item.key.compare(0, userInput.size(), userInput) == 0) {
-                        completionCommand = item.key;
-                    }
-                    // 既不是别名前缀也不是全名前缀，那么可能是新实现的模糊匹配之类，直接补全为全名
-                    else {
-                        completionCommand = item.fullName;
-                    }
-                    
-                    // 清除当前内容，插入补全内容
-                    data->DeleteChars(0, data->BufTextLen);
-                    data->InsertChars(0, completionCommand.c_str());
-                    
-                    // 将通过补全填入的字符置于选中状态，同时光标置于末尾，方便用户通过一次Backspace就轻松删除
-                    data->SelectionStart = static_cast<int>(userInput.size());
-                    data->SelectionEnd = data->BufTextLen;
-                    data->CursorPos = data->BufTextLen;
-                }
-            }
-            
-            // 5. Always 回调 - 处理缓冲区修改标志、补充清空补全信息
-            if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
-                // 命令输入缓冲区被修改，那么就解除选中并移动光标到末尾
-                if (s_bCommandBufferModified) {
-                    // 直接修改外部缓冲区后，多出来的字符在下一帧可能处于选中状态，所以需要取消其选中状态
-                    data->SelectionStart = data->SelectionEnd = data->BufTextLen;
-                    // 焦点丢失后，其他位置的输入总是追加到末尾，所以总是移动光标到末尾，不管焦点丢失前光标在什么位置
-                    data->CursorPos = data->BufTextLen;
-                    // 重置标记
-                    s_bCommandBufferModified = false;
-                }
-                // 需要清除命令输入缓冲区的内部副本
-                if (s_bNeedClearCommandBufferInternalCopy) {
-                    data->DeleteChars(0, data->BufTextLen); // 强制抹除 ImGui 内部的副本
-                    data->CursorPos = 0;
-                    // 重置标记
-                    s_bNeedClearCommandBufferInternalCopy = false;
-                }
-                
-                // 命令补全
-                // 某些情况下会无法清空补全信息(极少数corner case)，导致输入清空了还会显示补全框，这里做一个补充清空
-                if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
-                    // 如果输入已经空了，那么无条件清空补全信息
-                    if (data->BufTextLen == 0) {
-                        s_userInputCommand.clear();
-                        s_completionCandidates.clear();
-                        s_completionSelectedIndex = -1;
-                    }
-                }
-            }
-            return 0;
-        };
-
-        ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
-            ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackCompletion, 
-            inputTextCallback, nullptr);
-        
-        // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
-        s_commandInputId = ImGui::GetItemID(); 
-        
-        // 命令补全相关: 绘制候选框
-        // 条件：没有命令或者任务执行时也就是输入的是命令、且补全列表有东西且输入框有焦点才绘制
-        //      另外命令历史导航模式下也不进行补全
-        if (!InputContext::getInstance().isAnyCommandOrTaskRunning() &&
-            !s_completionCandidates.empty() && ImGui::IsItemFocused() &&
-            !isInCommandHistoryNavigationMode()) {
-            // 首次计算候选框宽度（40个字符宽度）
-            static float completionPopupWidth = ImGui::CalcTextSize("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl").x;
-            
-            ImVec2 inputMin = ImGui::GetItemRectMin();
-            float itemHeight = ImGui::GetTextLineHeightWithSpacing();
-            float popupHeight = s_completionCandidates.size() * itemHeight + ImGui::GetStyle().WindowPadding.y * 2;
-            ImVec2 popupPos(inputMin.x, inputMin.y - popupHeight - 2);
-            
-            ImGui::SetNextWindowPos(popupPos);
-            ImGui::SetNextWindowSize(ImVec2(completionPopupWidth, popupHeight));
-            ImGui::SetNextWindowBgAlpha(0.95f);
-            
-            if (ImGui::Begin("##CompletionPopup", nullptr, 
-                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
-                ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings)) {
-                
-                bool bItemClicked = false;
-                std::string commandToBeExecuted;
-                for (std::size_t i = 0; i < s_completionCandidates.size(); i++) {
-                    const auto& item = s_completionCandidates[i];
-                    // 别名显示 key (fullName)，全称直接显示
-                    std::string displayText = item.isAlias ? (item.key + " (" + item.fullName + ")") : item.key;
-                    
-                    // 还没有通过Tab来选择补全项，那么以一种不同的颜色高亮第一项，表示现在直接回车将默认执行的命令
-                    if (s_completionSelectedIndex == -1 && i == 0) {
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
-                        ImGui::Selectable(displayText.c_str(), false);
-                        ImGui::PopStyleColor();
-                    }
-                    // 通过Tab选中的当前补全项
-                    else if (i == s_completionSelectedIndex) {
-                        ImGui::Selectable(displayText.c_str(), true);
-                    }
-                    // 未选中
-                    else {
-                        ImGui::Selectable(displayText.c_str(), false);
-                    }
-                    
-                    // 通过鼠标点击
-                    if (ImGui::IsItemClicked()) {
-                        bItemClicked = true;
-                        commandToBeExecuted = s_completionCandidates[i].fullName;
-                    }
-                }
-                // 鼠标点击补全项则直接执行命令
-                if (bItemClicked) {
-                    // 清空命令缓冲区
-                    getAndClearCommandBuffer();
-                    // 清除补全相关状态
+            // 命令补全
+            // 某些情况下会无法清空补全信息(极少数corner case)，导致输入清空了还会显示补全框，这里做一个补充清空
+            if (!InputContext::getInstance().isAnyCommandOrTaskRunning()) {
+                // 如果输入已经空了，那么无条件清空补全信息
+                if (data->BufTextLen == 0) {
+                    s_userInputCommand.clear();
                     s_completionCandidates.clear();
                     s_completionSelectedIndex = -1;
-                    s_userInputCommand.clear();
-                    // 采用通用流程处理，将命令全名发送个InputContext执行
-                    inputContext.handleEnterSpace(commandToBeExecuted);
                 }
-                ImGui::End();
             }
         }
+        return 0;
+    };
+    
+    // 命令输入框
+    ImGui::InputTextWithHint("##CommandInput", loc.get("commandLine.inputPrompt").c_str(), s_cmdBuffer.data(), s_cmdBuffer.size(), 
+        ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit | ImGuiInputTextFlags_CallbackCompletion, 
+        inputTextCallback, nullptr);
+    
+    // 获取刚刚渲染的InputText控件的ID，在检测焦点是否在CommandInput上时使用，每一帧记录确保不会失效
+    s_commandInputId = ImGui::GetItemID(); 
+    
+    // 命令补全候选框
+    // 条件：没有命令或者任务执行时也就是输入的是命令、且补全列表有东西且输入框有焦点才绘制
+    //      另外命令历史导航模式下也不进行补全
+    if (!InputContext::getInstance().isAnyCommandOrTaskRunning() &&
+        !s_completionCandidates.empty() && ImGui::IsItemFocused() &&
+        !isInCommandHistoryNavigationMode()) {
+        // 首次计算候选框宽度（40个字符宽度）
+        static float completionPopupWidth = ImGui::CalcTextSize("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl").x;
         
-        // 平衡PushItemWidth调用
-        ImGui::PopItemWidth();
+        ImVec2 inputMin = ImGui::GetItemRectMin();
+        float itemHeight = ImGui::GetTextLineHeightWithSpacing();
+        float popupHeight = s_completionCandidates.size() * itemHeight + ImGui::GetStyle().WindowPadding.y * 2;
+        ImVec2 popupPos(inputMin.x, inputMin.y - popupHeight - 2);
         
+        ImGui::SetNextWindowPos(popupPos);
+        ImGui::SetNextWindowSize(ImVec2(completionPopupWidth, popupHeight));
+        ImGui::SetNextWindowBgAlpha(0.95f);
+        
+        // 补全窗口
+        ImGui::Begin("##CompletionPopup", nullptr, 
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings);
+            
+        bool bItemClicked = false;
+        std::string commandToBeExecuted;
+        for (std::size_t i = 0; i < s_completionCandidates.size(); i++) {
+            const auto& item = s_completionCandidates[i];
+            // 别名显示 key (fullName)，全称直接显示
+            std::string displayText = item.isAlias ? (item.key + " (" + item.fullName + ")") : item.key;
+            
+            // 还没有通过Tab来选择补全项，那么以一种不同的颜色高亮第一项，表示现在直接回车将默认执行的命令
+            if (s_completionSelectedIndex == -1 && i == 0) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+                ImGui::Selectable(displayText.c_str(), false);
+                ImGui::PopStyleColor();
+            }
+            // 通过Tab选中的当前补全项
+            else if (i == s_completionSelectedIndex) {
+                ImGui::Selectable(displayText.c_str(), true);
+            }
+            // 未选中
+            else {
+                ImGui::Selectable(displayText.c_str(), false);
+            }
+            
+            // 通过鼠标点击
+            if (ImGui::IsItemClicked()) {
+                bItemClicked = true;
+                commandToBeExecuted = s_completionCandidates[i].fullName;
+            }
+        }
+        // 鼠标点击补全项则直接执行命令
+        if (bItemClicked) {
+            // 清空命令缓冲区
+            getAndClearCommandBuffer();
+            // 清除补全相关状态
+            s_completionCandidates.clear();
+            s_completionSelectedIndex = -1;
+            s_userInputCommand.clear();
+            // 采用通用流程处理，将命令全名发送个InputContext执行
+            inputContext.handleEnterSpace(commandToBeExecuted);
+        }
         ImGui::End();
     }
+    
+    // 平衡PushItemWidth调用
+    ImGui::PopItemWidth();
+    
+    ImGui::End();
+
     
     // 绘制拖动条，允许调整命令栏高度
     static bool isResizing = false;
     static float resizeStartY = 0.0f;
     static float resizeStartHeight = 0.0f;
+    float uiScale = getUIScaleFactor();
     
     // 减小拖动条高度，使其更美观
-    float resizeBarHeight = 2.0f;
+    float resizeBarHeight = 2.0f * uiScale;
     ImVec2 resizeBarPos(0, height - statusBarHeight - s_commandBarHeight);
     ImVec2 resizeBarSize(commandBarWidth, resizeBarHeight);
     
@@ -1504,8 +1519,10 @@ void Renderer::drawCommandBar() {
         float deltaY = currentY - resizeStartY;
         float newHeight = resizeStartHeight - deltaY;
         
-        // 限制高度范围，增大最小高度和最大高度以适应更大的屏幕
-        if (newHeight > 150.0f && newHeight < 1080.0f) {
+        // 限制拖动的高度范围
+        float minHeight = 150.0f;
+        float maxHeight = 1080.0f * uiScale;
+        if (newHeight > minHeight && newHeight < maxHeight) {
             s_commandBarHeight = newHeight;
         }
         
