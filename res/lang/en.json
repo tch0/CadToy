@@ -40,8 +40,11 @@
   "optionsDialog.crossCursorSize": "Cross Cursor Size",
   "optionsDialog.tab.selection": "Selection Set",
   "optionsDialog.pickBoxSize": "PickBox Size",
-  "optionsDialog.tab.language": "Language",
+  "optionsDialog.tab.ui": "UI",
   "optionsDialog.language": "Language",
+  "optionsDialog.fontSize": "Font Size",
+  "optionsDialog.fontPreview": "This is preview, the UI will scale with the font size.",
+  "optionsDialog.apply": "Apply",
   "optionsDialog.ok": "OK",
   "optionsDialog.cancel": "Cancel",
 

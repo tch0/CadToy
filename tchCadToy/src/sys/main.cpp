@@ -9,6 +9,7 @@
 
 // 项目头文件
 #include "command/CommandManager.h"
+#include "utils/DisplayConfigManager.h"
 #include "debug/Logger.h"
 #include "input/InputHandler.h"
 #include "render/Renderer.h"
@@ -93,6 +94,11 @@ int main(int argc, char* argv[])
     LOG_INFO("Initializing Renderer...");
     Renderer::initialize(window);
     LOG_INFO("Renderer initialized successfully!");
+    
+    // 初始化显示器配置管理器
+    LOG_INFO("Initializing DisplayConfigManager...");
+    DisplayConfigManager::getInstance().initialize(window);
+    LOG_INFO("DisplayConfigManager initialized successfully!");
     
     // 主循环
     LOG_INFO("Entering main loop...");

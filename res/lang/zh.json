@@ -40,8 +40,11 @@
   "optionsDialog.crossCursorSize": "十字光标大小",
   "optionsDialog.tab.selection": "选择集",
   "optionsDialog.pickBoxSize": "选择框大小",
-  "optionsDialog.tab.language": "语言",
+  "optionsDialog.tab.ui": "UI",
   "optionsDialog.language": "语言",
+  "optionsDialog.fontSize": "字体大小",
+  "optionsDialog.fontPreview": "这是预览，UI将跟随字体大小缩放。",
+  "optionsDialog.apply": "应用",
   "optionsDialog.ok": "确定",
   "optionsDialog.cancel": "取消",
 

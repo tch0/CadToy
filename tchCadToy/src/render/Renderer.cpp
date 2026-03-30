@@ -22,6 +22,7 @@
 #include "input/InputContext.h"
 #include "input/InputHandler.h"
 #include "sys/Global.h"
+#include "utils/DisplayConfigManager.h"
 #include "utils/LocalizationManager.h"
 #include "utils/StringUtils.h"
 
@@ -514,172 +515,197 @@ void Renderer::drawStatusBar() {
 
 // 绘制选项对话框
 void Renderer::drawOptionsDialog() {
-    if (s_optionsDialogVisible) {
-        auto& loc = LocalizationManager::getInstance();
-        // 使用BeginPopupModal创建真正的模态对话框
-        ImGui::OpenPopup("Options");
+    if (!s_optionsDialogVisible) {
+        return;
+    }
+    auto& loc = LocalizationManager::getInstance();
+    // 使用BeginPopupModal创建真正的模态对话框
+    ImGui::OpenPopup("Options");
+    
+    // 设置对话框位置为屏幕中央
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    
+    // 不强制设置对话框大小，让ImGui从ini文件读取
+    // ImGui::SetNextWindowSize(ImVec2(400, 300));
+    
+    // 使用模态对话框标志，允许调整大小
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | 
+                             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+    
+    if (ImGui::BeginPopupModal("Options", &s_optionsDialogVisible, flags)) {
+        // 对话框标题
+        ImGui::Text(loc.get("optionsDialog.title").c_str());
+        ImGui::Separator();
         
-        // 设置对话框位置为屏幕中央
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        // 对话框内容
+        static bool showGrid = DocManager::getCurrentDocument().isShowGrid();
+        static bool showAxes = DocManager::getCurrentDocument().isShowAxes();
+        static int crossCursorSize = static_cast<int>(s_crossCursorSize);
+        static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
+        static int fontSize = DisplayConfigManager::getInstance().getCurrentFontSize();
         
-        // 不强制设置对话框大小，让ImGui从ini文件读取
-        // ImGui::SetNextWindowSize(ImVec2(400, 300));
-        
-        // 使用模态对话框标志，允许调整大小
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | 
-                                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
-        
-        if (ImGui::BeginPopupModal("Options", &s_optionsDialogVisible, flags)) {
-            // 对话框标题
-            ImGui::Text(loc.get("optionsDialog.title").c_str());
-            ImGui::Separator();
-            
-            // 对话框内容
-            static bool showGrid = DocManager::getCurrentDocument().isShowGrid();
-            static bool showAxes = DocManager::getCurrentDocument().isShowAxes();
-            static int crossCursorSize = static_cast<int>(s_crossCursorSize);
-            static int pickBoxSizeInt = static_cast<int>(s_pickBoxSize);
-            
-            // 创建选项卡栏
-            if (ImGui::BeginTabBar("OptionsTabs")) {
-                // 第一个选项卡：显示
-                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.display").c_str())) {
-                    // Grid & Axes 标题
-                    ImGui::Text(loc.get("optionsDialog.gridAxes").c_str());
-                    ImGui::Spacing();
-                    
-                    // 选项
-                    ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
-                    ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
-                    
-                    // 在十字光标大小设置前添加分隔线，与前面的栅格坐标轴设置分开
-                    ImGui::Separator();
-                    
-                    // 十字光标大小
-                    ImGui::Spacing();
-                    ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
-                    ImGui::Spacing();
-                    
-                    // 滑块控件，范围10-200，使用整数，长度设为500
-                    ImGui::PushItemWidth(500); // 设置滑块宽度为500
-                    ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 200, "%d");
-                    ImGui::PopItemWidth();
-                    
-                    ImGui::EndTabItem();
-                }
+        // 创建选项卡栏
+        if (ImGui::BeginTabBar("OptionsTabs")) {
+            // 第一个选项卡：显示
+            if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.display").c_str())) {
+                // Grid & Axes 标题
+                ImGui::Text(loc.get("optionsDialog.gridAxes").c_str());
+                ImGui::Spacing();
                 
-                // 第二个选项卡：选择集
-                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.selection").c_str())) {
-                    // 拾取框大小
-                    ImGui::Spacing();
-                    ImGui::Text(loc.get("optionsDialog.pickBoxSize").c_str());
-                    ImGui::Spacing();
-                    
-                    // 首先绘制预览框
-                    ImGui::BeginGroup();
-                    
-                    // 创建一个更大的预览区域，确保最大拾取框也能完全显示
-                    ImVec2 previewSize(120, 120);
-                    ImGui::BeginChild("Preview", previewSize, true);
-                    
-                    // 计算预览框的位置和大小
-                    ImVec2 previewPos = ImGui::GetCursorScreenPos();
-                    ImVec2 center(previewSize.x / 2 - 8, previewSize.y / 2 - 8);
-                    
-                    // 绘制预览框（正方形）
-                    ImGui::GetWindowDrawList()->AddRect(
-                        ImVec2(previewPos.x + center.x - pickBoxSizeInt, previewPos.y + center.y - pickBoxSizeInt),
-                        ImVec2(previewPos.x + center.x + pickBoxSizeInt, previewPos.y + center.y + pickBoxSizeInt),
-                        IM_COL32(255, 255, 255, 255),
-                        0.0f,
-                        0,
-                        1.0f
-                    );
-                    
-                    ImGui::EndChild();
-                    ImGui::EndGroup();
-                    
-                    // 然后在左侧绘制滑块，对齐到预览框底部
-                    ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
-                    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
-                    
-                    ImGui::PushItemWidth(250); // 设置滑块宽度为250
-                    ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
-                    ImGui::PopItemWidth();
-                    
-                    ImGui::EndTabItem();
-                }
+                // 选项
+                ImGui::Checkbox(loc.get("optionsDialog.showGrid").c_str(), &showGrid);
+                ImGui::Checkbox(loc.get("optionsDialog.showAxes").c_str(), &showAxes);
                 
-                // 第三个选项卡：语言
-                if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.language").c_str())) {
-                    // 语言选择
-                    ImGui::Spacing();
-                    ImGui::Text(loc.get("optionsDialog.language").c_str());
-                    ImGui::Spacing();
-                    
-                    // 获取当前语言
-                    std::string currentLanguage = loc.getCurrentLanguage();
-                    
-                    // 语言选择下拉框，显示固定的语言选项
-                    if (ImGui::BeginCombo("##LanguageSelect", (currentLanguage == "en" ? "English" : "中文"))) {
-                        bool isEnglishSelected = (currentLanguage == "en");
-                        if (ImGui::Selectable("English", isEnglishSelected)) {
-                            loc.setLanguage("en");
-                        }
-                        if (isEnglishSelected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                        
-                        bool isChineseSelected = (currentLanguage == "zh");
-                        if (ImGui::Selectable("中文", isChineseSelected)) {
-                            loc.setLanguage("zh");
-                        }
-                        if (isChineseSelected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
+                // 在十字光标大小设置前添加分隔线，与前面的栅格坐标轴设置分开
+                ImGui::Separator();
+                
+                // 十字光标大小
+                ImGui::Spacing();
+                ImGui::Text(loc.get("optionsDialog.crossCursorSize").c_str());
+                ImGui::Spacing();
+                
+                // 滑块控件，范围10-200，使用整数，长度设为500
+                ImGui::PushItemWidth(500); // 设置滑块宽度为500
+                ImGui::SliderInt("##CrossCursorSize", &crossCursorSize, 10, 200, "%d");
+                ImGui::PopItemWidth();
+                
+                ImGui::EndTabItem();
+            }
+            
+            // 第二个选项卡：选择集
+            if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.selection").c_str())) {
+                // 拾取框大小
+                ImGui::Spacing();
+                ImGui::Text(loc.get("optionsDialog.pickBoxSize").c_str());
+                ImGui::Spacing();
+                
+                // 首先绘制预览框
+                ImGui::BeginGroup();
+                
+                // 创建一个更大的预览区域，确保最大拾取框也能完全显示
+                ImVec2 previewSize(120, 120);
+                ImGui::BeginChild("Preview", previewSize, true);
+                
+                // 计算预览框的位置和大小
+                ImVec2 previewPos = ImGui::GetCursorScreenPos();
+                ImVec2 center(previewSize.x / 2 - 8, previewSize.y / 2 - 8);
+                
+                // 绘制预览框（正方形）
+                ImGui::GetWindowDrawList()->AddRect(
+                    ImVec2(previewPos.x + center.x - pickBoxSizeInt, previewPos.y + center.y - pickBoxSizeInt),
+                    ImVec2(previewPos.x + center.x + pickBoxSizeInt, previewPos.y + center.y + pickBoxSizeInt),
+                    IM_COL32(255, 255, 255, 255),
+                    0.0f,
+                    0,
+                    1.0f
+                );
+                
+                ImGui::EndChild();
+                ImGui::EndGroup();
+                
+                // 然后在左侧绘制滑块，对齐到预览框底部
+                ImGui::SameLine(0.0f, 20.0f); // 0.0f表示左对齐，20.0f是间距
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 90); // 调整垂直位置，使滑块与预览框底部对齐
+                
+                ImGui::PushItemWidth(250); // 设置滑块宽度为250
+                ImGui::SliderInt("##PickBoxSize", &pickBoxSizeInt, 0, 50, "%d");
+                ImGui::PopItemWidth();
+                
+                ImGui::EndTabItem();
+            }
+            
+            // 第三个选项卡：UI
+            if (ImGui::BeginTabItem(loc.get("optionsDialog.tab.ui").c_str())) {
+                // 语言选择
+                ImGui::Spacing();
+                ImGui::Text(loc.get("optionsDialog.language").c_str());
+                ImGui::Spacing();
+                
+                // 获取当前语言
+                std::string currentLanguage = loc.getCurrentLanguage();
+                
+                // 语言选择下拉框，显示固定的语言选项
+                if (ImGui::BeginCombo("##LanguageSelect", (currentLanguage == "en" ? "English" : "中文"))) {
+                    bool isEnglishSelected = (currentLanguage == "en");
+                    if (ImGui::Selectable("English", isEnglishSelected)) {
+                        loc.setLanguage("en");
+                    }
+                    if (isEnglishSelected) {
+                        ImGui::SetItemDefaultFocus();
                     }
                     
-                    ImGui::EndTabItem();
+                    bool isChineseSelected = (currentLanguage == "zh");
+                    if (ImGui::Selectable("中文", isChineseSelected)) {
+                        loc.setLanguage("zh");
+                    }
+                    if (isChineseSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
                 }
                 
-                ImGui::EndTabBar();
+                ImGui::Separator();
+                
+                // 字体大小
+                ImGui::Spacing();
+                ImGui::Text(loc.get("optionsDialog.fontSize").c_str());
+                ImGui::Spacing();
+                
+                ImGui::PushItemWidth(300);
+                ImGui::SliderInt("##FontSize", &fontSize, 18, 50, "%d");
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(60);
+                ImGui::InputInt("##FontSizeInput", &fontSize, 0, 0);
+                fontSize = std::clamp(fontSize, 18, 50);
+                
+                ImGui::SameLine();
+                ImGui::PushFont(nullptr, static_cast<float>(fontSize));
+                ImGui::Text("%s", loc.get("optionsDialog.fontPreview").c_str());
+                ImGui::PopFont();
+                
+                ImGui::EndTabItem();
             }
             
-            // 垂直填充空间，将按钮推到底部
-            ImGui::Spacing();
-            ImGui::Spacing();
-            ImGui::Spacing();
-            ImGui::Spacing();
-            ImGui::Spacing();
-            
-            // 底部分隔线
-            ImGui::Separator();
-            
-            // 右对齐按钮
-            ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 170);
-            
-            // 确定按钮
-            if (ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(80, 30))) {
-                // 应用设置
-                DocManager::getCurrentDocument().setShowGrid(showGrid);
-                DocManager::getCurrentDocument().setShowAxes(showAxes);
-                s_crossCursorSize = static_cast<float>(crossCursorSize);
-                s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
-                ImGui::CloseCurrentPopup();
-                s_optionsDialogVisible = false;
-            }
-            
-            // 取消按钮
-            ImGui::SameLine();
-            if (ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(80, 30))) {
-                // 不应用设置，直接关闭对话框
-                ImGui::CloseCurrentPopup();
-                s_optionsDialogVisible = false;
-            }
-            
-            ImGui::EndPopup();
+            ImGui::EndTabBar();
         }
+        
+        // 垂直填充空间，将按钮推到底部上方一定距离
+        float availHeight = ImGui::GetContentRegionAvail().y;
+        float buttonAreaHeight = 100.0f;
+        if (availHeight > buttonAreaHeight) {
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + availHeight - buttonAreaHeight);
+        }
+        
+        // 底部分隔线
+        ImGui::Separator();
+        
+        // 右对齐按钮
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 260);
+        
+        // 应用
+        bool applyClicked = ImGui::Button(loc.get("optionsDialog.apply").c_str(), ImVec2(80, 30));
+        // 确认
+        ImGui::SameLine();
+        bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(80, 30));
+        // 取消
+        ImGui::SameLine();
+        bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(80, 30));
+        
+        if (applyClicked || okClicked) {
+            DocManager::getCurrentDocument().setShowGrid(showGrid);
+            DocManager::getCurrentDocument().setShowAxes(showAxes);
+            s_crossCursorSize = static_cast<float>(crossCursorSize);
+            s_pickBoxSize = static_cast<float>(pickBoxSizeInt);
+            DisplayConfigManager::getInstance().setFontSize(fontSize);
+        }
+        
+        if (okClicked || cancelClicked) {
+            ImGui::CloseCurrentPopup();
+            s_optionsDialogVisible = false;
+        }
+        
+        ImGui::EndPopup();
     }
 }
 
