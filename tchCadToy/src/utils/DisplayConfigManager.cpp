@@ -79,7 +79,7 @@ void DisplayConfigManager::initialize(GLFWwindow* window) {
 }
 
 // 设置窗口字体大小，范围18-50
-void DisplayConfigManager::setFontSize(int fontSize, bool saveToConfig) {
+void DisplayConfigManager::setFontSize(int fontSize) {
     if (fontSize < 18) {
         fontSize = 18;
     }
@@ -88,10 +88,10 @@ void DisplayConfigManager::setFontSize(int fontSize, bool saveToConfig) {
     }
     
     
-    if (saveToConfig && m_window) {
+    if (m_window) {
         ConfigKey key = generateConfigKey(m_window);
         // 如果字号和当前不同
-        if (m_configs[key] != fontSize) {
+        if (!m_configs.contains(key) || m_configs[key] != fontSize) {
             // 更新当前配置
             m_configs[key] = fontSize;
             m_dirty = true;
@@ -108,7 +108,7 @@ DisplayConfigManager::ConfigKey DisplayConfigManager::generateConfigKey(GLFWwind
     ConfigKey key;
     getCurrentMonitorInfo(window, key.screenWidth, key.screenHeight, key.dpiScale);
     
-    // DPI精确到两位小数
+    // DPI精确到两位小数，杜绝浮点误差问题
     key.dpiScale = std::round(key.dpiScale * 100) / 100.0f;
     return key;
 }
@@ -179,7 +179,7 @@ float DisplayConfigManager::getCurrentDPIScale(GLFWwindow* window) {
     
     // 有效性检查，确保 >= 1.0
     float dpiScale = (xscale >= 0.95f && xscale <= 4.0f) ? std::max(1.0f, xscale) : 1.0f;
-    // 精确到两位小数
+    // 精确到两位小数，杜绝浮点误差问题
     dpiScale = std::round(dpiScale * 100) / 100.0f;
     
     return dpiScale;
@@ -316,6 +316,10 @@ void DisplayConfigManager::applyConfig(int fontSize) {
     if (m_currentFontSize == fontSize) {
         return;
     }
+    
+    // 原则上来说这里应该调用ImGui::GetStyle().ScaleAllSizes(fontSize*1.0f / m_currentFontSize);来修改各种spacing/padding/thickness
+    // 但是这个修改只是乘一个比例，还会向下取整，对目前的UI实现来说在字号比较大时并不稳定，而固定的spacing/padding/thickness在高分辨率、
+    // 高DPI下已经相对比较可用，所以这里权衡之下不做修改。因为要做的话需要将所有UI改为依赖这些spacing/padding而不是使用固定值+UIScaleFactor进行缩放。
     
     m_currentFontSize = fontSize;
     

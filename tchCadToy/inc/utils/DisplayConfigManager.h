@@ -28,7 +28,7 @@ public:
     int getCurrentFontSize() const { return m_currentFontSize; }
     
     // 设置窗口字体大小，范围18-50
-    void setFontSize(int fontSize, bool saveToConfig = true);
+    void setFontSize(int fontSize);
     
     // 析构时自动保存配置
     ~DisplayConfigManager();

@@ -110,6 +110,9 @@ void Renderer::initialize(GLFWwindow* window) {
     // 初始化ImGui
     initializeImGui();
     
+    // 初始化显示器配置管理器
+    DisplayConfigManager::getInstance().initialize(window);
+    
     // 初始化本地化管理器
     LocalizationManager::getInstance().initialize();
     
