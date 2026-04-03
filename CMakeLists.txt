@@ -247,6 +247,7 @@ add_subdirectory(imgui)
 
 add_subdirectory(tchGeneral)    # cross-platform basis
 add_subdirectory(tchPlatform)   # multi-platform basis
+add_subdirectory(tchGeometry)   # basic geometry
 add_subdirectory(tchCadToy)       # cross-platform execuatable
 
 set_target_properties(tchCadToy PROPERTIES UNITY_BUILD OFF) # UNITY building
