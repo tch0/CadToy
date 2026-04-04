@@ -216,26 +216,43 @@ std::vector<BezierCurve> BezierCurve::subdivide(double t) const {
 // ============================================================================
 
 Point BSplineCurve::evaluate(double t) const {
-    if (controlPoints.empty()) { return Point(0, 0, 0); }
+    if (controlPoints.empty()) {
+        return Point(0, 0, 0);
+    }
+    
+    // 注意：调用者需确保节点向量合法
+    // 1. 节点向量必须非递减：knots[i] <= knots[i+1]
+    // 2. 首尾节点重复度应为 degree+1
+    // 3. 分母 knots[i+degree-r+1] - knots[i] 应大于 0
+    //    若等于 0，说明节点重复度过高，曲线在该处不连续
+    
+    // 节点向量范围：[knots[degree], knots[knots.size() - degree - 1]]
+    int n = (int)knots.size() - degree - 1;
     
     // 查找 t 所在的节点区间
     int span = degree;
-    for (int i = degree; i < (int)knots.size() - degree - 1; ++i) {
-        if (t >= knots[i] && t < knots[i + 1]) {
+    for (int i = degree; i < n; ++i) {
+        // 使用 <= 包含右端点，确保 t == knots[n] 时也能匹配
+        if (t >= knots[i] && t <= knots[i + 1]) {
             span = i;
             break;
         }
     }
     
-    // Cox-de Boor 递归：逐层插值
+    // Cox-de Boor 递归算法
+    // temp 存储当前层的控制点，逐层插值
     std::vector<Point> temp = controlPoints;
     for (int r = 1; r <= degree; ++r) {
+        // i 从当前区间终点向下遍历
         for (int i = span; i >= span - degree + r; --i) {
+            // 计算插值系数 alpha
             double alpha = (t - knots[i]) / (knots[i + degree - r + 1] - knots[i]);
+            // 线性插值
             temp[i] = temp[i] * (1 - alpha) + temp[i - 1] * alpha;
         }
     }
     
+    // 返回最终插值结果
     return temp[span];
 }
 
@@ -470,41 +487,195 @@ Point closestPoint(const Point& p, const Circle& circle) {
 }
 
 // ============================================================================
+// 共线/共面检查
+// ============================================================================
+
+/// 判断点是否在无限直线上（直线由原点+方向定义）
+bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDirection) {
+    Vector w = p - lineOrigin;
+    Vector cross = glm::cross(w, lineDirection);
+    double cross_len = glm::length(cross);
+    double w_len = glm::length(w);
+    double dir_len = glm::length(lineDirection);
+    
+    double relativeTol = Tolerance::Default.relative * w_len * dir_len;
+    return cross_len < relativeTol;
+}
+
+// 两条直线共面（直线由原点+方向定义）
+bool isCoplanarLines(const Point& origin1, const Vector& dir1,
+                     const Point& origin2, const Vector& dir2) {
+    // 方向平行则必然共面
+    if (isParallel(dir1, dir2)) {
+        return true;
+    }
+    
+    // 不平行，检查是否共面
+    Vector w = origin2 - origin1;
+    Vector n = glm::cross(dir1, dir2);
+    double w_len = glm::length(w);
+    double n_len = glm::length(n);
+    double relativeTol = Tolerance::Default.relative * w_len * n_len;
+    return std::abs(glm::dot(w, n)) < relativeTol;
+}
+
+// 直线与圆/椭圆共面
+bool isCoplanarLineCurve(const Point& center, const Vector& normal,
+                         const Point& lineOrigin, const Vector& lineDirection) {
+    // 法向量与直线方向垂直（值域 [-1,1]，使用绝对精度）
+    if (std::abs(glm::dot(normal, lineDirection)) > Tolerance::Default.absolute) {
+        return false;
+    }
+    // 中心到直线的距离为0（使用相对精度）
+    Vector w = center - lineOrigin;
+    double cross_len = glm::length(glm::cross(w, lineDirection));
+    double w_len = glm::length(w);
+    double dir_len = glm::length(lineDirection);
+    double relativeTol = Tolerance::Default.relative * w_len * dir_len;
+    return cross_len < relativeTol;
+}
+
+// 两个圆/椭圆共面
+bool isCoplanarCurves(const Point& center1, const Vector& normal1,
+                      const Point& center2, const Vector& normal2) {
+    // 法向量平行
+    if (!isParallel(normal1, normal2)) {
+        return false;
+    }
+    // 中心到另一平面的距离为0（使用相对精度）
+    double dist = std::abs(glm::dot(center1 - center2, normal1));
+    double center_len = glm::length(center1);
+    double relativeTol = Tolerance::Default.relative * std::max(1.0, center_len);
+    return dist < relativeTol;
+}
+
+// ============================================================================
 // 交点计算实现
 // ============================================================================
 
-// 线段与线段
+// 线段与线段求交（支持 3D，自动处理共面检查）
 bool intersect(const Segment& a, const Segment& b, Point& out) {
-    // 参数方程: P = A + t·AB, t∈[0,1]; Q = C + u·CD, u∈[0,1]
-    // 解方程: t·AB - u·CD = C - A，使用叉积求解
     Vector ab = a.end - a.start;
     Vector cd = b.end - b.start;
     Vector ac = b.start - a.start;
     
-    double cross = glm::cross(ab, cd).z;
-    if (std::abs(cross) < 1e-12) { return false; } // 平行
+    double ab_len = glm::length(ab);
+    double cd_len = glm::length(cd);
     
-    double t = glm::cross(ac, cd).z / cross;
-    double u = glm::cross(ac, ab).z / cross;
+    Vector n = glm::cross(ab, cd);
+    double n_len = glm::length(n);
     
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+    double parallelTol = Tolerance::Default.relative * ab_len * cd_len;
+    
+    if (n_len > parallelTol) {
+        double ac_len = glm::length(ac);
+        double coplanarTol = Tolerance::Default.relative * ac_len * n_len;
+        if (std::abs(glm::dot(ac, n)) > coplanarTol) {
+            return false;
+        }
+    } else {
+        double ac_len = glm::length(ac);
+        double collinearTol = Tolerance::Default.relative * ac_len * ab_len;
+        if (glm::length(glm::cross(ac, ab)) > collinearTol) {
+            return false;
+        }
+        return false;
+    }
+    
+    // 共面，投影到坐标平面用 2D 方法求解
+    // 选择投影平面：取法向量绝对值最大的分量作为投影轴
+    int projAxis = 0;
+    if (std::abs(n.x) < std::abs(n.y)) {
+        projAxis = 1;
+    }
+    if (std::abs(n[projAxis]) < std::abs(n.z)) {
+        projAxis = 2;
+    }
+    
+    int u = (projAxis + 1) % 3;
+    int v = (projAxis + 2) % 3;
+    
+    auto get2D = [&](const Point& p) -> std::pair<double, double> {
+        if (u == 0 && v == 1) {
+            return {p.x, p.y};
+        }
+        if (u == 0 && v == 2) {
+            return {p.x, p.z};
+        }
+        return {p.y, p.z};
+    };
+    
+    auto [ax, ay] = get2D(a.start);
+    auto [bx, by] = get2D(a.end);
+    auto [cx, cy] = get2D(b.start);
+    auto [dx, dy] = get2D(b.end);
+    
+    double cross_ab_cd = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+    double crossTol = Tolerance::Default.relative * ab_len * cd_len;
+    if (std::abs(cross_ab_cd) < crossTol) {
+        return false;
+    }
+    
+    double t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / cross_ab_cd;
+    double u_param = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / cross_ab_cd;
+    
+    if (t >= 0 && t <= 1 && u_param >= 0 && u_param <= 1) {
         out = a.start + ab * t;
         return true;
     }
     return false;
 }
 
-// 线段与直线
+// 线段与直线（需要检查线段与直线是否共面）
 bool intersect(const Segment& seg, const Line& line, Point& out) {
-    // 参数方程: P = A + t·AB, t∈[0,1]; Q = O + u·D, u∈R
     Vector ab = seg.end - seg.start;
-    Vector ac = line.origin - seg.start;
     Vector dir = line.direction;
+    Vector ac = line.origin - seg.start;
     
-    double cross = glm::cross(ab, dir).z;
-    if (std::abs(cross) < 1e-12) { return false; }
+    double ab_len = glm::length(ab);
+    double dir_len = glm::length(dir);
     
-    double t = glm::cross(ac, dir).z / cross;
+    // 检查线段和直线是否共面
+    Vector n = glm::cross(ab, dir);
+    double n_len = glm::length(n);
+    
+    double parallelTol = Tolerance::Default.relative * ab_len * dir_len;
+    
+    if (n_len > parallelTol) {
+        // 不平行，检查 ac 是否在 ab 和 dir 张成的平面内
+        double ac_len = glm::length(ac);
+        double coplanarTol = Tolerance::Default.relative * ac_len * n_len;
+        if (std::abs(glm::dot(ac, n)) > coplanarTol) {
+            return false;  // 异面，无交点
+        }
+    }
+    
+    // 投影到坐标平面求解
+    int projAxis = 0;
+    if (std::abs(n.x) < std::abs(n.y)) { projAxis = 1; }
+    if (std::abs(n[projAxis]) < std::abs(n.z)) { projAxis = 2; }
+    
+    int u = (projAxis + 1) % 3;
+    int v = (projAxis + 2) % 3;
+    
+    auto get2D = [&](const Point& p) -> std::pair<double, double> {
+        if (u == 0 && v == 1) { return {p.x, p.y}; }
+        if (u == 0 && v == 2) { return {p.x, p.z}; }
+        return {p.y, p.z};
+    };
+    
+    auto [ax, ay] = get2D(seg.start);
+    auto [bx, by] = get2D(seg.end);
+    auto [cx, cy] = get2D(line.origin);
+    auto [dx, dy] = get2D(line.origin + line.direction);
+    
+    double cross_ab_dir = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+    double crossTol = Tolerance::Default.relative * ab_len * dir_len;
+    if (std::abs(cross_ab_dir) < crossTol) {
+        return false;
+    }
+    
+    double t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / cross_ab_dir;
     if (t >= 0 && t <= 1) {
         out = seg.start + ab * t;
         return true;
@@ -512,20 +683,58 @@ bool intersect(const Segment& seg, const Line& line, Point& out) {
     return false;
 }
 
-// 线段与射线
+// 线段与射线（需要检查是否共面）
 bool intersect(const Segment& seg, const Ray& ray, Point& out) {
-    // 参数方程: P = A + t·AB, t∈[0,1]; Q = O + u·D, u≥0
     Vector ab = seg.end - seg.start;
-    Vector ac = seg.start - ray.origin;
     Vector dir = ray.direction;
+    Vector ac = ray.origin - seg.start;
     
-    double cross = glm::cross(dir, ab).z;
-    if (std::abs(cross) < 1e-12) { return false; }
+    double ab_len = glm::length(ab);
+    double dir_len = glm::length(dir);
     
-    double t = glm::cross(ac, ab).z / cross;    // 射线参数
-    double u = glm::cross(ac, dir).z / cross;   // 线段参数
+    // 检查是否共面
+    Vector n = glm::cross(ab, dir);
+    double n_len = glm::length(n);
     
-    if (t >= 0 && u >= 0 && u <= 1) {
+    double parallelTol = Tolerance::Default.relative * ab_len * dir_len;
+    
+    if (n_len > parallelTol) {
+        double ac_len = glm::length(ac);
+        double coplanarTol = Tolerance::Default.relative * ac_len * n_len;
+        if (std::abs(glm::dot(ac, n)) > coplanarTol) {
+            return false;  // 异面，无交点
+        }
+    }
+    
+    // 投影到坐标平面求解
+    int projAxis = 0;
+    if (std::abs(n.x) < std::abs(n.y)) { projAxis = 1; }
+    if (std::abs(n[projAxis]) < std::abs(n.z)) { projAxis = 2; }
+    
+    int u = (projAxis + 1) % 3;
+    int v = (projAxis + 2) % 3;
+    
+    auto get2D = [&](const Point& p) -> std::pair<double, double> {
+        if (u == 0 && v == 1) { return {p.x, p.y}; }
+        if (u == 0 && v == 2) { return {p.x, p.z}; }
+        return {p.y, p.z};
+    };
+    
+    auto [ax, ay] = get2D(seg.start);
+    auto [bx, by] = get2D(seg.end);
+    auto [cx, cy] = get2D(ray.origin);
+    auto [dx, dy] = get2D(ray.origin + ray.direction);
+    
+    double cross_ab_dir = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+    double crossTol = Tolerance::Default.relative * ab_len * dir_len;
+    if (std::abs(cross_ab_dir) < crossTol) {
+        return false;
+    }
+    
+    double t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / cross_ab_dir;
+    double u_param = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / cross_ab_dir;
+    
+    if (t >= 0 && u_param >= 0 && u_param <= 1) {
         out = ray.origin + dir * t;
         return true;
     }
@@ -632,30 +841,88 @@ bool intersect(const Segment& seg, const Ellipse& ellipse, std::vector<Point>& o
     return !out.empty();
 }
 
-// 直线与直线
+// 直线与直线求交（支持 3D，自动处理共面检查）
 bool intersect(const Line& a, const Line& b, Point& out) {
-    // 解方程: A + t·Da = B + u·Db
-    // 两边叉乘 Db 得 t·(Da×Db) = (B-A)×Db
-    Vector cross = glm::cross(a.direction, b.direction);
-    if (glm::length(cross) < 1e-12) { return false; } // 平行
-    
+    Vector da = a.direction;
+    Vector db = b.direction;
     Vector w = b.origin - a.origin;
-    double t = glm::dot(glm::cross(w, b.direction), cross) / glm::dot(cross, cross);
-    out = a.origin + a.direction * t;
+    
+    double da_len = glm::length(da);
+    double db_len = glm::length(db);
+    double w_len = glm::length(w);
+    
+    // 检查是否平行
+    Vector n = glm::cross(da, db);
+    double n_len = glm::length(n);
+    
+    double parallelTol = Tolerance::Default.relative * da_len * db_len;
+    
+    if (n_len < parallelTol) {
+        // 平行，检查是否共线
+        double collinearTol = Tolerance::Default.relative * w_len * da_len;
+        if (glm::length(glm::cross(w, da)) > collinearTol) {
+            return false;  // 平行但不共线，无交点
+        }
+        // 共线，有无穷多交点（返回 false，或返回任意点）
+        return false;
+    }
+    
+    // 检查是否共面
+    double coplanarTol = Tolerance::Default.relative * w_len * n_len;
+    if (std::abs(glm::dot(w, n)) > coplanarTol) {
+        return false;  // 异面，无交点
+    }
+    
+    // 共面，解方程求交点
+    // 使用叉积法：t = ((B-A) × Db) · (Da × Db) / |Da × Db|²
+    double t = glm::dot(glm::cross(w, db), n) / glm::dot(n, n);
+    out = a.origin + da * t;
     return true;
 }
 
-// 直线与射线
+// 直线与射线（需要检查是否共面）
 bool intersect(const Line& line, const Ray& ray, Point& out) {
-    Vector cross = glm::cross(line.direction, ray.direction);
-    if (glm::length(cross) < 1e-12) { return false; }
-    
+    Vector da = line.direction;
+    Vector db = ray.direction;
     Vector w = ray.origin - line.origin;
-    double t = glm::dot(glm::cross(w, ray.direction), cross) / glm::dot(cross, cross);
-    double u = glm::dot(glm::cross(w, line.direction), cross) / glm::dot(cross, cross);
+    
+    double da_len = glm::length(da);
+    double db_len = glm::length(db);
+    double w_len = glm::length(w);
+    
+    // 检查是否平行
+    Vector n = glm::cross(da, db);
+    double n_len = glm::length(n);
+    
+    double parallelTol = Tolerance::Default.relative * da_len * db_len;
+    
+    if (n_len < parallelTol) {
+        // 平行，检查是否共线
+        double collinearTol = Tolerance::Default.relative * w_len * da_len;
+        if (glm::length(glm::cross(w, da)) > collinearTol) {
+            return false;
+        }
+        // 共线，检查射线方向与直线的交点
+        double t = glm::dot(w, da);
+        if (t >= 0) {
+            out = line.origin + da * t;
+            return true;
+        }
+        return false;
+    }
+    
+    // 检查是否共面
+    double coplanarTol = Tolerance::Default.relative * w_len * n_len;
+    if (std::abs(glm::dot(w, n)) > coplanarTol) {
+        return false;  // 异面，无交点
+    }
+    
+    // 共面，解方程求交点
+    double t = glm::dot(glm::cross(w, db), n) / glm::dot(n, n);
+    double u = glm::dot(glm::cross(w, da), n) / glm::dot(n, n);
     
     if (u >= 0) {
-        out = line.origin + line.direction * t;
+        out = line.origin + da * t;
         return true;
     }
     return false;
@@ -756,17 +1023,49 @@ bool intersect(const Line& line, const Ellipse& ellipse, std::vector<Point>& out
     return !out.empty();
 }
 
-// 射线与射线
+// 射线与射线（需要检查是否共面）
 bool intersect(const Ray& a, const Ray& b, Point& out) {
-    Vector cross = glm::cross(a.direction, b.direction);
-    if (glm::length(cross) < 1e-12) { return false; }
-    
+    Vector da = a.direction;
+    Vector db = b.direction;
     Vector w = b.origin - a.origin;
-    double t = glm::dot(glm::cross(w, b.direction), cross) / glm::dot(cross, cross);
-    double u = glm::dot(glm::cross(w, a.direction), cross) / glm::dot(cross, cross);
+    
+    double da_len = glm::length(da);
+    double db_len = glm::length(db);
+    double w_len = glm::length(w);
+    
+    // 检查是否平行
+    Vector n = glm::cross(da, db);
+    double n_len = glm::length(n);
+    
+    double parallelTol = Tolerance::Default.relative * da_len * db_len;
+    
+    if (n_len < parallelTol) {
+        // 平行，检查是否共线
+        double collinearTol = Tolerance::Default.relative * w_len * da_len;
+        if (glm::length(glm::cross(w, da)) > collinearTol) {
+            return false;
+        }
+        // 共线，检查射线方向
+        double t = glm::dot(w, da);
+        if (t >= 0) {
+            out = a.origin + da * t;
+            return true;
+        }
+        return false;
+    }
+    
+    // 检查是否共面
+    double coplanarTol = Tolerance::Default.relative * w_len * n_len;
+    if (std::abs(glm::dot(w, n)) > coplanarTol) {
+        return false;  // 异面，无交点
+    }
+    
+    // 共面，解方程求交点
+    double t = glm::dot(glm::cross(w, db), n) / glm::dot(n, n);
+    double u = glm::dot(glm::cross(w, da), n) / glm::dot(n, n);
     
     if (t >= 0 && u >= 0) {
-        out = a.origin + a.direction * t;
+        out = a.origin + da * t;
         return true;
     }
     return false;
@@ -1105,16 +1404,33 @@ bool intersect(const Ellipse& ellipse, const Circle& circle, std::vector<Point>&
 // ============================================================================
 
 bool contains(const Segment& seg, const Point& p, const Tolerance& tol) {
+    // 点到线段距离（使用相对精度，基于线段长度）
     double d = distance(p, seg);
-    if (!isZero(d, tol)) { return false; }
+    double seg_len = seg.length();
+    if (d > tol.relative * seg_len) {
+        return false;
+    }
     
+    // 参数 t 范围（无量纲，用绝对精度）
     double t = glm::dot(p - seg.start, seg.end - seg.start) / glm::length2(seg.end - seg.start);
     return t >= -tol.absolute && t <= 1.0 + tol.absolute;
 }
 
+bool contains(const Ray& ray, const Point& p, const Tolerance& tol) {
+    // 先检查点是否在直线上
+    if (!isPointOnLine(p, ray.origin, ray.direction)) {
+        return false;
+    }
+    // 再检查参数 t 是否 >= 0
+    double t = glm::dot(p - ray.origin, ray.direction) / glm::length2(ray.direction);
+    return t >= -tol.absolute;
+}
+
 bool contains(const Circle& circle, const Point& p, const Tolerance& tol) {
     double d = glm::distance(p, circle.center);
-    return std::abs(d - circle.radius) < tol.absolute;
+    double diff = std::abs(d - circle.radius);
+    double scale = std::max(1.0, circle.radius);
+    return diff < tol.relative * scale;
 }
 
 bool contains(const Ellipse& ellipse, const Point& p, const Tolerance& tol) {

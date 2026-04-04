@@ -16,7 +16,7 @@ namespace tch {
 namespace Geometry {
 
 // ============================================================================
-// 零、常量、精度
+// 常量、精度
 // ============================================================================
 
 /// 圆周率 π
@@ -41,7 +41,7 @@ inline const Tolerance Tolerance::Loose{1e-6, 1e-9, 1e-6};
 inline const Tolerance Tolerance::Strict{1e-12, 1e-14, 1e-10};
 
 // ============================================================================
-// 一、基础类型
+// 基础类型
 // ============================================================================
 
 using Point = glm::dvec3;   ///< 三维点 (x, y, z)
@@ -49,7 +49,7 @@ using Vector = glm::dvec3;  ///< 三维向量 (x, y, z)
 using Matrix = glm::dmat4;  ///< 4x4 仿射变换矩阵
 
 // ============================================================================
-// 二、基础比较函数
+// 基础比较函数
 // ============================================================================
 
 /// 判断浮点数是否为零，绝对值小于绝对精度
@@ -75,7 +75,7 @@ inline bool isAngleEqual(double a, double b, const Tolerance& tol = Tolerance::D
 }
 
 // ============================================================================
-// 三、点与向量比较
+// 点与向量比较
 // ============================================================================
 
 /// 判断两点是否重合
@@ -136,7 +136,7 @@ inline bool isPerpendicular(const Vector& a, const Vector& b, const Tolerance& t
 }
 
 // ============================================================================
-// 四、基本图元
+// 基本图元
 // ============================================================================
 
 /// 线段，由起点和终点定义
@@ -294,7 +294,7 @@ struct NURBSCurve {
 };
 
 // ============================================================================
-// 五、复合图元
+// 复合图元
 // ============================================================================
 
 /// 多段线，由连续点序列组成的折线
@@ -342,7 +342,7 @@ struct RegularPolygon {
 };
 
 // ============================================================================
-// 六、辅助结构
+// 辅助结构
 // ============================================================================
 
 /// 轴对齐包围盒（AABB），用于快速剔除和空间索引
@@ -362,7 +362,7 @@ struct AABB {
 };
 
 // ============================================================================
-// 七、距离计算
+// 距离计算
 // ============================================================================
 
 inline double distance(const Point& a, const Point& b) { return glm::distance(a, b); }
@@ -376,7 +376,7 @@ double distance(const Segment& a, const Segment& b);
 double distance(const Segment& seg, const Circle& circle);
 
 // ============================================================================
-// 八、投影计算
+// 投影计算
 // ============================================================================
 
 Point project(const Point& p, const Line& line);
@@ -385,7 +385,77 @@ Point closestPoint(const Point& p, const Segment& seg);
 Point closestPoint(const Point& p, const Circle& circle);
 
 // ============================================================================
-// 九、交点计算
+// 共线/共面检查
+// ============================================================================
+
+/// 判断点是否在无限直线上（直线由原点+方向定义）
+bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDirection);
+
+// 两条直线共面（直线由原点+方向定义）
+bool isCoplanarLines(const Point& origin1, const Vector& dir1,
+                     const Point& origin2, const Vector& dir2);
+
+// 直线与圆/椭圆共面
+bool isCoplanarLineCurve(const Point& center, const Vector& normal,
+                         const Point& lineOrigin, const Vector& lineDirection);
+
+// 两个圆/椭圆共面
+bool isCoplanarCurves(const Point& center1, const Vector& normal1,
+                      const Point& center2, const Vector& normal2);
+
+// 两条直线共面（具体类型包装）
+inline bool isCoplanar(const Line& a, const Line& b) {
+    return isCoplanarLines(a.origin, a.direction, b.origin, b.direction);
+}
+
+inline bool isCoplanar(const Ray& a, const Ray& b) {
+    return isCoplanarLines(a.origin, a.direction, b.origin, b.direction);
+}
+
+inline bool isCoplanar(const Segment& a, const Segment& b) {
+    return isCoplanarLines(a.start, a.end - a.start, b.start, b.end - b.start);
+}
+
+// 直线与圆/椭圆共面（具体类型包装）
+inline bool isCoplanar(const Circle& circle, const Line& line) {
+    return isCoplanarLineCurve(circle.center, circle.normal, line.origin, line.direction);
+}
+
+inline bool isCoplanar(const Circle& circle, const Ray& ray) {
+    return isCoplanarLineCurve(circle.center, circle.normal, ray.origin, ray.direction);
+}
+
+inline bool isCoplanar(const Circle& circle, const Segment& seg) {
+    return isCoplanarLineCurve(circle.center, circle.normal, seg.start, seg.end - seg.start);
+}
+
+inline bool isCoplanar(const Ellipse& ellipse, const Line& line) {
+    return isCoplanarLineCurve(ellipse.center, ellipse.normal, line.origin, line.direction);
+}
+
+inline bool isCoplanar(const Ellipse& ellipse, const Ray& ray) {
+    return isCoplanarLineCurve(ellipse.center, ellipse.normal, ray.origin, ray.direction);
+}
+
+inline bool isCoplanar(const Ellipse& ellipse, const Segment& seg) {
+    return isCoplanarLineCurve(ellipse.center, ellipse.normal, seg.start, seg.end - seg.start);
+}
+
+// 两个圆/椭圆共面（具体类型包装）
+inline bool isCoplanar(const Circle& a, const Circle& b) {
+    return isCoplanarCurves(a.center, a.normal, b.center, b.normal);
+}
+
+inline bool isCoplanar(const Circle& circle, const Ellipse& ellipse) {
+    return isCoplanarCurves(circle.center, circle.normal, ellipse.center, ellipse.normal);
+}
+
+inline bool isCoplanar(const Ellipse& a, const Ellipse& b) {
+    return isCoplanarCurves(a.center, a.normal, b.center, b.normal);
+}
+
+// ============================================================================
+// 交点计算
 // ============================================================================
 
 bool intersect(const Segment& a, const Segment& b, Point& out);
@@ -418,17 +488,18 @@ bool intersect(const Ellipse& ellipse, const Segment& seg, std::vector<Point>& o
 bool intersect(const Ellipse& ellipse, const Circle& circle, std::vector<Point>& out);
 
 // ============================================================================
-// 十、包含性测试
+// 包含性测试
 // ============================================================================
 
 bool contains(const Segment& seg, const Point& p, const Tolerance& tol = Tolerance::Default);
+bool contains(const Ray& ray, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Circle& circle, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Ellipse& ellipse, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Polygon& poly, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Circle& outer, const Circle& inner, const Tolerance& tol = Tolerance::Default);
 
 // ============================================================================
-// 十一、曲线细分
+// 曲线细分
 // ============================================================================
 
 std::vector<Segment> subdivide(const Circle& circle, int segments);
@@ -439,7 +510,7 @@ std::vector<Segment> subdivide(const BSplineCurve& curve, int segments);
 std::vector<Segment> subdivide(const NURBSCurve& curve, int segments);
 
 // ============================================================================
-// 十二、几何变换
+// 几何变换
 // ============================================================================
 
 /// 点平移
@@ -465,7 +536,7 @@ inline Matrix inverse(const Matrix& m) {
 }
 
 // ============================================================================
-// 十三、几何变换之镜像变换
+// 几何变换之镜像变换
 // ============================================================================
 
 /// 点关于平面的镜像（通用 3D）
@@ -519,7 +590,7 @@ inline glm::dvec3 mirrorCenter(const glm::dvec3& v) {
 }
 
 // ============================================================================
-// 十四、辅助函数
+// 辅助函数
 // ============================================================================
 
 /// 角度转弧度
