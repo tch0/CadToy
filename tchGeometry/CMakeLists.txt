@@ -13,9 +13,9 @@ target_link_directories(tchGeometry
     PUBLIC
         ${3rdparty_lib_dir}
 )
+# 只依赖glm，glm是header only，不需要链接
 target_link_libraries(tchGeometry
     PUBLIC
-        glm
         general_cxx_compiler_flags
 )
 

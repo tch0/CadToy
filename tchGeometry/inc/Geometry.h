@@ -391,6 +391,23 @@ Point closestPoint(const Point& p, const Circle& circle);
 /// 判断点是否在无限直线上（直线由原点+方向定义）
 bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDirection);
 
+/// 判断两条直线是否共线
+bool isCollinearLines(const Point& origin1, const Vector& dir1,
+                      const Point& origin2, const Vector& dir2);
+
+// 便捷包装
+inline bool isCollinear(const Line& a, const Line& b) {
+    return isCollinearLines(a.origin, a.direction, b.origin, b.direction);
+}
+
+inline bool isCollinear(const Ray& a, const Ray& b) {
+    return isCollinearLines(a.origin, a.direction, b.origin, b.direction);
+}
+
+inline bool isCollinear(const Segment& a, const Segment& b) {
+    return isCollinearLines(a.start, a.end - a.start, b.start, b.end - b.start);
+}
+
 // 两条直线共面（直线由原点+方向定义）
 bool isCoplanarLines(const Point& origin1, const Vector& dir1,
                      const Point& origin2, const Vector& dir2);
@@ -493,9 +510,14 @@ bool intersect(const Ellipse& ellipse, const Circle& circle, std::vector<Point>&
 
 bool contains(const Segment& seg, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Ray& ray, const Point& p, const Tolerance& tol = Tolerance::Default);
+
+/// 判断点是否在圆上（注意：调用者需确保点在圆所在平面内）
 bool contains(const Circle& circle, const Point& p, const Tolerance& tol = Tolerance::Default);
+/// 判断点是否在椭圆上（注意：调用者需确保点在椭圆所在平面内）
 bool contains(const Ellipse& ellipse, const Point& p, const Tolerance& tol = Tolerance::Default);
+/// 判断点是否在多边形内（注意：调用者需确保点在多边形所在平面内，且多边形在 XY 平面）
 bool contains(const Polygon& poly, const Point& p, const Tolerance& tol = Tolerance::Default);
+/// 判断圆 inner 是否完全在圆 outer 内（注意：调用者需确保两圆共面）
 bool contains(const Circle& outer, const Circle& inner, const Tolerance& tol = Tolerance::Default);
 
 // ============================================================================
@@ -508,6 +530,25 @@ std::vector<Segment> subdivide(const Arc& arc, int segments);
 std::vector<Segment> subdivide(const BezierCurve& curve, int segments);
 std::vector<Segment> subdivide(const BSplineCurve& curve, int segments);
 std::vector<Segment> subdivide(const NURBSCurve& curve, int segments);
+
+// ============================================================================
+// 切线计算
+// ============================================================================
+
+/// 圆上某角度的切线方向（返回单位向量）
+Vector tangentAt(const Circle& circle, double angle);
+
+/// 圆上某点的切线方向（返回单位向量），调用者需确保点在圆上且在圆所在平面内
+Vector tangentAt(const Circle& circle, const Point& p);
+
+/// 过圆外一点的切点，返回切点列表（0、1或2个），点在圆内返回空，调用者需确保点在圆所在平面内
+std::vector<Point> tangentPointsFromPoint(const Circle& circle, const Point& externalPoint);
+
+/// 椭圆上某参数的切线方向（返回单位向量），t∈[0,1] 对应 startParam 到 endParam
+Vector tangentAt(const Ellipse& ellipse, double t);
+
+/// 椭圆上某点的切线方向（返回单位向量），调用者需确保点在椭圆上且在椭圆所在平面内
+Vector tangentAt(const Ellipse& ellipse, const Point& p);
 
 // ============================================================================
 // 几何变换
@@ -588,6 +629,19 @@ inline glm::dvec3 mirrorCenter(const glm::dvec3& v, const glm::dvec3& center) {
 inline glm::dvec3 mirrorCenter(const glm::dvec3& v) {
     return mirrorCenter(v, glm::dvec3(0, 0, 0));
 }
+
+// ============================================================================
+// 角度计算
+// ============================================================================
+
+/// 计算两向量之间的夹角（弧度，返回值 [0, π]）
+double angleBetween(const Vector& a, const Vector& b);
+
+/// 计算三点形成的夹角（弧度，以 b 为顶点，返回值 [0, π]）
+double angleAt(const Point& a, const Point& b, const Point& c);
+
+/// 计算向量与 X 轴正方向的夹角（弧度，返回值 [0, 2π)）
+double angleOf(const Vector& v);
 
 // ============================================================================
 // 辅助函数

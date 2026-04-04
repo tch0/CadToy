@@ -502,6 +502,17 @@ bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDi
     return cross_len < relativeTol;
 }
 
+/// 判断两条直线是否共线
+bool isCollinearLines(const Point& origin1, const Vector& dir1,
+                      const Point& origin2, const Vector& dir2) {
+    // 方向必须平行
+    if (!isParallel(dir1, dir2)) {
+        return false;
+    }
+    // 原点2必须在直线1上
+    return isPointOnLine(origin2, origin1, dir1);
+}
+
 // 两条直线共面（直线由原点+方向定义）
 bool isCoplanarLines(const Point& origin1, const Vector& dir1,
                      const Point& origin2, const Vector& dir2) {
@@ -1565,6 +1576,169 @@ std::vector<Segment> subdivide(const NURBSCurve& curve, int segments) {
         prev = curr;
     }
     return result;
+}
+
+// ============================================================================
+// 切线计算实现
+// ============================================================================
+
+Vector tangentAt(const Circle& circle, double angle) {
+    // 圆上点的切线方向垂直于半径方向
+    // 在圆的局部坐标系中，半径方向为 (cos(angle), sin(angle))
+    // 切线方向为 (-sin(angle), cos(angle))，即逆时针旋转90度
+    
+    // 构建局部坐标系
+    Vector u, v;
+    if (isParallel(circle.normal, Vector(0, 0, 1))) {
+        u = glm::normalize(glm::cross(Vector(0, 1, 0), circle.normal));
+    } else {
+        u = glm::normalize(glm::cross(Vector(0, 0, 1), circle.normal));
+    }
+    v = glm::normalize(glm::cross(circle.normal, u));
+    
+    // 切线方向：半径方向逆时针旋转90度
+    return -u * std::sin(angle) + v * std::cos(angle);
+}
+
+Vector tangentAt(const Circle& circle, const Point& p) {
+    // 计算点对应的角度
+    Vector diff = p - circle.center;
+    
+    // 构建局部坐标系
+    Vector u, v;
+    if (isParallel(circle.normal, Vector(0, 0, 1))) {
+        u = glm::normalize(glm::cross(Vector(0, 1, 0), circle.normal));
+    } else {
+        u = glm::normalize(glm::cross(Vector(0, 0, 1), circle.normal));
+    }
+    v = glm::normalize(glm::cross(circle.normal, u));
+    
+    // 计算角度
+    double x = glm::dot(diff, u);
+    double y = glm::dot(diff, v);
+    double angle = std::atan2(y, x);
+    
+    return tangentAt(circle, angle);
+}
+
+std::vector<Point> tangentPointsFromPoint(const Circle& circle, const Point& externalPoint) {
+    std::vector<Point> result;
+    
+    // 计算点到圆心的距离
+    double dist = glm::distance(externalPoint, circle.center);
+    
+    // 点在圆内，无切点
+    if (dist < circle.radius - Tolerance::Default.absolute) {
+        return result;
+    }
+    
+    // 点在圆上，只有一个切点（就是点本身）
+    if (std::abs(dist - circle.radius) < Tolerance::Default.absolute) {
+        result.push_back(externalPoint);
+        return result;
+    }
+    
+    // 点在圆外，有两个切点
+    // 使用几何法：切点与圆心、外点形成直角三角形
+    // 设切点为 T，则 |CT| = r，|PT| = sqrt(d² - r²)
+    // 切点到圆心的距离为 r，到外点的距离为 sqrt(d² - r²)
+    
+    // 构建局部坐标系
+    Vector u, v;
+    if (isParallel(circle.normal, Vector(0, 0, 1))) {
+        u = glm::normalize(glm::cross(Vector(0, 1, 0), circle.normal));
+    } else {
+        u = glm::normalize(glm::cross(Vector(0, 0, 1), circle.normal));
+    }
+    v = glm::normalize(glm::cross(circle.normal, u));
+    
+    // 外点在局部坐标系中的坐标
+    Vector diff = externalPoint - circle.center;
+    double px = glm::dot(diff, u);
+    double py = glm::dot(diff, v);
+    
+    // 切点到圆心连线的角度
+    double angleToCenter = std::atan2(py, px);
+    
+    // 切线与圆心连线的夹角
+    double tangentAngle = std::acos(circle.radius / dist);
+    
+    // 两个切点对应的角度
+    double angle1 = angleToCenter + tangentAngle;
+    double angle2 = angleToCenter - tangentAngle;
+    
+    // 计算切点
+    Point t1 = circle.center + u * (circle.radius * std::cos(angle1)) + v * (circle.radius * std::sin(angle1));
+    Point t2 = circle.center + u * (circle.radius * std::cos(angle2)) + v * (circle.radius * std::sin(angle2));
+    
+    result.push_back(t1);
+    result.push_back(t2);
+    
+    return result;
+}
+
+Vector tangentAt(const Ellipse& ellipse, double t) {
+    // 椭圆参数方程的导数
+    // x = rx * cos(θ), y = ry * sin(θ)
+    // dx/dt = -rx * sin(θ) * dθ/dt
+    // dy/dt = ry * cos(θ) * dθ/dt
+    // 切线方向 = (-rx * sin(θ), ry * cos(θ))
+    
+    double angleSpan = ellipse.endParam - ellipse.startParam;
+    if (angleSpan < 0) {
+        angleSpan += TWO_PI;
+    }
+    double angle = ellipse.startParam + t * angleSpan;
+    
+    auto [u_rot, v_rot] = ellipse.getLocalAxes();
+    
+    // 切线方向（未归一化）
+    Vector tangent = -u_rot * (ellipse.radiusX * std::sin(angle)) + v_rot * (ellipse.radiusY * std::cos(angle));
+    
+    return glm::normalize(tangent);
+}
+
+Vector tangentAt(const Ellipse& ellipse, const Point& p) {
+    // 计算点对应的参数
+    double t = ellipse.pointToParam(p);
+    
+    // 归一化到 [0, 1]
+    double angleSpan = ellipse.endParam - ellipse.startParam;
+    if (angleSpan < 0) {
+        angleSpan += TWO_PI;
+    }
+    double normalizedT = (t - ellipse.startParam) / angleSpan;
+    
+    return tangentAt(ellipse, normalizedT);
+}
+
+// ============================================================================
+// 角度计算实现
+// ============================================================================
+
+double angleBetween(const Vector& a, const Vector& b) {
+    double lenA = glm::length(a);
+    double lenB = glm::length(b);
+    if (isZero(lenA) || isZero(lenB)) {
+        return 0.0;
+    }
+    double dot = glm::dot(a, b) / (lenA * lenB);
+    dot = std::max(-1.0, std::min(1.0, dot));  // 防止浮点误差
+    return std::acos(dot);
+}
+
+double angleAt(const Point& a, const Point& b, const Point& c) {
+    Vector ba = a - b;
+    Vector bc = c - b;
+    return angleBetween(ba, bc);
+}
+
+double angleOf(const Vector& v) {
+    double angle = std::atan2(v.y, v.x);
+    if (angle < 0) {
+        angle += TWO_PI;
+    }
+    return angle;
 }
 
 } // namespace Geometry
