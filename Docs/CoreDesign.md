@@ -94,32 +94,53 @@ graph BT
 
 **五、交点计算**
 
+**直线相交结果结构体**
+
+segment/line/ray 相交函数返回 `LineIntersectionResult` 结构体：
+
+```cpp
+struct LineIntersectionResult {
+    enum Type {
+        kNone,           // 无交点（异面或平行不共线）
+        kSinglePoint,    // 有一个交点
+        kOverlapSegment, // 有重叠线段
+        kOverlapRay,     // 有重叠射线
+        kOverlapLine     // 有重叠直线（两直线共线）
+    };
+    
+    Type type;          // 相交类型
+    Point p1;           // 第一个点（交点或重叠起点）
+    Point p2;           // 第二个点（重叠终点，仅 OverlapSegment 使用）
+    Vector direction;   // 方向向量（OverlapRay/OverlapLine 使用）
+};
+```
+
+**各函数返回值分析**
+
+| 函数对 | 无交点 | 交点 | 重叠线段 | 重叠射线 | 重叠直线 |
+|--------|--------|------|----------|----------|----------|
+| Segment-Segment | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Segment-Line | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Segment-Ray | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Line-Line | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Line-Ray | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Ray-Ray | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+**说明**：线段是有限的，与任何类型重叠都只能返回 `kOverlapSegment`。射线与射线重叠：方向相同返回 `kOverlapRay`，方向相反返回 `kOverlapSegment`。
+
+**其他相交函数**
+
 | 输入 A | 输入 B | 输出 | 实现方式 |
 |--------|--------|------|----------|
-| Segment | Segment | 交点（0、1或多个） | 解析法 |
-| Segment | Line | 交点（0或1个） | 解析法 |
-| Segment | Ray | 交点（0或1个） | 解析法 |
 | Segment | Circle | 交点（0、1或2个） | 解析法 |
 | Segment | Ellipse | 交点（0、1或多个） | 数值迭代法 |
-| Line | Line | 交点（0或1个） | 解析法 |
-| Line | Ray | 交点（0或1个） | 解析法 |
 | Line | Circle | 交点（0、1或2个） | 解析法 |
 | Line | Ellipse | 交点（0、1或多个） | 数值迭代法 |
-| Ray | Ray | 交点（0或1个） | 解析法 |
-| Ray | Segment | 交点（0或1个） | 解析法 |
-| Ray | Line | 交点（0或1个） | 解析法 |
 | Ray | Circle | 交点（0、1或2个） | 解析法 |
 | Ray | Ellipse | 交点（0、1或多个） | 数值迭代法 |
 | Circle | Circle | 交点（0、1或2个） | 解析法 |
-| Circle | Line | 交点（0、1或2个） | 解析法 |
-| Circle | Ray | 交点（0、1或2个） | 解析法 |
-| Circle | Segment | 交点（0、1或2个） | 解析法 |
 | Circle | Ellipse | 交点（0、1或多个） | 数值迭代法 |
 | Ellipse | Ellipse | 交点（0、1或多个） | 数值迭代法 |
-| Ellipse | Line | 交点（0、1或多个） | 数值迭代法 |
-| Ellipse | Ray | 交点（0、1或多个） | 数值迭代法 |
-| Ellipse | Segment | 交点（0、1或多个） | 数值迭代法 |
-| Ellipse | Circle | 交点（0、1或多个） | 数值迭代法 |
 | BezierCurve | Line | 交点（0、1或多个） | 迭代求解（待实现） |
 | NURBSCurve | Line | 交点（0、1或多个） | 迭代求解（待实现） |
 

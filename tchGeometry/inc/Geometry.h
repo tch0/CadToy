@@ -116,10 +116,10 @@ inline bool isParallel(const Vector& a, const Vector& b, const Tolerance& tol = 
     if (isZero(lenA, tol) || isZero(lenB, tol)) {
         return false;
     }
-    Vector na = a / lenA;
-    Vector nb = b / lenB;
-    double dot = std::abs(glm::dot(na, nb));
-    return dot > 1.0 - tol.absolute;
+    double cosAngle = std::abs(glm::dot(a, b) / (lenA * lenB));
+    cosAngle = std::min(1.0, cosAngle);  // 防止浮点误差导致略大于 1
+    double sinAngleSq = 1.0 - cosAngle * cosAngle;
+    return sinAngleSq < tol.angle * tol.angle;
 }
 
 /// 判断两个向量是否垂直（夹角接近 π/2 或 3π/2）
@@ -129,10 +129,10 @@ inline bool isPerpendicular(const Vector& a, const Vector& b, const Tolerance& t
     if (isZero(lenA, tol) || isZero(lenB, tol)) {
         return false;
     }
-    Vector na = a / lenA;
-    Vector nb = b / lenB;
-    double dot = std::abs(glm::dot(na, nb));
-    return dot < tol.absolute;
+    // 当两向量接近垂直时，|cos(θ)| ≈ 0
+    // |cos(θ)| < sin(angleTol) ≈ angleTol（当角度很小时）
+    double cosAngle = std::abs(glm::dot(a, b) / (lenA * lenB));
+    return cosAngle < tol.angle;
 }
 
 // ============================================================================
@@ -191,6 +191,8 @@ struct Circle {
     double area() const { return PI * radius * radius; }           ///< 面积
     double circumference() const { return 2.0 * PI * radius; }     ///< 周长
     Point pointAt(double angle) const;  ///< 参数方程，angle∈[0,2π)
+    /// 将圆上的点转换为参数（0 到 2π），注意：调用者需确保点在圆上
+    double pointToParam(const Point& p) const;
 };
 
 /// 圆弧，圆的一部分，由起始角和终止角定义
@@ -205,8 +207,20 @@ struct Arc {
     Arc(const Point& c, const Vector& n, double r, double sa, double ea)
         : center(c), normal(glm::normalize(n)), radius(r), startAngle(sa), endAngle(ea) {}
     
+    /// 判断是否为完整圆
+    bool isFull() const {
+        double angleSpan = endAngle - startAngle;
+        if (angleSpan < 0) {
+            angleSpan += TWO_PI;
+        }
+        return std::abs(angleSpan - TWO_PI) < Tolerance::Default.angle;
+    }
+    
     double length() const;                      ///< 弧长
+    double area() const;                        ///< 扇形面积
     Point pointAt(double t) const;              ///< 参数方程，t∈[0,1]
+    /// 将圆弧上的点转换为参数角度（弧度），注意：调用者需确保点在圆弧所在圆上
+    double pointToParam(const Point& p) const;
 };
 
 /// 椭圆，支持完整椭圆和椭圆弧，由中心、法向量、长短半轴、旋转角以及参数范围定义
@@ -250,7 +264,8 @@ struct Ellipse {
     double length() const;                      ///< 弧长（椭圆弧近似）
     double area() const { return PI * radiusX * radiusY; }  ///< 面积（完整椭圆）
     Point pointAt(double t) const;              ///< 参数方程，t∈[0,1] 对应 startParam 到 endParam
-    double pointToParam(const Point& p) const;  ///< 将椭圆上的点转换为参数（0 到 2π）
+    /// 将椭圆上的点转换为参数（0 到 2π），注意：调用者需确保点在椭圆上
+    double pointToParam(const Point& p) const;
 };
 
 /// 贝塞尔曲线，使用 de Casteljau 算法
@@ -389,7 +404,8 @@ Point closestPoint(const Point& p, const Circle& circle);
 // ============================================================================
 
 /// 判断点是否在无限直线上（直线由原点+方向定义）
-bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDirection);
+bool isPointOnLine(const Point& p, const Point& lineOrigin, const Vector& lineDirection,
+                   const Tolerance& tol = Tolerance::Default);
 
 /// 判断两条直线是否共线
 bool isCollinearLines(const Point& origin1, const Vector& dir1,
@@ -472,37 +488,51 @@ inline bool isCoplanar(const Ellipse& a, const Ellipse& b) {
 }
 
 // ============================================================================
+// 直线相交结果
+// ============================================================================
+
+/// 直线相交结果结构体，用于 segment/line/ray 相交计算
+struct LineIntersectionResult {
+    enum Type {
+        kNone,           ///< 无交点（异面或平行不共线）
+        kSinglePoint,    ///< 有一个交点
+        kOverlapSegment, ///< 有重叠线段
+        kOverlapRay,     ///< 有重叠射线
+        kOverlapLine     ///< 有重叠直线（两直线共线）
+    };
+    
+    Type type = kNone;       ///< 相交类型
+    Point p1;               ///< 第一个点（交点或重叠起点）
+    Point p2;               ///< 第二个点（重叠终点，仅 OverlapSegment 使用）
+    Vector direction;       ///< 方向向量（OverlapRay/OverlapLine 使用）
+    
+    bool hasIntersection() const { return type != kNone; }
+    bool isPoint() const { return type == kSinglePoint; }
+    bool isOverlap() const { return type >= kOverlapSegment; }
+};
+
+// ============================================================================
 // 交点计算
 // ============================================================================
 
-bool intersect(const Segment& a, const Segment& b, Point& out);
-bool intersect(const Segment& seg, const Line& line, Point& out);
-bool intersect(const Segment& seg, const Ray& ray, Point& out);
+// segment/line/ray 相交，返回 LineIntersectionResult
+LineIntersectionResult intersect(const Segment& a, const Segment& b);
+LineIntersectionResult intersect(const Segment& seg, const Line& line);
+LineIntersectionResult intersect(const Segment& seg, const Ray& ray);
+LineIntersectionResult intersect(const Line& a, const Line& b);
+LineIntersectionResult intersect(const Line& line, const Ray& ray);
+LineIntersectionResult intersect(const Ray& a, const Ray& b);
+
+// 其他相交函数，返回 bool 并通过输出参数返回交点
 bool intersect(const Segment& seg, const Circle& circle, std::vector<Point>& out);
 bool intersect(const Segment& seg, const Ellipse& ellipse, std::vector<Point>& out);
-
-bool intersect(const Line& a, const Line& b, Point& out);
-bool intersect(const Line& line, const Ray& ray, Point& out);
 bool intersect(const Line& line, const Circle& circle, std::vector<Point>& out);
 bool intersect(const Line& line, const Ellipse& ellipse, std::vector<Point>& out);
-
-bool intersect(const Ray& a, const Ray& b, Point& out);
-bool intersect(const Ray& ray, const Segment& seg, Point& out);
-bool intersect(const Ray& ray, const Line& line, Point& out);
 bool intersect(const Ray& ray, const Circle& circle, std::vector<Point>& out);
 bool intersect(const Ray& ray, const Ellipse& ellipse, std::vector<Point>& out);
-
 bool intersect(const Circle& a, const Circle& b, std::vector<Point>& out);
-bool intersect(const Circle& circle, const Line& line, std::vector<Point>& out);
-bool intersect(const Circle& circle, const Ray& ray, std::vector<Point>& out);
-bool intersect(const Circle& circle, const Segment& seg, std::vector<Point>& out);
 bool intersect(const Circle& circle, const Ellipse& ellipse, std::vector<Point>& out);
-
 bool intersect(const Ellipse& a, const Ellipse& b, std::vector<Point>& out);
-bool intersect(const Ellipse& ellipse, const Line& line, std::vector<Point>& out);
-bool intersect(const Ellipse& ellipse, const Ray& ray, std::vector<Point>& out);
-bool intersect(const Ellipse& ellipse, const Segment& seg, std::vector<Point>& out);
-bool intersect(const Ellipse& ellipse, const Circle& circle, std::vector<Point>& out);
 
 // ============================================================================
 // 包含性测试
@@ -510,6 +540,7 @@ bool intersect(const Ellipse& ellipse, const Circle& circle, std::vector<Point>&
 
 bool contains(const Segment& seg, const Point& p, const Tolerance& tol = Tolerance::Default);
 bool contains(const Ray& ray, const Point& p, const Tolerance& tol = Tolerance::Default);
+bool contains(const Line& line, const Point& p, const Tolerance& tol = Tolerance::Default);
 
 /// 判断点是否在圆上（注意：调用者需确保点在圆所在平面内）
 bool contains(const Circle& circle, const Point& p, const Tolerance& tol = Tolerance::Default);
