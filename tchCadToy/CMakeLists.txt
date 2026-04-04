@@ -15,7 +15,7 @@ target_link_directories(tchCadToy
 )
 target_link_libraries(tchCadToy
     PUBLIC
-        tchGeneral
+        tchDatabase
         tchPlatform
         ${3rdparty_libs}
         ${essential_libs}

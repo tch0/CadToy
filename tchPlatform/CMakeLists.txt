@@ -25,7 +25,6 @@ target_link_directories(tchPlatform
 )
 target_link_libraries(tchPlatform
     PUBLIC
-        tchGeneral
         ${3rdparty_libs}
         ${essential_libs}
         general_cxx_compiler_flags
