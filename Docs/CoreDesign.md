@@ -305,10 +305,69 @@ struct LineIntersectionResult {
 - 放在GeometryUtils模块，依赖实体层与几何层，提供给命令层或者选择捕捉等框架使用。
 - 处理非简单几何曲线的复杂几何算法，部分实现需要依赖第三方库提供。
 - 例如：多边形布尔、多边形偏移、三角剖分、NURBS曲线（定义在Geometry，算法在GeometryUtils）相关操作等。
+- 目前暂无，后续需要时再来实现。
 
 ## 数据库与实体层
 
+概述：
 - 数据库和实体层定义在同一个模块中。数据库负责保存实体，对应到一张图纸，一个CAD文档。图纸中每一个图形则关联到具体的实体对象和类型。
 - 简单实体直接包含一个`Geometry::xxx`对象，数据从中获取，几何计算时直接调用进行计算。
 - 复合实体比如多段线则保存顶点，需要进行几何计算时构造`Geometry::xxx`对象进行计算。
 
+**数据库**：
+- 结构：
+```
+Database
+├── Entities (图形实体)
+├── Layers (图层)
+├── Linetypes (线型)
+├── TextStyles (文字样式)
+├── DimStyles (标注样式)
+├── Blocks (块定义)
+├── Groups (组)
+├── UCSTable (用户坐标系表)
+├── Layouts (布局)
+├── PlotSettings (打印设置)
+├── NamedObjectsDictionary (命名对象字典)
+│   └── Variables (系统变量)
+├── XRecords (扩展数据记录)
+└── ApplicationData (应用程序自定义数据)
+```
+- 先实现实体、图层、线型、命名对象字典4个表，其他后续逐步添加。
+
+
+
+## Undo/Redo设计
+
+经过慎重考虑，决定采用增量变更+实体备份这种方案来完成：
+- 增量变更：
+    - 这是轻量高频多实体操作的处理方案。
+    - 主要用于属性栏修改属性、夹点编辑等简单修改属性的变更操作。
+    - 通过记录变更的属性、源值、新值、参与变更的所有实体id即可，通过批量设置实体属性即可完成undo操作。
+    - 需要侵入实体，实体需要实现setProperty("name",value)这种方法。
+- 实体备份：
+    - 这是统一、通用的最终方案。
+    - 主要用于命令中的实体修改。
+    - 记录一个UndoGroup(undo操作的单位，一般是命令或者其他被包装成一个UndoGroup的一群操作)中涉及到的所有实体修改、实体删除、实体添加。实体修改会被备份、删除会被保留，并被分配新id并记录对应源id。添加的实体同样会被记录为一个id列表。
+    - undo执行时：所有新添加实体被标记删除(修改id到对应区间)，所有备份实体被恢复为活跃状态，id恢复为记录下的对应源id。
+    - 备份实体只存在于一个会话中，不需要序列化，保存重新打开后丢失。
+- 实体备份事实上足以处理所有情况，但是针对大量实体的属性修改可能会造成大量实体备份同时存在(例如100次连续选择100个实体修改属性会造成10000个实体备份，而增量修改方案则几乎没有什么内存消耗也不需要频繁克隆)。所以对轻量高频的属性修改进行优化以实现内存、性能、可用性的最优化方案。
+
+具体细节：
+- Undo栈保存在Document中对应于该Database，超过100次的记录会被丢弃。
+- undo执行后redo栈新增一条记录，记录与上一条undo栈相反的信息(或者不需要存储反向信息，直接用undo记录推导redo操作就行，undo/redo时记录在undo/redo栈之间移动就行，一个动态数组配合移动的索引即可实现)。新的undo操作开始记录(beginUndoGroup)会让redo栈丢弃现有所有记录。
+- 数据库Database中提供标记删除的功能，而具体的实体克隆则由Undo框架来完成。
+```C++
+// 参考
+class UndoManager {
+public:
+    void beginUndoGroup();
+    void endUndoGroup();
+    void recordModify(ObjectId id);
+    void recordDelete(ObjectId id);
+    void recordCreate(ObjectId id);
+};
+```
+- 命令层需要在任何涉及数据库修改的地方调用对应的函数记录修改，方便Undo框架生成与管理备份对象。
+- 最终一组`beginUndoGroup/endUndoGroup`的所有操作被记录为一个Undo栈中的一个`UndoRecord`，`undo/redo`命令通过管理这个栈执行变更来实现撤销重做操作。如果整个`beginUndoGroup/endUndoGroup`期间没有任何记录，则不会生成`UndoRecord`。
+- 而属性修改对应的undo记录则比较简单，只需要一个Id列表、属性原值与修改后的值即可，后续属性栏实现时再来补充。
