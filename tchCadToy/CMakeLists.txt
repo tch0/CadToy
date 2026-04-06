@@ -1,11 +1,11 @@
-collect_header_files("inc" tch_main_header_dirs tch_main_headers)
-collect_sources_files("src" tch_main_sources)
+collect_header_files("inc" tch_cadtoy_header_dirs tch_cadtoy_headers)
+collect_sources_files("src" tch_cadtoy_sources)
 
-add_executable(tchCadToy ${tch_main_sources} ${tch_main_headers})
+add_executable(tchCadToy ${tch_cadtoy_sources} ${tch_cadtoy_headers})
 
 target_include_directories(tchCadToy
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+        ${tch_cadtoy_header_dirs}
         ${3rdparty_include_dir}
         ${sysconfig_dir}
 )
@@ -22,7 +22,7 @@ target_link_libraries(tchCadToy
         general_cxx_compiler_flags
 )
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_main_sources} ${tch_main_headers})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${tch_cadtoy_sources} ${tch_cadtoy_headers})
 
 # For Windows: compile to Win32 GUI application for Release config, console application for Debug config
 if (WIN32)

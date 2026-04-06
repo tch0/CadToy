@@ -1,5 +1,5 @@
 // 对应头文件
-#include "utils/DisplayConfigManager.h"
+#include "DisplayConfigManager.h"
 
 // C++ 标准库
 #include <algorithm>
@@ -15,8 +15,8 @@
 #include <imgui.h>
 
 // 项目头文件
-#include "debug/Logger.h"
-#include "sys/Global.h"
+#include "Logger.h"
+#include "Global.h"
 
 namespace tch {
 

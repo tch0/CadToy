@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "gl/Shader.h"
+#include "Shader.h"
 
 namespace tch {
 

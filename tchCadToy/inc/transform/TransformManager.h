@@ -5,9 +5,9 @@
 // 第三方库
 
 // 项目头文件
-#include "transform/Camera.h"
-#include "transform/CoordinateSystem.h"
-#include "transform/Viewport.h"
+#include "Camera.h"
+#include "CoordinateSystem.h"
+#include "Viewport.h"
 
 namespace tch {
 

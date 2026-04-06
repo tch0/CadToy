@@ -7,8 +7,8 @@
 // 第三方库
 
 // 项目头文件
-#include "common/CommonTypes.h"
-#include "input/Task.h"
+#include "CommonTypes.h"
+#include "Task.h"
 
 namespace tch {
 

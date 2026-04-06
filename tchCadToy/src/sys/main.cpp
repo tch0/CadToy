@@ -8,11 +8,11 @@
 #include <GLFW/glfw3.h>
 
 // 项目头文件
-#include "command/CommandManager.h"
-#include "debug/Logger.h"
-#include "input/InputHandler.h"
-#include "render/Renderer.h"
-#include "sys/Global.h"
+#include "CommandManager.h"
+#include "Logger.h"
+#include "InputHandler.h"
+#include "Renderer.h"
+#include "Global.h"
 
 
 using namespace tch;

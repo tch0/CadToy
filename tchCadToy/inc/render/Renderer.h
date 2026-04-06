@@ -10,9 +10,9 @@
 #include <imgui.h>
 
 // 项目头文件
-#include "render/CanvasRenderer.h"
-#include "render/EntityRenderer.h"
-#include "transform/TransformManager.h"
+#include "CanvasRenderer.h"
+#include "EntityRenderer.h"
+#include "TransformManager.h"
 
 namespace tch {
 

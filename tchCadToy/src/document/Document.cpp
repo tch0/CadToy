@@ -1,5 +1,5 @@
 // 对应头文件
-#include "document/Document.h"
+#include "Document.h"
 
 // C++ 标准库
 #include <algorithm>

@@ -1,5 +1,5 @@
 // 对应头文件
-#include "utils/LocalizationManager.h"
+#include "LocalizationManager.h"
 
 // C++ 标准库
 #include <fstream>
@@ -11,8 +11,8 @@
 #include <rapidjson/error/en.h>
 
 // 项目头文件
-#include "debug/Logger.h"
-#include "sys/Global.h"
+#include "Logger.h"
+#include "Global.h"
 
 namespace tch {
 

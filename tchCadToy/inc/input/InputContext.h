@@ -9,9 +9,9 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "common/CommonTypes.h"
-#include "input/SelectionTask.h"
-#include "input/Task.h"
+#include "CommonTypes.h"
+#include "SelectionTask.h"
+#include "Task.h"
 
 namespace tch {
 

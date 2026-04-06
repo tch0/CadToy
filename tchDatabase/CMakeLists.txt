@@ -7,7 +7,6 @@ target_include_directories(tchDatabase
     PUBLIC
         ${tch_database_header_dirs}
         ${3rdparty_include_dir}
-        ${sysconfig_dir}
 )
 target_link_directories(tchDatabase
     PUBLIC
@@ -16,8 +15,6 @@ target_link_directories(tchDatabase
 target_link_libraries(tchDatabase
     PUBLIC
         tchGeometry
-        ${3rdparty_libs}
-        ${essential_libs}
         general_cxx_compiler_flags
 )
 

@@ -1,5 +1,5 @@
 // 对应头文件
-#include "gl/GLFuncs.h"
+#include "GLFuncs.h"
 
 // C++ 标准库
 #include <cstdlib>
@@ -12,8 +12,8 @@
 
 // 项目头文件
 #include "SysConfig.h"
-#include "debug/Logger.h"
-#include "sys/Global.h"
+#include "Logger.h"
+#include "Global.h"
 
 using namespace tch;
 using namespace std::string_literals;

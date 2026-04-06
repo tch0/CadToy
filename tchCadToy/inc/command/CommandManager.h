@@ -10,7 +10,7 @@
 // 第三方库
 
 // 项目头文件
-#include "command/Command.h"
+#include "Command.h"
 
 namespace tch {
 

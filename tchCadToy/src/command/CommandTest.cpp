@@ -1,5 +1,5 @@
 // 对应头文件
-#include "command/CommandTest.h"
+#include "CommandTest.h"
 
 // C++ 标准库
 #include <format>
@@ -10,9 +10,9 @@
 // 第三方库
 
 // 项目头文件
-#include "common/CommonTypes.h"
-#include "input/InputContext.h"
-#include "utils/GlobalUtils.h"
+#include "CommonTypes.h"
+#include "InputContext.h"
+#include "GlobalUtils.h"
 
 namespace tch {
 

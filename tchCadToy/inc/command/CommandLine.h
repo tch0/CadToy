@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "command/Command.h"
+#include "Command.h"
 
 namespace tch {
 

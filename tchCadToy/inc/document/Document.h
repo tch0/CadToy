@@ -7,7 +7,7 @@
 // 第三方库
 
 // 项目头文件
-#include "transform/TransformManager.h"
+#include "TransformManager.h"
 
 namespace tch {
 

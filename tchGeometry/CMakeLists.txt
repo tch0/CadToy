@@ -7,13 +7,12 @@ target_include_directories(tchGeometry
     PUBLIC
         ${tch_geometry_header_dirs}
         ${3rdparty_include_dir}
-        ${sysconfig_dir}
 )
 target_link_directories(tchGeometry
     PUBLIC
         ${3rdparty_lib_dir}
 )
-# 只依赖glm，glm是header only，不需要链接
+# only rely on glm, glm is header only, do not need link
 target_link_libraries(tchGeometry
     PUBLIC
         general_cxx_compiler_flags

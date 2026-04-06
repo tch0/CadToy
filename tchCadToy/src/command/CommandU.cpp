@@ -1,12 +1,12 @@
 // 对应头文件
-#include "command/CommandU.h"
+#include "CommandU.h"
 
 // C++ 标准库
 
 // 第三方库
 
 // 项目头文件
-#include "utils/GlobalUtils.h"
+#include "GlobalUtils.h"
 
 namespace tch {
 

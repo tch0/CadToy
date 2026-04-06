@@ -1,5 +1,5 @@
 // 对应头文件
-#include "render/EntityRenderer.h"
+#include "EntityRenderer.h"
 
 // C++ 标准库
 
@@ -7,8 +7,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 // 项目头文件
-#include "debug/Logger.h"
-#include "document/DocManager.h"
+#include "Logger.h"
+#include "DocManager.h"
 
 namespace tch {
 

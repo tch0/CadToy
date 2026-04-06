@@ -1,12 +1,12 @@
 // 对应头文件
-#include "command/Command.h"
+#include "Command.h"
 
 // C++ 标准库
 
 // 第三方库
 
 // 项目头文件
-#include "input/InputContext.h"
+#include "InputContext.h"
 
 namespace tch {
 

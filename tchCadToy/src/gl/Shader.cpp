@@ -1,5 +1,5 @@
 // 对应头文件
-#include "gl/Shader.h"
+#include "Shader.h"
 
 // C++ 标准库
 
@@ -7,7 +7,7 @@
 #include <glm/ext.hpp>
 
 // 项目头文件
-#include "gl/GLFuncs.h"
+#include "GLFuncs.h"
 
 
 Shader::Shader() : m_Id(0)

@@ -1,5 +1,5 @@
 // 对应头文件
-#include "render/Renderer.h"
+#include "Renderer.h"
 
 // C++ 标准库
 #include <algorithm>
@@ -15,17 +15,17 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // 项目头文件
-#include "common/CommonTypes.h"
-#include "command/CommandManager.h"
-#include "debug/Logger.h"
-#include "document/DocManager.h"
-#include "input/InputContext.h"
-#include "input/InputHandler.h"
-#include "sys/Global.h"
-#include "utils/DisplayConfigManager.h"
-#include "utils/GlobalUtils.h"
-#include "utils/LocalizationManager.h"
-#include "utils/StringUtils.h"
+#include "CommonTypes.h"
+#include "CommandManager.h"
+#include "Logger.h"
+#include "DocManager.h"
+#include "InputContext.h"
+#include "InputHandler.h"
+#include "Global.h"
+#include "DisplayConfigManager.h"
+#include "GlobalUtils.h"
+#include "LocalizationManager.h"
+#include "StringUtils.h"
 
 namespace tch {
 

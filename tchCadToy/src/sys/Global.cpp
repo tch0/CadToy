@@ -6,8 +6,8 @@
 
 // 项目头文件
 #include "SysConfig.h"
-#include "debug/Logger.h"
-#include "sys/Global.h"
+#include "Logger.h"
+#include "Global.h"
 
 using namespace tch;
 namespace fs = std::filesystem;

@@ -1,5 +1,5 @@
 // 对应头文件
-#include "input/SelectionTask.h"
+#include "SelectionTask.h"
 
 // C++ 标准库
 
@@ -7,11 +7,11 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "input/InputHandler.h"
-#include "input/InputContext.h"
-#include "render/Renderer.h"
-#include "utils/GlobalUtils.h"
-#include "utils/LocalizationManager.h"
+#include "InputHandler.h"
+#include "InputContext.h"
+#include "Renderer.h"
+#include "GlobalUtils.h"
+#include "LocalizationManager.h"
 
 namespace tch {
 

@@ -1,5 +1,5 @@
 // 对应头文件
-#include "input/InputContext.h"
+#include "InputContext.h"
 
 // C++ 标准库
 #include <algorithm>
@@ -10,12 +10,12 @@
 #include <imgui.h>
 
 // 项目头文件
-#include "command/CommandManager.h"
-#include "input/InputHandler.h"
-#include "render/Renderer.h"
-#include "utils/GlobalUtils.h"
-#include "utils/LocalizationManager.h"
-#include "utils/StringUtils.h"
+#include "CommandManager.h"
+#include "InputHandler.h"
+#include "Renderer.h"
+#include "GlobalUtils.h"
+#include "LocalizationManager.h"
+#include "StringUtils.h"
 
 namespace tch {
 

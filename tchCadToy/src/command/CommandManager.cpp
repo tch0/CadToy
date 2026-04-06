@@ -1,5 +1,5 @@
 // 对应头文件
-#include "command/CommandManager.h"
+#include "CommandManager.h"
 
 // C++ 标准库
 #include <algorithm>
@@ -7,18 +7,18 @@
 // 第三方库
 
 // 项目头文件
-#include "command/CommandClose.h"
-#include "command/CommandLine.h"
-#include "command/CommandTest.h"
-#include "command/CommandUndo.h"
-#include "command/CommandU.h"
-#include "debug/Logger.h"
-#include "document/DocManager.h"
-#include "input/InputContext.h"
-#include "render/Renderer.h"
-#include "utils/GlobalUtils.h"
-#include "utils/StringUtils.h"
-#include "utils/LocalizationManager.h"
+#include "CommandClose.h"
+#include "CommandLine.h"
+#include "CommandTest.h"
+#include "CommandUndo.h"
+#include "CommandU.h"
+#include "Logger.h"
+#include "DocManager.h"
+#include "InputContext.h"
+#include "Renderer.h"
+#include "GlobalUtils.h"
+#include "StringUtils.h"
+#include "LocalizationManager.h"
 
 namespace tch {
 

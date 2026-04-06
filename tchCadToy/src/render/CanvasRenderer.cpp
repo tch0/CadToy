@@ -1,5 +1,5 @@
 // 对应头文件
-#include "render/CanvasRenderer.h"
+#include "CanvasRenderer.h"
 
 // C++ 标准库
 #include <cmath>
@@ -7,12 +7,12 @@
 // 第三方库
 
 // 项目头文件
-#include "common/CommonTypes.h"
-#include "debug/Logger.h"
-#include "document/DocManager.h"
-#include "input/InputContext.h"
-#include "input/InputHandler.h"
-#include "render/Renderer.h"
+#include "CommonTypes.h"
+#include "Logger.h"
+#include "DocManager.h"
+#include "InputContext.h"
+#include "InputHandler.h"
+#include "Renderer.h"
 
 namespace tch {
 
