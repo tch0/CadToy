@@ -366,7 +366,19 @@ struct AABB {
     Point max;  ///< 最大点
     
     AABB() : min(Point(INFINITY, INFINITY, INFINITY)), max(Point(-INFINITY, -INFINITY, -INFINITY)) {}
-    AABB(const Point& m, const Point& M) : min(m), max(M) {}
+    // 通过两点构造包围盒
+    AABB(const Point& a, const Point& b) {
+        min = Point(
+            std::min(a.x, b.x),
+            std::min(a.y, b.y),
+            std::min(a.z, b.z)
+        );
+        max = Point(
+            std::max(a.x, b.x),
+            std::max(a.y, b.y),
+            std::max(a.z, b.z)
+        );
+    }
     
     void expand(const Point& p);                 ///< 扩展包围盒以包含点 p
     void merge(const AABB& other);               ///< 合并另一个包围盒
