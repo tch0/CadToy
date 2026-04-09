@@ -29,6 +29,15 @@ public:
         kRGB
     };
     
+    // 预定义颜色（静态成员）
+    static const DbColor White;    // 白
+    static const DbColor Red;      // 红
+    static const DbColor Yellow;   // 黄
+    static const DbColor Green;    // 绿
+    static const DbColor Cyan;     // 青
+    static const DbColor Blue;     // 蓝
+    static const DbColor Magenta;  // 洋红
+    
     static DbColor byLayer() { return DbColor(kByLayer); }
     static DbColor byBlock() { return DbColor(kByBlock); }
     static DbColor fromRgb(uint8_t r, uint8_t g, uint8_t b) {

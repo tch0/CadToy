@@ -9,6 +9,19 @@
 
 
 namespace tch {
+
+// ============================================================================
+// DbColor 预定义颜色定义
+// ============================================================================
+
+const DbColor DbColor::White = DbColor::fromRgb(255, 255, 255);
+const DbColor DbColor::Red = DbColor::fromRgb(255, 0, 0);
+const DbColor DbColor::Yellow = DbColor::fromRgb(255, 255, 0);
+const DbColor DbColor::Green = DbColor::fromRgb(0, 255, 0);
+const DbColor DbColor::Cyan = DbColor::fromRgb(0, 255, 255);
+const DbColor DbColor::Blue = DbColor::fromRgb(0, 0, 255);
+const DbColor DbColor::Magenta = DbColor::fromRgb(255, 0, 255);
+
 namespace DbJsonUtils {
 
 // ============================================================================

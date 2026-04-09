@@ -28,8 +28,9 @@ public:
         kEllipse,
         kXLine,
         kRay,
-        // 
+        // 其他对象
         kLayer,
+        // 计数
         kCount
     };
     

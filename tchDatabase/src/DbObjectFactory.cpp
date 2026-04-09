@@ -12,6 +12,7 @@
 #include "DbEllipse.h"
 #include "DbRay.h"
 #include "DbXLine.h"
+#include "DbLayer.h"
 
 
 namespace tch {
@@ -32,6 +33,7 @@ DbObjectFactory::DbObjectFactory() {
     registerType<DbEllipse>(DbObject::kEllipse);
     registerType<DbRay>(DbObject::kRay);
     registerType<DbXLine>(DbObject::kXLine);
+    registerType<DbLayer>(DbObject::kLayer);
 }
 
 std::unique_ptr<DbObject> DbObjectFactory::create(DbObject::Type type) const {
