@@ -4,6 +4,7 @@
 #include <functional>
 
 // 第三方库
+#include <rapidjson/document.h>
 
 // 项目头文件
 #include "DbObject.h"
@@ -26,6 +27,9 @@ public:
     }
     
     std::unique_ptr<DbObject> create(DbObject::Type type) const;
+    
+    // 从 JSON 创建对象
+    std::unique_ptr<DbObject> createFromJson(const rapidjson::Value& value) const;
     
 private:
     DbObjectFactory();

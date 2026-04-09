@@ -62,8 +62,8 @@ public:
     virtual std::unique_ptr<DbObject> clone() const = 0;
     
     // 序列化
-    virtual void toJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
-    virtual bool fromJson(const rapidjson::Value& value);
+    virtual void saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
+    virtual bool loadFromJson(const rapidjson::Value& value);
     
 protected:
     virtual void writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;

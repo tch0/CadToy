@@ -44,4 +44,33 @@ std::unique_ptr<DbObject> DbObjectFactory::create(DbObject::Type type) const {
     return nullptr;
 }
 
+std::unique_ptr<DbObject> DbObjectFactory::createFromJson(const rapidjson::Value& value) const {
+    if (!value.IsObject()) {
+        return nullptr;
+    }
+
+    // 读取 type 字段
+    if (!value.HasMember("type") || !value["type"].IsInt()) {
+        return nullptr;
+    }
+
+    int typeValue = value["type"].GetInt();
+    if (typeValue < 0 || typeValue >= static_cast<int>(DbObject::kCount)) {
+        return nullptr;
+    }
+
+    DbObject::Type type = static_cast<DbObject::Type>(typeValue);
+    std::unique_ptr<DbObject> obj = create(type);
+    if (!obj) {
+        return nullptr;
+    }
+
+    // 从 JSON 读取数据
+    if (!obj->loadFromJson(value)) {
+        return nullptr;
+    }
+
+    return obj;
+}
+
 } // namespace tch

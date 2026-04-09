@@ -11,7 +11,7 @@
 
 namespace tch {
 
-void DbObject::toJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
+void DbObject::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     writer.StartObject();
     
     writer.Key("type");
@@ -25,7 +25,7 @@ void DbObject::toJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) 
     writer.EndObject();
 }
 
-bool DbObject::fromJson(const rapidjson::Value& value) {
+bool DbObject::loadFromJson(const rapidjson::Value& value) {
     if (!value.HasMember("type") || !value["type"].IsUint()) {
         return false;
     }
