@@ -332,6 +332,7 @@ struct LineIntersectionResult {
 Database
 ├── Entities (图形实体)
 ├── Layers (图层)
+├── Variables (系统变量)
 ├── Linetypes (线型)
 ├── TextStyles (文字样式)
 ├── DimStyles (标注样式)
@@ -341,11 +342,10 @@ Database
 ├── Layouts (布局)
 ├── PlotSettings (打印设置)
 ├── NamedObjectsDictionary (命名对象字典)
-│   └── Variables (系统变量)
 ├── XRecords (扩展数据记录)
 └── ApplicationData (应用程序自定义数据)
 ```
-- 先实现实体、图层、线型、命名对象字典4个表，其他后续逐步添加。
+- 先实现实体、图层、系统变量3个表，其他后续根据需要逐步添加。
 - 序列化：实现为json文件格式，通过rapidjson库读取。
 
 **实体与对象**：
