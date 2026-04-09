@@ -7,7 +7,7 @@
 #include <rapidjson/prettywriter.h>
 
 // 项目头文件
-#include "DbTypes.h"
+#include "DbCommon.h"
 #include "DbObject.h"
 #include "Geometry.h"
 

@@ -8,6 +8,7 @@
 
 // 项目头文件
 
+
 namespace tch {
 
 DbEllipse::DbEllipse(const Geometry::Point& center, double radiusX, double radiusY, double rotation)
@@ -47,71 +48,56 @@ void DbEllipse::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& wr
     DbEntity::writeFields(writer);
     
     writer.Key("center");
-    writer.StartObject();
-    writer.Key("x");
-    writer.Double(m_ellipse.center.x);
-    writer.Key("y");
-    writer.Double(m_ellipse.center.y);
-    writer.Key("z");
-    writer.Double(m_ellipse.center.z);
-    writer.EndObject();
+    DbJsonUtils::writeVectorPoint3d(writer, m_ellipse.center);
     
     writer.Key("radiusX");
-    writer.Double(m_ellipse.radiusX);
+    DbJsonUtils::writeDouble(writer, m_ellipse.radiusX);
     
     writer.Key("radiusY");
-    writer.Double(m_ellipse.radiusY);
+    DbJsonUtils::writeDouble(writer, m_ellipse.radiusY);
     
     writer.Key("rotation");
-    writer.Double(m_ellipse.rotation);
+    DbJsonUtils::writeDouble(writer, m_ellipse.rotation);
     
     writer.Key("startParam");
-    writer.Double(m_ellipse.startParam);
+    DbJsonUtils::writeDouble(writer, m_ellipse.startParam);
     
     writer.Key("endParam");
-    writer.Double(m_ellipse.endParam);
+    DbJsonUtils::writeDouble(writer, m_ellipse.endParam);
 }
 
 bool DbEllipse::readFields(const rapidjson::Value& value) {
-    if (!DbEntity::readFields(value)) { return false; }
+    if (!DbEntity::readFields(value)) {
+        return false;
+    }
     
-    Geometry::Point center(0, 0, 0);
+    Geometry::Point center;
     double radiusX = 0.0;
     double radiusY = 0.0;
     double rotation = 0.0;
     double startParam = 0.0;
     double endParam = 2.0 * Geometry::PI;
     
-    if (value.HasMember("center") && value["center"].IsObject()) {
-        const auto& centerVal = value["center"];
-        if (centerVal.HasMember("x") && centerVal["x"].IsDouble()) { center.x = centerVal["x"].GetDouble(); }
-        if (centerVal.HasMember("y") && centerVal["y"].IsDouble()) { center.y = centerVal["y"].GetDouble(); }
-        if (centerVal.HasMember("z") && centerVal["z"].IsDouble()) { center.z = centerVal["z"].GetDouble(); }
+    if (value.HasMember("center")) {
+        DbJsonUtils::readVectorPoint3d(value["center"], center);
+    }
+    if (value.HasMember("radiusX")) {
+        DbJsonUtils::readDouble(value["radiusX"], radiusX);
+    }
+    if (value.HasMember("radiusY")) {
+        DbJsonUtils::readDouble(value["radiusY"], radiusY);
+    }
+    if (value.HasMember("rotation")) {
+        DbJsonUtils::readDouble(value["rotation"], rotation);
+    }
+    if (value.HasMember("startParam")) {
+        DbJsonUtils::readDouble(value["startParam"], startParam);
+    }
+    if (value.HasMember("endParam")) {
+        DbJsonUtils::readDouble(value["endParam"], endParam);
     }
     
-    if (value.HasMember("radiusX") && value["radiusX"].IsDouble()) {
-        radiusX = value["radiusX"].GetDouble();
-    }
-    
-    if (value.HasMember("radiusY") && value["radiusY"].IsDouble()) {
-        radiusY = value["radiusY"].GetDouble();
-    }
-    
-    if (value.HasMember("rotation") && value["rotation"].IsDouble()) {
-        rotation = value["rotation"].GetDouble();
-    }
-    
-    if (value.HasMember("startParam") && value["startParam"].IsDouble()) {
-        startParam = value["startParam"].GetDouble();
-    }
-    
-    if (value.HasMember("endParam") && value["endParam"].IsDouble()) {
-        endParam = value["endParam"].GetDouble();
-    }
-    
-    m_ellipse = Geometry::Ellipse(center, Geometry::Vector(0, 0, 1),
-                                   radiusX, radiusY, rotation,
-                                   startParam, endParam);
+    m_ellipse = Geometry::Ellipse(center, Geometry::Vector(0, 0, 1), radiusX, radiusY, rotation, startParam, endParam);
     return true;
 }
 

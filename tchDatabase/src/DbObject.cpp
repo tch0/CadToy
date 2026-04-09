@@ -6,6 +6,7 @@
 // 第三方库
 
 // 项目头文件
+#include "DbCommon.h"
 
 
 namespace tch {
@@ -25,19 +26,21 @@ void DbObject::toJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) 
 }
 
 bool DbObject::fromJson(const rapidjson::Value& value) {
-    if (!value.HasMember("type") || !value["type"].IsUint()) { return false; }
+    if (!value.HasMember("type") || !value["type"].IsUint()) {
+        return false;
+    }
     // typeString 只用于调试，不读取
     return readFields(value);
 }
 
 void DbObject::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     writer.Key("id");
-    writer.Uint64(m_id);
+    DbJsonUtils::writeUint64(writer, m_id);
 }
 
 bool DbObject::readFields(const rapidjson::Value& value) {
-    if (value.HasMember("id") && value["id"].IsUint64()) {
-        m_id = value["id"].GetUint64();
+    if (value.HasMember("id")) {
+        DbJsonUtils::readUint64(value["id"], m_id);
     }
     return true;
 }

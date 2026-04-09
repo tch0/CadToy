@@ -28,31 +28,25 @@ void DbCircle::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& wri
     DbEntity::writeFields(writer);
     
     writer.Key("center");
-    writer.StartObject();
-    writer.Key("x"); writer.Double(m_circle.center.x);
-    writer.Key("y"); writer.Double(m_circle.center.y);
-    writer.Key("z"); writer.Double(m_circle.center.z);
-    writer.EndObject();
+    DbJsonUtils::writeVectorPoint3d(writer, m_circle.center);
     
     writer.Key("radius");
-    writer.Double(m_circle.radius);
+    DbJsonUtils::writeDouble(writer, m_circle.radius);
 }
 
 bool DbCircle::readFields(const rapidjson::Value& value) {
-    if (!DbEntity::readFields(value)) { return false; }
-    
-    Geometry::Point center(0, 0, 0);
-    double radius = 0.0;
-    
-    if (value.HasMember("center") && value["center"].IsObject()) {
-        const auto& centerVal = value["center"];
-        if (centerVal.HasMember("x") && centerVal["x"].IsDouble()) { center.x = centerVal["x"].GetDouble(); }
-        if (centerVal.HasMember("y") && centerVal["y"].IsDouble()) { center.y = centerVal["y"].GetDouble(); }
-        if (centerVal.HasMember("z") && centerVal["z"].IsDouble()) { center.z = centerVal["z"].GetDouble(); }
+    if (!DbEntity::readFields(value)) {
+        return false;
     }
     
-    if (value.HasMember("radius") && value["radius"].IsDouble()) {
-        radius = value["radius"].GetDouble();
+    Geometry::Point center;
+    double radius = 0.0;
+    
+    if (value.HasMember("center")) {
+        DbJsonUtils::readVectorPoint3d(value["center"], center);
+    }
+    if (value.HasMember("radius")) {
+        DbJsonUtils::readDouble(value["radius"], radius);
     }
     
     m_circle = Geometry::Circle::xyPlane(center, radius);

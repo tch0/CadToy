@@ -47,24 +47,10 @@ void DbRay::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
     DbEntity::writeFields(writer);
     
     writer.Key("origin");
-    writer.StartObject();
-    writer.Key("x");
-    writer.Double(m_ray.origin.x);
-    writer.Key("y");
-    writer.Double(m_ray.origin.y);
-    writer.Key("z");
-    writer.Double(m_ray.origin.z);
-    writer.EndObject();
+    DbJsonUtils::writeVectorPoint3d(writer, m_ray.origin);
     
     writer.Key("direction");
-    writer.StartObject();
-    writer.Key("x");
-    writer.Double(m_ray.direction.x);
-    writer.Key("y");
-    writer.Double(m_ray.direction.y);
-    writer.Key("z");
-    writer.Double(m_ray.direction.z);
-    writer.EndObject();
+    DbJsonUtils::writeVectorPoint3d(writer, m_ray.direction);
 }
 
 bool DbRay::readFields(const rapidjson::Value& value) {
@@ -72,33 +58,14 @@ bool DbRay::readFields(const rapidjson::Value& value) {
         return false;
     }
     
-    Geometry::Point origin(0, 0, 0);
+    Geometry::Point origin;
     Geometry::Vector direction(1, 0, 0);
     
-    if (value.HasMember("origin") && value["origin"].IsObject()) {
-        const auto& originVal = value["origin"];
-        if (originVal.HasMember("x") && originVal["x"].IsDouble()) {
-            origin.x = originVal["x"].GetDouble();
-        }
-        if (originVal.HasMember("y") && originVal["y"].IsDouble()) {
-            origin.y = originVal["y"].GetDouble();
-        }
-        if (originVal.HasMember("z") && originVal["z"].IsDouble()) {
-            origin.z = originVal["z"].GetDouble();
-        }
+    if (value.HasMember("origin")) {
+        DbJsonUtils::readVectorPoint3d(value["origin"], origin);
     }
-    
-    if (value.HasMember("direction") && value["direction"].IsObject()) {
-        const auto& dirVal = value["direction"];
-        if (dirVal.HasMember("x") && dirVal["x"].IsDouble()) {
-            direction.x = dirVal["x"].GetDouble();
-        }
-        if (dirVal.HasMember("y") && dirVal["y"].IsDouble()) {
-            direction.y = dirVal["y"].GetDouble();
-        }
-        if (dirVal.HasMember("z") && dirVal["z"].IsDouble()) {
-            direction.z = dirVal["z"].GetDouble();
-        }
+    if (value.HasMember("direction")) {
+        DbJsonUtils::readVectorPoint3d(value["direction"], direction);
     }
     
     m_ray = Geometry::Ray(origin, direction);

@@ -351,6 +351,30 @@ Database
 **实体与对象**：
 
 - 所有保存在数据库中的数据都派生自`DbObject`，其中实现RTTI，`id`相关接口，`clone`接口。
+- `DbEntity`是所有可绘制图形的父类，
+- 所有可绘制图形都派生自`DbEntity`：
+    - 其中维护图形通用数据：图层、颜色、线型、线型比例、线宽、可见性。
+    - 定义纯虚函数获取包围盒，所以子类都需要实现。
+- 具体图形类派生`DbEntity`并实现各自的几何数据：
+    - 简单图形：线段、直线、射线、圆、椭圆直接包含对应几何对象。
+    - 复杂图形：多段线等则保存一系列点等数据。
+- 数据格式与序列化：图形使用json数据，rapidjson库用来实例化。所有数据都使用整数(枚举、索引、id等)、浮点数(坐标、长度等)或者字符串(比如名称)保存。
+- 数据示例：
+```C++
+{
+    "type": 2, // DbObject::kCircle
+    "typeString": "Circle", // 用于人的阅读，实际type就足够表示类型
+    "id": 1001, // object id
+    "layerId": 0,
+    "color": [0], // [type, rgb?]
+    "linetype": [2], // [type, id?]
+    "linetypeScale": 1.0,
+    "lineWeight": -1, // 特殊值表示ByLayer
+    "visible": true,
+    "center": [50.0, 50.0, 0.0], // [x, y, z]
+    "radius": 25.0
+}
+```
 
 ## Undo/Redo设计
 
@@ -359,7 +383,7 @@ Database
     - 这是轻量高频多实体操作的处理方案。
     - 主要用于属性栏修改属性、夹点编辑等简单修改属性的变更操作。
     - 通过记录变更的属性、源值、新值、参与变更的所有实体id即可，通过批量设置实体属性即可完成undo操作。
-    - 需要侵入实体，实体需要实现setProperty("name",value)这种方法。
+    - 需要侵入实体，实体需要实现setProperty(DbPropertyId::kCertainProperty, propValue)这种方法。
 - 实体备份：
     - 这是统一、通用的最终方案。
     - 主要用于命令中的实体修改。

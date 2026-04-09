@@ -2,10 +2,16 @@
 
 // C++ 标准库
 #include <cstdint>
+#include <string>
 
 // 第三方库
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
+#include <glm/glm.hpp>
 
 // 项目头文件
+
 
 namespace tch {
 
@@ -20,20 +26,20 @@ public:
     enum Type {
         kByLayer,
         kByBlock,
-        kColor
+        kRGB
     };
     
     static DbColor byLayer() { return DbColor(kByLayer); }
     static DbColor byBlock() { return DbColor(kByBlock); }
-    static DbColor rgb(uint8_t r, uint8_t g, uint8_t b) {
-        DbColor c(kColor);
+    static DbColor fromRgb(uint8_t r, uint8_t g, uint8_t b) {
+        DbColor c(kRGB);
         c.m_rgb = (static_cast<uint32_t>(r) << 16) |
                   (static_cast<uint32_t>(g) << 8) |
                   static_cast<uint32_t>(b);
         return c;
     }
-    static DbColor rgb(uint32_t rgb) {
-        DbColor c(kColor);
+    static DbColor fromRgb(uint32_t rgb) {
+        DbColor c(kRGB);
         c.m_rgb = rgb;
         return c;
     }
@@ -95,14 +101,14 @@ public:
         kByLayer,       // 跟随图层
         kByBlock,       // 跟随块
         kContinuous,    // 实线（特殊处理，不查表）
-        kLinetype       // 普通线型，通过 ID 引用
+        kLinetypeId     // 普通线型，通过 ID 引用
     };
     
     static DbLinetypeRef byLayer() { return DbLinetypeRef(kByLayer); }
     static DbLinetypeRef byBlock() { return DbLinetypeRef(kByBlock); }
     static DbLinetypeRef continuous() { return DbLinetypeRef(kContinuous); }
-    static DbLinetypeRef byId(ObjectId id) {
-        DbLinetypeRef ref(kLinetype);
+    static DbLinetypeRef fromId(ObjectId id) {
+        DbLinetypeRef ref(kLinetypeId);
         ref.m_linetypeId = id;
         return ref;
     }
@@ -120,5 +126,54 @@ private:
     Type m_type;
     ObjectId m_linetypeId = 0;
 };
+
+// ============================================================================
+// JSON 序列化工具函数
+// ============================================================================
+
+namespace DbJsonUtils {
+
+// 基本类型
+void writeDouble(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, double value);
+void readDouble(const rapidjson::Value& value, double& out);
+
+void writeInt(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, int value);
+void readInt(const rapidjson::Value& value, int& out);
+
+void writeUint(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, uint32_t value);
+void readUint(const rapidjson::Value& value, uint32_t& out);
+
+void writeUint64(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, uint64_t value);
+void readUint64(const rapidjson::Value& value, uint64_t& out);
+
+void writeBool(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, bool value);
+void readBool(const rapidjson::Value& value, bool& out);
+
+// 字符串
+void writeString(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const char* str);
+void writeString(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const std::string& str);
+void readString(const rapidjson::Value& value, std::string& out);
+
+// 2D 向量/点 [x, y]
+void writeVectorPoint2d(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const glm::dvec2& v);
+void readVectorPoint2d(const rapidjson::Value& value, glm::dvec2& out);
+
+// 3D 向量/点 [x, y, z]
+void writeVectorPoint3d(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const glm::dvec3& v);
+void readVectorPoint3d(const rapidjson::Value& value, glm::dvec3& out);
+
+// 颜色 [type, rgb?]
+void writeColor(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const DbColor& color);
+void readColor(const rapidjson::Value& value, DbColor& out);
+
+// 线型 [type, id?]
+void writeLinetype(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const DbLinetypeRef& linetype);
+void readLinetype(const rapidjson::Value& value, DbLinetypeRef& out);
+
+// 线宽
+void writeLineWeight(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, DbLineWeight lw);
+void readLineWeight(const rapidjson::Value& value, DbLineWeight& out);
+
+} // namespace DbJsonUtils
 
 } // namespace tch

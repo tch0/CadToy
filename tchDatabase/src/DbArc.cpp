@@ -4,7 +4,6 @@
 // C++ 标准库
 #include <cmath>
 
-
 // 第三方库
 
 // 项目头文件
@@ -73,50 +72,39 @@ void DbArc::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer
     DbEntity::writeFields(writer);
     
     writer.Key("center");
-    writer.StartObject();
-    writer.Key("x");
-    writer.Double(m_arc.center.x);
-    writer.Key("y");
-    writer.Double(m_arc.center.y);
-    writer.Key("z");
-    writer.Double(m_arc.center.z);
-    writer.EndObject();
+    DbJsonUtils::writeVectorPoint3d(writer, m_arc.center);
     
     writer.Key("radius");
-    writer.Double(m_arc.radius);
+    DbJsonUtils::writeDouble(writer, m_arc.radius);
     
     writer.Key("startAngle");
-    writer.Double(m_arc.startAngle);
+    DbJsonUtils::writeDouble(writer, m_arc.startAngle);
     
     writer.Key("endAngle");
-    writer.Double(m_arc.endAngle);
+    DbJsonUtils::writeDouble(writer, m_arc.endAngle);
 }
 
 bool DbArc::readFields(const rapidjson::Value& value) {
-    if (!DbEntity::readFields(value)) { return false; }
+    if (!DbEntity::readFields(value)) {
+        return false;
+    }
     
-    Geometry::Point center(0, 0, 0);
+    Geometry::Point center;
     double radius = 0.0;
     double startAngle = 0.0;
     double endAngle = 0.0;
     
-    if (value.HasMember("center") && value["center"].IsObject()) {
-        const auto& centerVal = value["center"];
-        if (centerVal.HasMember("x") && centerVal["x"].IsDouble()) { center.x = centerVal["x"].GetDouble(); }
-        if (centerVal.HasMember("y") && centerVal["y"].IsDouble()) { center.y = centerVal["y"].GetDouble(); }
-        if (centerVal.HasMember("z") && centerVal["z"].IsDouble()) { center.z = centerVal["z"].GetDouble(); }
+    if (value.HasMember("center")) {
+        DbJsonUtils::readVectorPoint3d(value["center"], center);
     }
-    
-    if (value.HasMember("radius") && value["radius"].IsDouble()) {
-        radius = value["radius"].GetDouble();
+    if (value.HasMember("radius")) {
+        DbJsonUtils::readDouble(value["radius"], radius);
     }
-    
-    if (value.HasMember("startAngle") && value["startAngle"].IsDouble()) {
-        startAngle = value["startAngle"].GetDouble();
+    if (value.HasMember("startAngle")) {
+        DbJsonUtils::readDouble(value["startAngle"], startAngle);
     }
-    
-    if (value.HasMember("endAngle") && value["endAngle"].IsDouble()) {
-        endAngle = value["endAngle"].GetDouble();
+    if (value.HasMember("endAngle")) {
+        DbJsonUtils::readDouble(value["endAngle"], endAngle);
     }
     
     m_arc = Geometry::Arc(center, Geometry::Vector(0, 0, 1), radius, startAngle, endAngle);
