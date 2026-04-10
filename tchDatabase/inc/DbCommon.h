@@ -144,6 +144,7 @@ enum class SysVar : uint16_t {
     // 文档级系统变量
     kLwDefault,   // 默认线宽 (LWDEFAULT), int/DbLineWeight
     kLtScale,     // 线型比例 (LTSCALE), double
+    kCLayer,      // 当前图层 (CLAYER), uint64/ObjectId
     kCount
 };
 

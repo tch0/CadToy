@@ -10,6 +10,10 @@ namespace tch {
 
 Database::Database() {
     initDefaultSysVars();
+
+    // 创建默认"0"图层，并设为当前图层
+    ObjectId layer0Id = ensureLayerZero();
+    setCurrentLayerId(layer0Id);
 }
 
 Database::~Database() = default;
@@ -203,11 +207,18 @@ DbLayer* Database::getLayerByName(const std::string& name) const {
     return nullptr;
 }
 
-void Database::removeLayer(ObjectId id) {
+bool Database::removeLayer(ObjectId id) {
     DbLayer* layer = getLayer(id);
     if (!layer) {
-        return;
+        return false;
     }
+
+    // 禁止删除当前图层
+    if (currentLayerId() == id) {
+        return false;
+    }
+
+    // TODO: 检查图层上是否有实体，有则返回失败
 
     // 从名称映射中移除
     m_layerNameMap.erase(layer->name());
@@ -220,6 +231,27 @@ void Database::removeLayer(ObjectId id) {
 
     // 移动到备份区
     removeObject(id);
+    return true;
+}
+
+ObjectId Database::currentLayerId() const {
+    auto it = m_sysVars.find(SysVar::kCLayer);
+    if (it != m_sysVars.end()) {
+        return static_cast<ObjectId>(it->second.asInt());
+    }
+    return 0;
+}
+
+void Database::setCurrentLayerId(ObjectId id) {
+    // 检查 ID 是否有效且是图层
+    if (id != 0 && !getLayer(id)) {
+        return;
+    }
+    m_sysVars[SysVar::kCLayer] = SysVarValue::fromInt(static_cast<int>(id));
+}
+
+DbLayer* Database::currentLayer() const {
+    return getLayer(currentLayerId());
 }
 
 // ============================================================================
@@ -296,6 +328,8 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     writer.Int(getSysVar(SysVar::kLwDefault).asInt());
     writer.Key("LTSCALE");
     writer.Double(getSysVar(SysVar::kLtScale).asDouble());
+    writer.Key("CLAYER");
+    writer.Uint64(currentLayerId());
     writer.EndObject();
 
     // 图层列表
@@ -338,11 +372,20 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     // 读取系统变量
     if (value.HasMember("variables") && value["variables"].IsObject()) {
         const auto& vars = value["variables"];
-        if (vars.HasMember("LWDEFAULT") && vars["LWDEFAULT"].IsNumber()) {
+
+        // LWDEFAULT - 必须是整数
+        if (vars.HasMember("LWDEFAULT") && vars["LWDEFAULT"].IsInt()) {
             setSysVar(SysVar::kLwDefault, SysVarValue::fromInt(vars["LWDEFAULT"].GetInt()));
         }
+
+        // LTSCALE - 可以是数值
         if (vars.HasMember("LTSCALE") && vars["LTSCALE"].IsNumber()) {
             setSysVar(SysVar::kLtScale, SysVarValue::fromDouble(vars["LTSCALE"].GetDouble()));
+        }
+
+        // CLAYER - 必须是 uint64
+        if (vars.HasMember("CLAYER") && vars["CLAYER"].IsUint64()) {
+            setCurrentLayerId(vars["CLAYER"].GetUint64());
         }
     }
 
@@ -381,6 +424,14 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
                 m_objects[id] = std::move(obj);
             }
         }
+    }
+
+    // 加载完成后，检查 CLAYER 有效性
+    ObjectId currentId = currentLayerId();
+    if (currentId == 0 || !getLayer(currentId)) {
+        // CLAYER 无效，确保"0"图层存在并设为当前
+        ObjectId layer0Id = ensureLayerZero();
+        setCurrentLayerId(layer0Id);
     }
 
     return true;
@@ -427,8 +478,32 @@ ObjectId Database::allocateId(DbObject::Type type) {
 }
 
 void Database::initDefaultSysVars() {
-    m_sysVars[SysVar::kLwDefault] = SysVarValue::fromInt(static_cast<int>(DbLineWeight::k025));
+    m_sysVars[SysVar::kLwDefault] = SysVarValue::fromInt(static_cast<int>(DbLineWeight::k000));
     m_sysVars[SysVar::kLtScale] = SysVarValue::fromDouble(1.0);
+    m_sysVars[SysVar::kCLayer] = SysVarValue::fromInt(0);  // 0 表示无效ID
+}
+
+ObjectId Database::ensureLayerZero() {
+    // 检查是否已存在"0"图层
+    DbLayer* layer0 = getLayerByName("0");
+    if (layer0) {
+        return layer0->id();
+    }
+
+    // 创建"0"图层
+    auto newLayer = std::make_unique<DbLayer>();
+    newLayer->setName("0");
+    newLayer->setColor(DbColor::White);
+    newLayer->setLinetype(DbLinetypeRef::continuous());
+    newLayer->setLineWeight(DbLineWeight::kByLwDefault);
+
+    ObjectId id = allocateId(DbObject::kLayer);
+    newLayer->setId(id);
+    m_objects[id] = std::move(newLayer);
+    m_layerIds.push_back(id);
+    m_layerNameMap["0"] = id;
+
+    return id;
 }
 
 } // namespace tch

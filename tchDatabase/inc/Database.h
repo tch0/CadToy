@@ -105,11 +105,19 @@ public:
     // 根据名称获取图层
     DbLayer* getLayerByName(const std::string& name) const;
 
-    // 删除图层
-    void removeLayer(ObjectId id);
+    // 删除图层，返回是否成功
+    // TODO: 需要检查图层上是否有实体，有则返回失败并提供相关信息
+    bool removeLayer(ObjectId id);
 
     // 获取所有图层 ID
     const std::vector<ObjectId>& layerIds() const { return m_layerIds; }
+
+    // 获取/设置当前图层 ID
+    ObjectId currentLayerId() const;
+    void setCurrentLayerId(ObjectId id);
+
+    // 获取当前图层
+    DbLayer* currentLayer() const;
 
     // ========================================================================
     // 系统变量
@@ -183,6 +191,9 @@ private:
 
     // 初始化默认系统变量
     void initDefaultSysVars();
+
+    // 确保有"0"图层，返回其ID
+    ObjectId ensureLayerZero();
 };
 
 } // namespace tch
