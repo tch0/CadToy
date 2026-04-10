@@ -3,13 +3,13 @@
 
 // C++ 标准库
 #include <algorithm>
-#include <fstream>
 
 // 第三方库
 
 // 项目头文件
 #include "Document.h"
 #include "Logger.h"
+
 
 namespace tch {
 
@@ -29,38 +29,35 @@ void DocManager::initialize() {
     s_currentDocIndex = createNewDocument();
 }
 
+// 生成默认文件名（不含后缀，如 "unnamed-0"）
+std::string DocManager::generateDefaultFileName() {
+    return "unnamed-" + std::to_string(s_docCounter++);
+}
+
 // 创建新文档，返回文档索引
 std::size_t DocManager::createNewDocument() {
-    std::string documentName = "unnamed-" + std::to_string(s_docCounter);
-    s_docCounter++;
+    Document newDocument(generateDefaultFileName());
+    // Database 已在 Document 构造函数中初始化，包含默认 "0" 图层
     
-    Document newDocument(documentName, "");
-    s_documents.push_back(newDocument);
-    
+    s_documents.push_back(std::move(newDocument));
     return s_documents.size() - 1;
 }
 
 // 打开文件，返回文档索引
 std::size_t DocManager::openFile(const std::string& filePath) {
     try {
-        std::ifstream file(filePath);
-        if (!file.is_open()) {
-            LOG_ERROR("Failed to open file: {}", filePath);
-            return -1;
+        // 使用默认构造创建文档（包含 Database）
+        Document newDocument;
+        
+        // 尝试加载文件
+        if (!newDocument.loadFromFile(filePath)) {
+            LOG_ERROR("Failed to load file: {}", filePath);
+            return -1;  // 加载失败，返回无效索引
         }
         
-        std::string content((std::istreambuf_iterator<char>(file)),
-                           std::istreambuf_iterator<char>());
-        file.close();
-        
-        Document newDocument("", filePath);
-        newDocument.setContent(content);
-        newDocument.markSaved(true);
-        
-        s_documents.push_back(newDocument);
+        // 加载成功
+        s_documents.push_back(std::move(newDocument));
         s_currentDocIndex = s_documents.size() - 1;
-        
-        // 添加到最近文件
         addToRecentFiles(filePath);
         
         return s_currentDocIndex;
@@ -82,26 +79,14 @@ bool DocManager::saveFile(std::size_t index) {
         return false;
     }
     
-    try {
-        std::ofstream outFile(document.getFullPath());
-        if (!outFile.is_open()) {
-            LOG_ERROR("Failed to save document: {}", document.getFullPath());
-            return false;
-        }
-        
-        outFile << document.getContent();
-        outFile.close();
-        
-        document.markSaved(true);
-        
-        // 添加到最近文件
-        addToRecentFiles(document.getFullPath());
-        
-        return true;
-    } catch (const std::exception& e) {
-        LOG_ERROR("Error saving document: {}", e.what());
+    if (!document.saveToFile()) {
+        LOG_ERROR("Failed to save document: {}", document.getFullPath());
         return false;
     }
+    
+    // 添加到最近文件
+    addToRecentFiles(document.getFullPath());
+    return true;
 }
 
 // 另存为
@@ -110,28 +95,14 @@ bool DocManager::saveFileAs(std::size_t index, const std::string& filePath) {
         return false;
     }
     
-    try {
-        std::ofstream outFile(filePath);
-        if (!outFile.is_open()) {
-            LOG_ERROR("Failed to save document as: {}", filePath);
-            return false;
-        }
-        
-        outFile << s_documents[index].getContent();
-        outFile.close();
-        
-        // 更新文档信息
-        s_documents[index].setFullPath(filePath);
-        s_documents[index].markSaved(true);
-        
-        // 添加到最近文件
-        addToRecentFiles(filePath);
-        
-        return true;
-    } catch (const std::exception& e) {
-        LOG_ERROR("Error saving document as: {}", e.what());
+    if (!s_documents[index].saveToFile(filePath)) {
+        LOG_ERROR("Failed to save document as: {}", filePath);
         return false;
     }
+    
+    // 添加到最近文件
+    addToRecentFiles(filePath);
+    return true;
 }
 
 // 关闭文档
@@ -188,15 +159,6 @@ Document& DocManager::getDocument(std::size_t index) {
         return s_documents[index];
     }
     return emptyDocument;
-}
-
-// 设置文档内容
-void DocManager::setDocumentContent(std::size_t index, const std::string& content) {
-    if (index < s_documents.size()) {
-        if (s_documents[index].getContent() != content) {
-            s_documents[index].setContent(content);
-        }
-    }
 }
 
 // 标记文档为已修改

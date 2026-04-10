@@ -16,7 +16,7 @@ class DocManager {
 private:
     static std::vector<Document> s_documents;       // 文档列表
     static std::size_t s_currentDocIndex;           // 当前文档索引
-    static std::size_t s_docCounter;                // 文档计数器
+    static std::size_t s_docCounter;                // 文档计数器（用于生成默认文件名）
     static std::vector<std::string> s_recentFiles;  // 最近打开的文件列表
     
     // 私有构造函数，防止实例化
@@ -25,6 +25,9 @@ private:
 public:
     // 初始化文档管理器
     static void initialize();
+    
+    // 生成默认文件名（不含后缀，如 "unnamed-0"）
+    static std::string generateDefaultFileName();
     
     // 文档操作
     static std::size_t createNewDocument();                         // 创建新文档，返回文档索引
@@ -41,7 +44,6 @@ public:
     static Document& getDocument(std::size_t index);                // 获取指定索引的文档
     
     // 文档内容操作
-    static void setDocumentContent(std::size_t index, const std::string& content); // 设置文档内容
     static void markDocumentModified(std::size_t index, bool modified = true);     // 标记文档为已修改
     
     // 文档标签操作

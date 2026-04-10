@@ -4,108 +4,58 @@
 // C++ 标准库
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 
 // 第三方库
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
 
 // 项目头文件
+#include "Logger.h"
+
 
 namespace tch {
 
-// 构造函数
+// 默认构造函数：创建空文档，构造 Database
 Document::Document() :
+    m_fileName("unnamed-empty"),
     m_fileExtension(".cad.json"),
     m_modified(false),
     m_saved(false),
     m_showGrid(true),
-    m_showAxes(true) {
+    m_showAxes(true),
+    m_database(std::make_unique<Database>()) {
 }
 
-Document::Document(const std::string& name, const std::string& path) :
+// 构造函数：新建文档，使用指定文件名
+Document::Document(const std::string& fileName) :
+    m_fileName(fileName),
     m_fileExtension(".cad.json"),
     m_modified(false),
     m_saved(false),
     m_showGrid(true),
-    m_showAxes(true) {
-    // 解析文件名和路径
-    std::filesystem::path filePath(path);
-    if (!path.empty()) {
-        m_fullPath = path;
-        // 从路径中提取文件名
-        std::string filename = filePath.filename().string();
-        // 分离文件名和后缀
-        size_t dotPos = filename.rfind('.');
-        if (dotPos != std::string::npos) {
-            m_fileName = filename.substr(0, dotPos);
-            m_fileExtension = filename.substr(dotPos);
-        }
-        else {
-            m_fileName = filename;
-        }
-    }
-    else {
-        // 如果没有路径，直接使用传入的name
-        m_fileName = name;
-    }
+    m_showAxes(true),
+    m_database(std::make_unique<Database>()) {
 }
 
-// 获取文件名（不含后缀）
-const std::string& Document::getFileName() const {
-    return m_fileName;
-}
-
-// 获取文件后缀
-const std::string& Document::getFileExtension() const {
-    return m_fileExtension;
-}
-
-// 获取完整文件名（含后缀）
-std::string Document::getFullFileName() const {
-    return m_fileName + m_fileExtension;
-}
-
-// 获取文件完整路径
-const std::string& Document::getFullPath() const {
-    return m_fullPath;
-}
-
-// 设置文件完整路径
-void Document::setFullPath(const std::string& path) {
+// 从路径解析文件名和后缀
+void Document::parseFilePath(const std::string& path) {
     m_fullPath = path;
-    // 从路径中提取文件名和后缀
+    
     std::filesystem::path filePath(path);
     std::string filename = filePath.filename().string();
+    
     size_t dotPos = filename.rfind('.');
     if (dotPos != std::string::npos) {
         m_fileName = filename.substr(0, dotPos);
         m_fileExtension = filename.substr(dotPos);
-    }
-    else {
+    } else {
         m_fileName = filename;
     }
 }
 
-// 获取文件内容
-const std::string& Document::getContent() const {
-    return m_content;
-}
-
-// 设置文件内容
-void Document::setContent(const std::string& content) {
-    this->m_content = content;
-    m_modified = true;
-}
-
-// 检查文件是否被修改
-bool Document::isModified() const {
-    return m_modified;
-}
-
-// 检查文件是否已保存
-bool Document::isSaved() const {
-    return m_saved;
-}
-
-// 标记文件为已修改
+// 标记文档为已修改
 void Document::markModified(bool isModified) {
     m_modified = isModified;
     if (isModified) {
@@ -113,7 +63,7 @@ void Document::markModified(bool isModified) {
     }
 }
 
-// 标记文件为已保存
+// 标记文档为已保存
 void Document::markSaved(bool isSaved) {
     m_saved = isSaved;
     if (isSaved) {
@@ -121,24 +71,9 @@ void Document::markSaved(bool isSaved) {
     }
 }
 
-// 获取命令行历史
-const std::vector<std::string>& Document::getCommandLineHistory() const {
-    return m_commandLineHistory;
-}
-
 // 添加行到命令行历史
 void Document::addToCommandLineHistory(const std::string& content) {
     m_commandLineHistory.push_back(content);
-}
-
-// 清除命令行历史
-void Document::clearCommandLineHistory() {
-    m_commandLineHistory.clear();
-}
-
-// 获取命令执行历史
-const std::vector<std::string>& Document::getCommandExecutionHistory() const {
-    return m_commandExecutionHistory;
 }
 
 // 添加命令到执行历史
@@ -153,39 +88,101 @@ void Document::addToCommandExecutionHistory(const std::string& content) {
     m_commandExecutionHistory.push_back(content);
 }
 
-// 清除命令执行历史
-void Document::clearCommandExecutionHistory() {
-    m_commandExecutionHistory.clear();
+// ============================================================================
+// 数据库相关方法
+// ============================================================================
+
+bool Document::loadFromFile(const std::string& filePath) {
+    if (filePath.empty()) {
+        LOG_ERROR("File path is empty");
+        return false;
+    }
+    
+    try {
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            LOG_ERROR("Failed to open file: {}", filePath);
+            return false;
+        }
+        
+        std::string jsonStr((std::istreambuf_iterator<char>(file)),
+                           std::istreambuf_iterator<char>());
+        file.close();
+        
+        // 解析 JSON
+        rapidjson::Document doc;
+        doc.Parse(jsonStr.c_str());
+        
+        if (doc.HasParseError()) {
+            LOG_ERROR("Failed to parse JSON from file: {}", filePath);
+            return false;
+        }
+        
+        // 加载到数据库
+        if (!m_database->loadFromJson(doc)) {
+            LOG_ERROR("Failed to load database from JSON: {}", filePath);
+            return false;
+        }
+        
+        // 解析路径并标记为已保存
+        parseFilePath(filePath);
+        markSaved(true);
+        return true;
+    } catch (const std::exception& e) {
+        LOG_ERROR("Exception loading file: {} - {}", filePath, e.what());
+        return false;
+    }
 }
 
-// 获取变换管理器
-TransformManager& Document::getTransformManager() {
-    return m_transformManager;
+bool Document::loadFromFile() {
+    if (m_fullPath.empty()) {
+        LOG_ERROR("No file path set for document");
+        return false;
+    }
+    return loadFromFile(m_fullPath);
 }
 
-// 获取变换管理器（const版本）
-const TransformManager& Document::getTransformManager() const {
-    return m_transformManager;
+bool Document::saveToFile(const std::string& filePath) {
+    if (filePath.empty()) {
+        LOG_ERROR("File path is empty");
+        return false;
+    }
+    
+    try {
+        rapidjson::StringBuffer buffer;
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+        
+        m_database->saveToJson(writer);
+        
+        std::ofstream outFile(filePath);
+        if (!outFile.is_open()) {
+            LOG_ERROR("Failed to open file for writing: {}", filePath);
+            return false;
+        }
+        
+        outFile << buffer.GetString();
+        outFile.close();
+        
+        // 解析路径并标记为已保存
+        parseFilePath(filePath);
+        markSaved(true);
+        return true;
+    } catch (const std::exception& e) {
+        LOG_ERROR("Exception saving file: {} - {}", filePath, e.what());
+        return false;
+    }
 }
 
-// 检查是否显示栅格
-bool Document::isShowGrid() const {
-    return m_showGrid;
+bool Document::saveToFile() {
+    if (m_fullPath.empty()) {
+        LOG_ERROR("No file path set for document");
+        return false;
+    }
+    return saveToFile(m_fullPath);
 }
 
-// 设置是否显示栅格
-void Document::setShowGrid(bool show) {
-    m_showGrid = show;
-}
-
-// 检查是否显示坐标轴
-bool Document::isShowAxes() const {
-    return m_showAxes;
-}
-
-// 设置是否显示坐标轴
-void Document::setShowAxes(bool show) {
-    m_showAxes = show;
+void Document::markDatabaseModified() {
+    markModified(true);
 }
 
 } // namespace tch
