@@ -61,18 +61,28 @@ void CommandOpen::onUpdate() {
                         }
                     }
                     
+                    // 文件已打开
                     if (alreadyOpened && existingDocIndex != DocManager::InvalidDocIndex) {
-                        // 文件已打开，切换到该文档
-                        DocManager::setCurrentDocumentIndex(existingDocIndex);
-                        Document& doc = DocManager::getCurrentDocument();
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.switched"), doc.getFullPath()));
+                        // 且不是当前文档，则需要切换
+                        if (existingDocIndex != DocManager::getCurrentDocumentIndex()) {
+                            // 但不能立即切换，而是延迟到ImGui逻辑中通知ImGui去切换，这一帧后续就会处理，
+                            // 如果直接设置则ImGui内部状态未被改变，ImGui不知情的情况下又被切回ImGui内部状态对应的那一个，
+                            // 这是使用ImGui不得不面临的问题，只有这个办法解决，
+                            DocManager::setPendingSwitchIndexFromCommand(existingDocIndex);
+                        }
+                        // else 是当前文档，则什么也不做
+                        // 直接调用finish提前结束命令，命令不能跨文档，确保完成切换之前命令已经结束，旧命令也不会在新文档中输出任何信息
+                        finish();
+                        break;
                     } else {
                         // 文件未打开，执行打开
                         std::size_t docIndex = DocManager::openFile(m_selectedPath);
                         if (docIndex != DocManager::InvalidDocIndex) {
-                            // 打开成功
-                            Document& doc = DocManager::getCurrentDocument();
-                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.opened"), doc.getFullPath()));
+                            // 打开成功，此时文档已经自动在OpenFile中切换，但这里依然要通知以处理命令中的切换
+                            DocManager::setPendingSwitchIndexFromCommand(docIndex);
+                            // 同样提前结束命令
+                            finish();
+                            break;
                         } else {
                             // 打开失败
                             Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), m_selectedPath));

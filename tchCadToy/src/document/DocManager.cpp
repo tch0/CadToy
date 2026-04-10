@@ -18,6 +18,7 @@ std::vector<Document> DocManager::s_documents;
 std::size_t DocManager::s_currentDocIndex = 0;
 std::size_t DocManager::s_docCounter = 0;
 std::vector<std::string> DocManager::s_recentFiles;
+std::size_t DocManager::s_pendingIndexToBeSwitched = static_cast<std::size_t>(-1);
 const std::size_t DocManager::InvalidDocIndex = static_cast<std::size_t>(-1);
 
 // 初始化文档管理器
@@ -160,6 +161,15 @@ Document& DocManager::getDocument(std::size_t index) {
         return s_documents[index];
     }
     return emptyDocument;
+}
+
+// 来自命令层的待切换文档索引，open打开已打开的文件需要切换到该文档，因为ImGui对此不知情，所以需要记录下之后在这一帧特殊处理，
+// 下一个状态已经切换过来了，可以放心使用，其余命令如果要切换文档也应该通过这两个接口实现
+void DocManager::setPendingSwitchIndexFromCommand(std::size_t index) {
+    s_pendingIndexToBeSwitched = index;
+}
+std::size_t DocManager::getPendingSwitchIndexFromCommand() {
+    return s_pendingIndexToBeSwitched;
 }
 
 // 标记文档为已修改

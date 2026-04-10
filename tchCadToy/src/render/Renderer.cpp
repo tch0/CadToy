@@ -856,18 +856,6 @@ void Renderer::drawPropertyBar() {
 
 // 绘制文件栏
 void Renderer::drawFileBar() {
-    // 待切换的文件索引，-1表示无待切换文件
-    static std::size_t s_pendingDocIndexToSwitch = DocManager::InvalidDocIndex;
-    
-    // 处理上一帧的待切换文档
-    if (s_pendingDocIndexToSwitch != DocManager::InvalidDocIndex) {
-        DocManager::setCurrentDocumentIndex(s_pendingDocIndexToSwitch);
-        // 切换文档后，自动滚动命令行历史到最底部
-        s_bScrollCommandLineHistoryToBottom = true;
-        // 重置待切换标记
-        s_pendingDocIndexToSwitch = DocManager::InvalidDocIndex;
-    }
-    
     // 获取窗口大小
     int width, height;
     glfwGetFramebufferSize(s_window, &width, &height);
@@ -898,40 +886,73 @@ void Renderer::drawFileBar() {
                                    ImGuiTabBarFlags_TabListPopupButton | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | 
                                    ImGuiTabBarFlags_FittingPolicyScroll;
     if (ImGui::BeginTabBar("FileTabBar", tabBarFlags)) {
+        // 待关闭的文件索引，-1表示无文件待关闭
+        static std::size_t s_docIndexToBeClosed = DocManager::InvalidDocIndex;
+        
         // 创建新文档
         if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
             // 创建新文档
             std::size_t newDocIndex = DocManager::createNewDocument();
             // 新建文档并切换也需要取消当前命令
             CommandManager::getInstance().cancelCurrentCommand();
-            // 设置待切换的文件索引，在下一帧执行切换
-            s_pendingDocIndexToSwitch = newDocIndex;
+            // 直接切换文档
+            DocManager::setCurrentDocumentIndex(newDocIndex);
+            // 切换文档后，滚动命令行历史到最底部
+            s_bScrollCommandLineHistoryToBottom = true;
         }
         
         // 遍历文档列表，绘制每一个打开文档
         std::size_t documentCount = DocManager::getDocumentCount();
-        // 待关闭的文件索引，-1表示无文件待关闭
-        static std::size_t s_docIndexToBeClosed = DocManager::InvalidDocIndex;
+        // 需要处理来自命令的切换，如果命令中(典型场景是open命令)需要切换文档，则会延迟到此处处理，如果这一帧有命令中的待切换索引
+        // 则不进行传统点击判定，而是通过ImGuiTabItemFlags_SetSelected标记去进行切换
+        std::size_t pendingSwitchIndexFromCommand = DocManager::getPendingSwitchIndexFromCommand();
+        
         for (std::size_t i = 0; i < documentCount; i++) {
             // 获取文件名
             std::string tabText = DocManager::getFileName(i) + StringUtils::format("##TabButton{}", i);
             
             // 设置标签项标志
             ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
+            // 未保存标志
             if (DocManager::isDocumentModified(i)) {
                 tabItemFlags |= ImGuiTabItemFlags_UnsavedDocument;
             }
             
             bool tabOpen = true;
-            if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
-                // 切换文档时，不能直接切换，命令栏的取消命令执行操作需要在当前文档上下文，所有事情做完后下一帧去切换文档上下文
-                if (DocManager::getCurrentDocumentIndex() != i) {
-                    // 切换文档时，取消当前命令执行
-                    CommandManager::getInstance().cancelCurrentCommand();
-                    // 设置待切换的文档索引，在下一帧执行切换
-                    s_pendingDocIndexToSwitch = i;
+            
+            // 处理来自命令的切换
+            if (pendingSwitchIndexFromCommand != DocManager::InvalidDocIndex) {
+                // 设置ImGuiTabItemFlags_SetSelected标记则调用BeginTabItem后会自动切换到这个tab
+                if (i == pendingSwitchIndexFromCommand) {
+                    tabItemFlags |= ImGuiTabItemFlags_SetSelected;
+                    // 清除待切换索引
+                    DocManager::setPendingSwitchIndexFromCommand(DocManager::InvalidDocIndex);
                 }
-                ImGui::EndTabItem();
+                if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
+                    if (DocManager::getCurrentDocumentIndex() != i) {
+                        // 这里不需要也不应该取消命令执行，因为不是从UI切换的，我们知道此时open命令已经进入结束状态
+                        // 切换文档
+                        DocManager::setCurrentDocumentIndex(i);
+                        // 切换文档后，滚动命令行历史到最底部
+                        s_bScrollCommandLineHistoryToBottom = true;
+                    }
+                    ImGui::EndTabItem();
+                }
+            }
+            // 没有来自命令的切换，正常判定是否点击以切换文档
+            else {
+                if (ImGui::BeginTabItem(tabText.c_str(), &tabOpen, tabItemFlags)) {
+                    // 直接切换文档
+                    if (DocManager::getCurrentDocumentIndex() != i) {
+                        // 切换文档前，取消当前命令执行
+                        CommandManager::getInstance().cancelCurrentCommand();
+                        // 切换文档
+                        DocManager::setCurrentDocumentIndex(i);
+                        // 切换文档后，滚动命令行历史到最底部
+                        s_bScrollCommandLineHistoryToBottom = true;
+                    }
+                    ImGui::EndTabItem();
+                }
             }
             
             // 添加工具提示

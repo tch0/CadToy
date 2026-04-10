@@ -18,7 +18,7 @@ private:
     static std::size_t s_currentDocIndex;           // 当前文档索引
     static std::size_t s_docCounter;                // 文档计数器（用于生成默认文件名）
     static std::vector<std::string> s_recentFiles;  // 最近打开的文件列表
-    
+    static std::size_t s_pendingIndexToBeSwitched;  // 来自命令的待切换文档索引
     // 私有构造函数，防止实例化
     DocManager() {}
     
@@ -45,6 +45,11 @@ public:
     static std::size_t getDocumentCount();                          // 获取文档数量
     static Document& getCurrentDocument();                          // 获取当前文档
     static Document& getDocument(std::size_t index);                // 获取指定索引的文档
+    
+    // 来自命令层的待切换文档索引，open打开已打开的文件需要切换到该文档，因为ImGui对此不知情，所以需要记录下之后在这一帧特殊处理，
+    // 下一个状态已经切换过来了，可以放心使用，其余命令如果要切换文档也应该通过这两个接口实现
+    static void setPendingSwitchIndexFromCommand(std::size_t index);
+    static std::size_t getPendingSwitchIndexFromCommand();
     
     // 文档内容操作
     static void markDocumentModified(std::size_t index, bool modified = true);     // 标记文档为已修改

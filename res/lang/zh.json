@@ -128,8 +128,6 @@
   "command.saveas.failed": "另存为失败: {}",
   "command.saveas.canceled": "另存为已取消。",
 
-  "command.open.opened": "文件已打开: {}",
   "command.open.failed": "文件打开失败: {}",
-  "command.open.canceled": "文件打开已取消。",
-  "command.open.switched": "切换到已打开的文档: {}"
+  "command.open.canceled": "文件打开已取消。"
 }

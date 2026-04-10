@@ -128,8 +128,6 @@
   "command.saveas.failed": "Failed to save as: {}",
   "command.saveas.canceled": "Save as canceled.",
 
-  "command.open.opened": "Opened file: {}",
   "command.open.failed": "Failed to open file: {}",
-  "command.open.canceled": "File open canceled.",
-  "command.open.switched": "Switched to already opened document: {}"
+  "command.open.canceled": "File open canceled."
 }
