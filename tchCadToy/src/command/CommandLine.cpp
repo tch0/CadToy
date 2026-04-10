@@ -111,7 +111,7 @@ void CommandLine::onUpdate() {
                     if (m_points.size() == 1) {
                         m_points.pop_back();
                         m_state = CommandLineState::kStartPointEntry;
-                        cmdLinePrint(loc.get("command.line.abandonedAll")); // 已放弃所有线段。
+                        Utils::cmdLinePrint(loc.get("command.line.abandonedAll")); // 已放弃所有线段。
                     }
                     else if (m_points.size() >= 2) {
                         m_points.pop_back();

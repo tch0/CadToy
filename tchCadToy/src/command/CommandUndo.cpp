@@ -20,7 +20,7 @@ void CommandUndo::onUpdate() {
     }
     
     // 输出占位提示
-    cmdLinePrint("暂未实现命令: undo");
+    Utils::cmdLinePrint("暂未实现命令: undo");
     
     // 命令执行完成，标记为完成状态
     finish();

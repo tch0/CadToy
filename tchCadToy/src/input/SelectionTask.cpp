@@ -201,12 +201,12 @@ void SelectionTask::onUpdate() {
                     if (m_previewPointWorld.x < m_initialPointWorld.x) {
                         m_selectionMode = SelectionMode::kCrossingLasso;
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
-                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                     }
                     else {
                         m_selectionMode = SelectionMode::kWindowLasso;
                         m_lassoModeCycle = LassoModeCycle::kWindow;
-                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                     }
                     m_state = SelectionState::kLassoSelection;
                     m_selectionPointsWorld.clear();
@@ -258,17 +258,17 @@ void SelectionTask::onUpdate() {
                     case LassoModeCycle::kCrossing:
                         m_lassoModeCycle = LassoModeCycle::kWindow;
                         m_selectionMode = SelectionMode::kWindowLasso;
-                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                         break;
                     case LassoModeCycle::kWindow:
                         m_lassoModeCycle = LassoModeCycle::kFence;
                         m_selectionMode = SelectionMode::kFence;
-                        cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
                         break;
                     case LassoModeCycle::kFence:
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
                         m_selectionMode = SelectionMode::kCrossingLasso;
-                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                         break;
                 }
                 // 更新交互数据
@@ -351,15 +351,15 @@ void SelectionTask::onUpdate() {
                     if (m_selectionMode == SelectionMode::kFence) {
                         m_selectionMode = SelectionMode::kFence;
                         m_lassoModeCycle = LassoModeCycle::kFence;
-                        cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoFence")); // 栏选(F) 套索  按空格键以循环选项
                     } else if (m_selectionMode == SelectionMode::kWindowPolygon) {
                         m_selectionMode = SelectionMode::kWindowLasso;
                         m_lassoModeCycle = LassoModeCycle::kWindow;
-                        cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoWindow")); // 窗口(W) 套索  按空格键以循环选项
                     } else if (m_selectionMode == SelectionMode::kCrossingPolygon) {
                         m_selectionMode = SelectionMode::kCrossingLasso;
                         m_lassoModeCycle = LassoModeCycle::kCrossing;
-                        cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
+                        Utils::cmdLinePrint(loc.get("selection.prompt.lassoCrossing")); // 窗交(C) 套索  按空格键以循环选项
                     }
                     
                     m_state = SelectionState::kLassoSelection;
@@ -582,7 +582,7 @@ void SelectionTask::handleBoxSelection()
     else if (status == InputStatus::kEnterInput) {
         // Enter作为分支中进行处理的合法输入，InputContext不会输出错误提示，所以这里需要进行手动输出
         auto& loc = LocalizationManager::getInstance();
-        cmdLinePrint(loc.get("selection.prompt.windowInvalid")); // 窗口说明无效。
+        Utils::cmdLinePrint(loc.get("selection.prompt.windowInvalid")); // 窗口说明无效。
         m_state = SelectionState::kBoxSelectionQuery;
     }
     // Esc

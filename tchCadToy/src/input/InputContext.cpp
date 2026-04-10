@@ -160,7 +160,7 @@ void InputContext::handleLeftMouseClick() {
         if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
             m_pickedPoint = worldPos;
             m_currentStatus = InputStatus::kPointInput;
-            cmdLinePrint(m_prompt);
+            Utils::cmdLinePrint(m_prompt);
         }
     }
     else {
@@ -175,7 +175,7 @@ void InputContext::handleLeftMouseClick() {
             if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
                 m_pickedPoint = worldPos;
                 m_currentStatus = InputStatus::kPointInput;
-                cmdLinePrint(m_prompt);
+                Utils::cmdLinePrint(m_prompt);
             }
         }
         // 没有活动任务也不在命令中，激活选择任务，进入框选过程
@@ -283,7 +283,7 @@ void InputContext::parseInput(const std::string& input) {
         m_currentStatus = InputStatus::kEnterInput;
         // 更新命令提示
         if (!m_prompt.empty()) {
-            cmdLinePrint(m_prompt);
+            Utils::cmdLinePrint(m_prompt);
         }
         return;
     }
@@ -297,7 +297,7 @@ void InputContext::parseInput(const std::string& input) {
                 m_inputKeyword = StringUtils::toUpperCase(input);
                 m_currentStatus = InputStatus::kKeywordInput;
                 // 更新命令提示
-                cmdLinePrint(inputPrompt);
+                Utils::cmdLinePrint(inputPrompt);
                 return;
             }
         }
@@ -319,7 +319,7 @@ void InputContext::parseInput(const std::string& input) {
                 if (posX == xStr.length() && posY == yStr.length()) {
                     m_pickedPoint = glm::dvec3(x, y, 0.0);
                     m_currentStatus = InputStatus::kPointInput;
-                    cmdLinePrint(inputPrompt);
+                    Utils::cmdLinePrint(inputPrompt);
                     return;
                 }
             } catch (...) {
@@ -334,7 +334,7 @@ void InputContext::parseInput(const std::string& input) {
                 double distance = stod(input);
                 m_pickedPoint = m_basePoint + glm::normalize(previewPointWorld - m_basePoint) * distance;
                 m_currentStatus = InputStatus::kPointInput;
-                cmdLinePrint(inputPrompt);
+                Utils::cmdLinePrint(inputPrompt);
                 return;
             } catch (...) {
                 // 解析失败，不是合法距离输入
@@ -353,7 +353,7 @@ void InputContext::parseInput(const std::string& input) {
                     m_inputInteger = intValue;
                     m_currentStatus = InputStatus::kIntegerInput;
                     // 更新命令提示
-                    cmdLinePrint(inputPrompt);
+                    Utils::cmdLinePrint(inputPrompt);
                     return;
                 }
             }
@@ -373,7 +373,7 @@ void InputContext::parseInput(const std::string& input) {
                     m_inputFloat = floatValue;
                     m_currentStatus = InputStatus::kFloatInput;
                     // 更新命令提示
-                    cmdLinePrint(inputPrompt);
+                    Utils::cmdLinePrint(inputPrompt);
                     return;
                 }
             }
@@ -387,17 +387,17 @@ void InputContext::parseInput(const std::string& input) {
         m_inputString = input;
         m_currentStatus = InputStatus::kStringInput;
         // 更新命令提示
-        cmdLinePrint(inputPrompt);
+        Utils::cmdLinePrint(inputPrompt);
         return;
     }
     
     // 没有匹配的类型，输出错误提示
     // 输出提示字符串+输入字符串
-    cmdLinePrint(inputPrompt);
+    Utils::cmdLinePrint(inputPrompt);
     
     // 输出错误提示
     if (!m_errorPrompt.empty()) {
-        cmdLinePrint(m_errorPrompt);
+        Utils::cmdLinePrint(m_errorPrompt);
     }
     
     // 保持当前状态为kNone，等待下一次输入
@@ -421,7 +421,7 @@ void InputContext::handleEnterSpace(const std::string& input) {
         if (input.empty())
         {
             auto& loc = LocalizationManager::getInstance();
-            cmdLinePrint(loc.get("commandLine.prompt.command"));
+            Utils::cmdLinePrint(loc.get("commandLine.prompt.command"));
         }
         // 不为空则解析为新命令，输出当前执行的命令的操作会在executeCommand中做
         else {
@@ -439,13 +439,13 @@ void InputContext::handleEscape(const std::string& input) {
         // 更新命令提示，添加取消标记和用户输入
         auto& loc = LocalizationManager::getInstance();
         std::string cancelPrompt = (m_prompt.empty() ? "" : m_prompt + " ") + input + loc.get("commandLine.prompt.cancel");
-        cmdLinePrint(cancelPrompt);
+        Utils::cmdLinePrint(cancelPrompt);
     }
     else {
         // 没有命令执行时按下Esc，键入的字符串也会被输出到命令历史
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandLine.prompt.command") + " " + input + loc.get("commandLine.prompt.cancel");
-        cmdLinePrint(promptStr);
+        Utils::cmdLinePrint(promptStr);
     }
 }
 

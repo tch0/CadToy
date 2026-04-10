@@ -139,7 +139,7 @@ void CommandManager::executeCommand(const std::string& command) {
     
     // 输出当前执行的命令的提示
     auto& loc = LocalizationManager::getInstance();
-    cmdLinePrint(loc.get("commandLine.prompt.command") + " " + command);
+    Utils::cmdLinePrint(loc.get("commandLine.prompt.command") + " " + command);
     
     // 查找命令全名，创建并设置命令对象，记录命令名
     std::string cmdFullName = findFullCommandName(command);
@@ -150,7 +150,7 @@ void CommandManager::executeCommand(const std::string& command) {
         
         DocManager::getCurrentDocument().addToCommandExecutionHistory(cmdFullName);
     } else {
-        cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
+        Utils::cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
     }
     
     // 设置输入上下文为命令执行状态，成功解析为了命令那才设置

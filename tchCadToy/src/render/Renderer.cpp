@@ -326,7 +326,7 @@ void Renderer::drawAll() {
 // 绘制光标测试窗口
 void Renderer::drawCursorTestWindow() {
     if (s_cursorTestWindowVisible) {
-        float uiScale = getUIScaleFactor();
+        float uiScale = Utils::getUIScaleFactor();
         ImGui::Begin("Cursor Test Window", &s_cursorTestWindowVisible);
         
         // 获取交互数据
@@ -528,7 +528,7 @@ void Renderer::drawOptionsDialog() {
         return;
     }
     auto& loc = LocalizationManager::getInstance();
-    float uiScale = getUIScaleFactor();
+    float uiScale = Utils::getUIScaleFactor();
     
     // 使用BeginPopupModal创建真正的模态对话框
     ImGui::OpenPopup("Options");
@@ -1486,7 +1486,7 @@ void Renderer::drawCommandBar() {
     static bool isResizing = false;
     static float resizeStartY = 0.0f;
     static float resizeStartHeight = 0.0f;
-    float uiScale = getUIScaleFactor();
+    float uiScale = Utils::getUIScaleFactor();
     
     // 减小拖动条高度，使其更美观
     float resizeBarHeight = 2.0f * uiScale;

@@ -8,22 +8,29 @@
 // 项目头文件
 #include "Renderer.h"
 #include "DisplayConfigManager.h"
+#include "DocManager.h"
+
 
 namespace tch {
 
-/**
- * @brief 全局输出函数，在命令行中打印内容
- * @param content 要输出的内容
- */
+namespace Utils {
+
+// 全局输出函数，在命令栏中输出信息
 void cmdLinePrint(const std::string& content) {
     Renderer::addContentToCommandLineHistory(content);
 }
 
-/**
- * @brief 获取全局UI缩放比例，用于快速计算UI布局，因为UI随字号变化而变化，所以只与字号相关
- */
+// 获取全局UI缩放比例，用于快速计算UI布局，因为UI随字号变化而变化，所以只与字号相关
 float getUIScaleFactor() {
     return DisplayConfigManager::getInstance().getCurrentFontSize() / 18.0f;
 }
+
+// 获取当前文档对应Database
+Database* getWorkingDatabase() {
+    return DocManager::getCurrentDocument().getDatabase();
+}
+
+
+} // namespace Utils
 
 } // namespace tch

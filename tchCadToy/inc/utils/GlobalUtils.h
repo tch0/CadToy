@@ -6,18 +6,26 @@
 // 第三方库
 
 // 项目头文件
+#include "Database.h"
 
 namespace tch {
 
-/**
- * @brief 全局输出函数，在命令栏中输出信息
- * @param message 要输出的信息
- */
+namespace Utils {
+
+
+// 全局输出函数，在命令栏中输出信息
 void cmdLinePrint(const std::string& message);
 
-/**
- * @brief 获取全局UI缩放比例，用于快速计算UI布局，因为UI随字号变化而变化，所以只与字号相关
- */
+// 获取全局UI缩放比例，用于快速计算UI布局，因为UI随字号变化而变化，所以只与字号相关
 float getUIScaleFactor();
+
+// 获取当前文档对应Database
+Database* getWorkingDatabase();
+
+
+// 全局UI函数：对话框、窗口等
+
+
+} // namespace Utils
 
 } // namespace tch

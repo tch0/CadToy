@@ -32,7 +32,7 @@ private:
     std::unique_ptr<Database> m_database;
 
 public:
-    // 默认构造函数：创建空文档，构造 Database
+    // 默认构造函数：创建空文档，不构造 Database
     Document();
     
     // 构造函数：新建文档，使用指定文件名

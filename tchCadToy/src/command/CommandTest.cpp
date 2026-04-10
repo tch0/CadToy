@@ -80,11 +80,11 @@ void CommandTest::onUpdate() {
         
         case TestState::kDisplayHelp:
             // 打印所有测试程序用途
-            cmdLinePrint("测试程序编号与说明:");
+            Utils::cmdLinePrint("测试程序编号与说明:");
             for (const auto& [number, description] : s_programInfos) {
-                cmdLinePrint(std::format("{:>4}: {}", number, description));
+                Utils::cmdLinePrint(std::format("{:>4}: {}", number, description));
             }
-            cmdLinePrint("");
+            Utils::cmdLinePrint("");
             // 回到初始状态
             m_state = TestState::kWaitForTestNumberEntry;
             break;
@@ -108,7 +108,7 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
             return TestState::kTest0;
         default:
             // 无效的测试程序编号
-            cmdLinePrint("无效的测试程序编号");
+            Utils::cmdLinePrint("无效的测试程序编号");
             return TestState::kWaitForTestNumberEntry;
     }
 }
@@ -119,7 +119,7 @@ CommandTest::TestState CommandTest::runTest0() {
     
     // 实体选择完成
     if (status == InputStatus::kEntitySelection) {
-        cmdLinePrint("实体选择完成，继续选择");
+        Utils::cmdLinePrint("实体选择完成，继续选择");
         // kEntitySelection状态时必选调用getSelectedEntities获取选择集并重置状态
         std::vector<void*> entities;
         inputContext.getSelectedEntities(entities);
@@ -128,12 +128,12 @@ CommandTest::TestState CommandTest::runTest0() {
     }
     // Enter/Space 结束选择
     else if (status == InputStatus::kEnterInput) {
-        cmdLinePrint("选择结束");
+        Utils::cmdLinePrint("选择结束");
         return TestState::kCompleted;
     }
     // Esc 取消选择
     else if (status == InputStatus::kCanceled) {
-        cmdLinePrint("选择取消");
+        Utils::cmdLinePrint("选择取消");
         return TestState::kCompleted;
     }
     

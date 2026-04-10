@@ -46,8 +46,8 @@ std::size_t DocManager::createNewDocument() {
 // 打开文件，返回文档索引
 std::size_t DocManager::openFile(const std::string& filePath) {
     try {
-        // 使用默认构造创建文档（包含 Database）
-        Document newDocument;
+        // 创建文档（带 Database），文件名临时为 "unnamed"，后续加载后会覆盖
+        Document newDocument("unnamed");
         
         // 尝试加载文件
         if (!newDocument.loadFromFile(filePath)) {

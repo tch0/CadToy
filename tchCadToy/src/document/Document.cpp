@@ -17,15 +17,15 @@
 
 namespace tch {
 
-// 默认构造函数：创建空文档，构造 Database
+// 默认构造函数：创建空文档，不构造 Database
 Document::Document() :
     m_fileName("unnamed-empty"),
     m_fileExtension(".cad.json"),
     m_modified(false),
     m_saved(false),
     m_showGrid(true),
-    m_showAxes(true),
-    m_database(std::make_unique<Database>()) {
+    m_showAxes(true) {
+    // m_database 不构造，保持 nullptr
 }
 
 // 构造函数：新建文档，使用指定文件名
