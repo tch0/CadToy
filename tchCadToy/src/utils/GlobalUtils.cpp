@@ -15,6 +15,7 @@
 #include "DocManager.h"
 #include "Global.h"
 #include "PlatformUtils.h"
+#include "LocalizationManager.h"
 
 
 namespace tch {
@@ -106,6 +107,8 @@ namespace {
 void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath,
                    bool isOpen, const std::string& initialPath, const std::string& title) {
     
+    auto& loc = LocalizationManager::getInstance();
+    
     // 初始化路径
     if (s_currentPath.empty()) {
         if (!initialPath.empty()) {
@@ -120,7 +123,7 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         refreshFileList();
     }
     
-    std::string windowTitle = title.empty() ? (isOpen ? "选择文件" : "图形另存为") : title;
+    std::string windowTitle = title.empty() ? (isOpen ? loc.get("fileDialog.title.open") : loc.get("fileDialog.title.save")) : title;
     
     // 设置模态对话框
     ImGui::OpenPopup(windowTitle.c_str());
@@ -182,7 +185,7 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         // 子目录
         int dirIndex = 0;
         for (const auto& dir : s_dirs) {
-            std::string label = "[D] " + dir + "##dir" + std::to_string(dirIndex++);
+            std::string label = "[D] " + dir + "/##dir" + std::to_string(dirIndex++);
             if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)) {
                 if (ImGui::IsMouseDoubleClicked(0)) {
                     s_currentPath = s_currentPath / dir;
@@ -221,17 +224,22 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         // 计算布局：文件名标签 + 输入框 + 后缀 + 保存按钮 + 取消按钮
         float scale = getUIScaleFactor();
         float availWidth = ImGui::GetContentRegionAvail().x;
-        float labelWidth = 50 * scale;      // "文件名:" 标签宽度
-        float extWidth = 100 * scale;       // 后缀选择宽度
-        float btnWidth = 60 * scale;        // 按钮宽度
+        float extWidth = 150 * scale;       // 后缀选择宽度
+        float btnWidth = 100 * scale;       // 按钮宽度
         float btnSpacing = 8 * scale;       // 按钮间距
-        float btnRightMargin = 30 * scale;  // 按钮右边距（将按钮向左移动）
-        float padding = 0; //16 * scale;         // 额外间距
-        float inputWidth = availWidth - labelWidth - extWidth - btnWidth * 2 - btnSpacing * 2 - btnRightMargin - padding;
+        float padding = 150 * scale;        // 额外间距，还要包括文字宽度、各种间距，调试得出
         
-        ImGui::Text("文件名:");
+        
+        // 计算输入框宽度，确保给按钮留出足够空间
+        float buttonsTotalWidth = btnWidth * 2 + btnSpacing;
+        float inputWidth = availWidth - extWidth - buttonsTotalWidth - padding;
+        if (inputWidth < 100 * scale) {
+            inputWidth = 100 * scale;  // 最小宽度限制
+        }
+        
+        ImGui::Text("%s", loc.get("fileDialog.fileName").c_str());
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(inputWidth > 100 * scale ? inputWidth : 100 * scale);
+        ImGui::SetNextItemWidth(inputWidth);
         
         // 使用静态缓冲区，清空后复制当前文件名
         std::fill_n(s_nameBuf, kNameBufSize, '\0');
@@ -258,7 +266,11 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             ImGui::BeginDisabled();
         }
         
-        std::string confirmLabel = isOpen ? "打开" : "保存";
+        // 按钮右对齐
+        availWidth = ImGui::GetContentRegionAvail().x;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + availWidth - buttonsTotalWidth);
+        
+        const std::string& confirmLabel = isOpen ? loc.get("fileDialog.button.open") : loc.get("fileDialog.button.save");
         if (ImGui::Button(confirmLabel.c_str(), ImVec2(btnWidth, 0))) {
             PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
             outFullPath = fullPath.string();  // 返回 UTF-8
@@ -275,8 +287,9 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         
         ImGui::SameLine();
         
-        // 取消按钮
-        if (ImGui::Button("取消", ImVec2(btnWidth, 0))) {
+        // 取消按钮、或者按下Esc键
+        if (ImGui::Button(loc.get("fileDialog.button.cancel").c_str(), ImVec2(btnWidth, 0))
+            || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             bReturned = false;
             bShowDialog = false;
             s_currentPath = PlatformUtils::Path();
@@ -287,9 +300,9 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         ImGui::Separator();
         if (!s_fileName.empty()) {
             PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
-            ImGui::Text("保存到: %s", fullPath.string().c_str());
+            ImGui::Text("%s %s", loc.get("fileDialog.saveTo").c_str(), fullPath.string().c_str());
         } else {
-            ImGui::Text("保存到: (未指定文件名)");
+            ImGui::Text("%s %s", loc.get("fileDialog.saveTo").c_str(), loc.get("fileDialog.noFileName").c_str());
         }
         
         ImGui::EndPopup();

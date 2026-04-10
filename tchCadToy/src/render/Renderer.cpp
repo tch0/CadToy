@@ -701,9 +701,10 @@ void Renderer::drawOptionsDialog() {
         // 确认
         ImGui::SameLine();
         bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(buttonWidth, buttonHeight));
-        // 取消
+        // 取消：点击取消按钮或者按下Esc
         ImGui::SameLine();
-        bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(buttonWidth, buttonHeight));
+        bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(buttonWidth, buttonHeight))
+                             || ImGui::IsKeyPressed(ImGuiKey_Escape);
         
         if (applyClicked || okClicked) {
             DocManager::getCurrentDocument().setShowGrid(showGrid);

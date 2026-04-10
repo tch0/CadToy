@@ -48,6 +48,15 @@
   "optionsDialog.ok": "OK",
   "optionsDialog.cancel": "Cancel",
 
+  "fileDialog.title.open": "Open File",
+  "fileDialog.title.save": "Save As",
+  "fileDialog.fileName": "File Name:",
+  "fileDialog.saveTo": "Save to:",
+  "fileDialog.noFileName": "(no file name specified)",
+  "fileDialog.button.open": "Open",
+  "fileDialog.button.save": "Save",
+  "fileDialog.button.cancel": "Cancel",
+
   "window.renderingInfo.title": "Real Time Rendering Info",
   "window.renderingInfo.viewport.title": "Viewport Information",
   "window.renderingInfo.viewport.size": "Viewport Size",

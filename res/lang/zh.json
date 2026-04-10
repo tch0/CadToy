@@ -48,6 +48,15 @@
   "optionsDialog.ok": "确定",
   "optionsDialog.cancel": "取消",
 
+  "fileDialog.title.open": "选择文件",
+  "fileDialog.title.save": "图形另存为",
+  "fileDialog.fileName": "文件名:",
+  "fileDialog.saveTo": "保存到:",
+  "fileDialog.noFileName": "(未指定文件名)",
+  "fileDialog.button.open": "打开",
+  "fileDialog.button.save": "保存",
+  "fileDialog.button.cancel": "取消",
+
   "window.renderingInfo.title": "实时渲染信息",
   "window.renderingInfo.viewport.title": "视口信息",
   "window.renderingInfo.viewport.size": "视口大小",
