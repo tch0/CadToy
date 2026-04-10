@@ -9,6 +9,7 @@
 // 项目头文件
 #include "CommandClose.h"
 #include "CommandLine.h"
+#include "CommandSave.h"
 #include "CommandTest.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
@@ -32,6 +33,7 @@ CommandManager::CommandManager() :
     registerCommand<CommandTest>("TEST", {});
     registerCommand<CommandLine>("LINE", {"L"});
     registerCommand<CommandClose>("CLOSE", {});
+    registerCommand<CommandSave>("SAVE", {});
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
     // registerCommand<CommandCircle>("CIRCLE", {"C"});
@@ -256,10 +258,8 @@ void CommandManager::runCommandLoop() {
     // 更新活动命令
     if (m_activeCommand) {
         // 更新命令
-        //      虽然这里每一帧都会进入一次，不缺少调用次数，但是一般命令里的设置输入信息和获取输入是被切割为两个状态，
-        //      还有命令流程结束后也需要一个状态来完成，我们希望在一帧内执行足够多的流程的话就调用两次就足够了。
-        //      执行时大多数命令状态都是在等待输入只执行查询输入上下文的操作，没什么开销，原则上调几次对性能和结果没有也不应该有任何影响。
-        m_activeCommand->onUpdate();
+        //      这里只应该调用一次onUpdate，对于没有对话框的命令来说，多次调用不影响结果，
+        //      但对于有对话框或者窗口显示的命令来说调用多次就会出现问题。
         m_activeCommand->onUpdate();
         
         // 检查命令是否完成

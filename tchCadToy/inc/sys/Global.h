@@ -1,7 +1,6 @@
 #pragma once
 
 // C++ 标准库
-#include <filesystem>
 #include <string>
 
 // 第三方库
@@ -13,8 +12,8 @@
 
 // global variables
 
-// cwd: current working directory
-inline std::filesystem::path g_pathCwd;
+// cwd: current working directory (UTF-8 encoding)
+inline std::string g_pathCwd;
 
 // system endian, true for big endian (like arm), false for little endian (like x86)
 inline bool g_bBigEndian {true};

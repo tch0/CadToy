@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
-#include <fstream>
 
 // 第三方库
 #include <rapidjson/document.h>
@@ -17,6 +16,8 @@
 // 项目头文件
 #include "Logger.h"
 #include "Global.h"
+#include "GlobalUtils.h"
+#include "PlatformUtils.h"
 
 namespace tch {
 
@@ -50,13 +51,14 @@ void DisplayConfigManager::initialize(GLFWwindow* window) {
         return;
     }
     
-    // 构建配置文件路径
-    m_configFilePath = (g_pathCwd / "config" / "DisplayConfig.json").string();
+    // 构建配置文件路径（使用 PlatformUtils::Path）
+    PlatformUtils::Path configPath = PlatformUtils::Path(g_pathCwd) / "config" / "DisplayConfig.json";
+    m_configFilePath = configPath.string();
     
     // 创建config目录（如果不存在）
-    std::filesystem::path configDir = g_pathCwd / "config";
-    if (!std::filesystem::exists(configDir)) {
-        std::filesystem::create_directories(configDir);
+    PlatformUtils::Path configDir = PlatformUtils::Path(g_pathCwd) / "config";
+    if (!configDir.exists()) {
+        std::filesystem::create_directories(configDir.local());
         LOG_INFO("DisplayConfigManager: Created config directory: {}", configDir.string());
     }
     
@@ -206,16 +208,12 @@ int DisplayConfigManager::generateDefaultFontSize(float dpiScale) {
 
 // 读取配置文件
 void DisplayConfigManager::loadFromFile() {
-    std::ifstream file(m_configFilePath);
-    if (!file.is_open()) {
+    std::string content;
+    if (!Utils::readTextFile(m_configFilePath, content)) {
         LOG_INFO("DisplayConfigManager: Config file not found, will create on save: {}", 
                  m_configFilePath);
         return;
     }
-    
-    std::string content((std::istreambuf_iterator<char>(file)),
-                        std::istreambuf_iterator<char>());
-    file.close();
     
     rapidjson::Document doc;
     if (doc.Parse(content.c_str()).HasParseError()) {
@@ -298,15 +296,11 @@ void DisplayConfigManager::saveToFile() {
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     doc.Accept(writer);
     
-    std::ofstream file(m_configFilePath);
-    if (!file.is_open()) {
-        LOG_ERROR("DisplayConfigManager: Failed to open config file for writing: {}", 
+    if (!Utils::writeTextFile(m_configFilePath, buffer.GetString())) {
+        LOG_ERROR("DisplayConfigManager: Failed to write config file: {}", 
                   m_configFilePath);
         return;
     }
-    
-    file << buffer.GetString();
-    file.close();
     
     LOG_INFO("DisplayConfigManager: Saved {} configs to file", m_configs.size());
 }

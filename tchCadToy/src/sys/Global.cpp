@@ -1,6 +1,7 @@
 // 对应头文件
 
 // C++ 标准库
+#include <filesystem>
 
 // 第三方库
 
@@ -8,6 +9,7 @@
 #include "SysConfig.h"
 #include "Logger.h"
 #include "Global.h"
+#include "PlatformUtils.h"
 
 using namespace tch;
 namespace fs = std::filesystem;
@@ -37,9 +39,11 @@ void checkSystemEndian()
 // build current working directory from exe path
 void buildCwd(const char* exePath)
 {
-    g_pathCwd = fs::absolute(fs::path(exePath));
-    g_pathCwd.remove_filename();
-    globalLogger().info(std::format("cwd: {}", g_pathCwd.string()));
+    fs::path cwdPath = fs::absolute(fs::path(exePath));
+    cwdPath.remove_filename();
+    // 转换为 UTF-8 存储
+    g_pathCwd = PlatformUtils::Path::fromLocal(cwdPath.string()).string();
+    globalLogger().info(std::format("cwd: {}", g_pathCwd));
 }
 
 // create a directory p if it does not exist

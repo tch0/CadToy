@@ -4,7 +4,6 @@
 // C++ 标准库
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 
 // 第三方库
 #include <rapidjson/document.h>
@@ -13,6 +12,8 @@
 
 // 项目头文件
 #include "Logger.h"
+#include "GlobalUtils.h"
+#include "PlatformUtils.h"
 
 
 namespace tch {
@@ -43,15 +44,26 @@ Document::Document(const std::string& fileName) :
 void Document::parseFilePath(const std::string& path) {
     m_fullPath = path;
     
-    std::filesystem::path filePath(path);
-    std::string filename = filePath.filename().string();
+    PlatformUtils::Path filePath(path);
+    std::string filename = filePath.filename();
     
-    size_t dotPos = filename.rfind('.');
-    if (dotPos != std::string::npos) {
-        m_fileName = filename.substr(0, dotPos);
-        m_fileExtension = filename.substr(dotPos);
+    // 特殊处理 .cad.json 后缀
+    const std::string CAD_JSON_EXT = ".cad.json";
+    if (filename.size() >= CAD_JSON_EXT.size() &&
+        filename.substr(filename.size() - CAD_JSON_EXT.size()) == CAD_JSON_EXT) {
+        // 文件名是 .cad.json 格式
+        m_fileName = filename.substr(0, filename.size() - CAD_JSON_EXT.size());
+        m_fileExtension = CAD_JSON_EXT;
     } else {
-        m_fileName = filename;
+        // 默认逻辑：查找最后一个点号
+        size_t dotPos = filename.rfind('.');
+        if (dotPos != std::string::npos) {
+            m_fileName = filename.substr(0, dotPos);
+            m_fileExtension = filename.substr(dotPos);
+        } else {
+            m_fileName = filename;
+            m_fileExtension = "";
+        }
     }
 }
 
@@ -99,15 +111,12 @@ bool Document::loadFromFile(const std::string& filePath) {
     }
     
     try {
-        std::ifstream file(filePath);
-        if (!file.is_open()) {
-            LOG_ERROR("Failed to open file: {}", filePath);
+        // 使用封装接口读取文件（内部自动处理编码转换）
+        std::string jsonStr;
+        if (!Utils::readTextFile(filePath, jsonStr)) {
+            LOG_ERROR("Failed to read file: {}", filePath);
             return false;
         }
-        
-        std::string jsonStr((std::istreambuf_iterator<char>(file)),
-                           std::istreambuf_iterator<char>());
-        file.close();
         
         // 解析 JSON
         rapidjson::Document doc;
@@ -154,16 +163,13 @@ bool Document::saveToFile(const std::string& filePath) {
         
         m_database->saveToJson(writer);
         
-        std::ofstream outFile(filePath);
-        if (!outFile.is_open()) {
-            LOG_ERROR("Failed to open file for writing: {}", filePath);
+        // 使用封装接口写入文件（内部自动处理编码转换）
+        if (!Utils::writeTextFile(filePath, buffer.GetString())) {
+            LOG_ERROR("Failed to write file: {}", filePath);
             return false;
         }
         
-        outFile << buffer.GetString();
-        outFile.close();
-        
-        // 解析路径并标记为已保存
+        // 解析路径并标记为已保存（内部统一使用 UTF-8）
         parseFilePath(filePath);
         markSaved(true);
         return true;

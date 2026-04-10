@@ -2,7 +2,6 @@
 #include "LocalizationManager.h"
 
 // C++ 标准库
-#include <fstream>
 #include <sstream>
 #include <vector>
 
@@ -13,6 +12,8 @@
 // 项目头文件
 #include "Logger.h"
 #include "Global.h"
+#include "GlobalUtils.h"
+#include "PlatformUtils.h"
 
 namespace tch {
 
@@ -34,23 +35,23 @@ LocalizationManager& LocalizationManager::getInstance() {
 
 // 初始化
 bool LocalizationManager::initialize() {
-    // 构建语言资源文件路径
-    std::filesystem::path langDir = g_pathCwd / "res" / "lang";
+    // 构建语言资源文件路径（使用 PlatformUtils::Path）
+    PlatformUtils::Path langDir = PlatformUtils::Path(g_pathCwd) / "res" / "lang";
     
     // 检查语言资源目录是否存在
-    if (!std::filesystem::exists(langDir)) {
+    if (!langDir.exists()) {
         LOG_WARNING("Language directory not found: {}", langDir.string());
         return false;
     }
     
     // 加载英语资源
-    std::filesystem::path enPath = langDir / "en.json";
+    PlatformUtils::Path enPath = langDir / "en.json";
     if (!loadLanguage("en", enPath.string())) {
         LOG_WARNING("Failed to load English language file: {}", enPath.string());
     }
     
     // 加载中文资源
-    std::filesystem::path zhPath = langDir / "zh.json";
+    PlatformUtils::Path zhPath = langDir / "zh.json";
     if (!loadLanguage("zh", zhPath.string())) {
         LOG_WARNING("Failed to load Chinese language file: {}", zhPath.string());
     }
@@ -74,21 +75,16 @@ void LocalizationManager::cleanup() {
 // 加载语言资源文件
 bool LocalizationManager::loadLanguage(const std::string& langCode, const std::string& filePath) {
     // 检查文件是否存在
-    if (!std::filesystem::exists(filePath)) {
+    PlatformUtils::Path path(filePath);
+    if (!path.exists()) {
         return false;
     }
     
-    // 打开文件
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
+    // 读取文件内容（使用封装接口）
+    std::string content;
+    if (!Utils::readTextFile(filePath, content)) {
         return false;
     }
-    
-    // 读取文件内容
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
-    file.close();
     
     // 解析JSON
     rapidjson::Document doc;

@@ -100,11 +100,12 @@ int main(int argc, char* argv[])
         // 处理事件
         glfwPollEvents();
         
-        // 运行命令循环
-        CommandManager::getInstance().runCommandLoop();
-        
         // 开始渲染
         Renderer::beginRender();
+        
+        // 运行命令循环
+        // 命令中也会需要打开ImGui窗口，所以命令循环必须放在beginRender(其中调用ImGui::NewFrame())之后
+        CommandManager::getInstance().runCommandLoop();
         
         // 绘制菜单栏
         Renderer::drawMenuBar();
