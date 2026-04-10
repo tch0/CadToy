@@ -115,5 +115,9 @@
   "command.line.startPoint": "指定起点:",
   "command.line.nextPoint": "指定下一点或 [放弃(U)]:",
   "command.line.nextPointWithClose": "指定下一点或 [闭合(C)/放弃(U)]:",
-  "command.line.abandonedAll": "已放弃所有线段。"
+  "command.line.abandonedAll": "已放弃所有线段。",
+
+  "command.save.saved": "已保存到: {}",
+  "command.save.failed": "保存失败: {}",
+  "command.save.canceled": "保存已取消。"
 }

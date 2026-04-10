@@ -115,5 +115,9 @@
   "command.line.startPoint": "Specify start point:",
   "command.line.nextPoint": "Specify next point or [Undo(U)]:",
   "command.line.nextPointWithClose": "Specify next point or [Close(C)/Undo(U)]:",
-  "command.line.abandonedAll": "Abandoned all line segments."
+  "command.line.abandonedAll": "Abandoned all line segments.",
+
+  "command.save.saved": "Saved to: {}",
+  "command.save.failed": "Failed to save: {}",
+  "command.save.canceled": "Save canceled."
 }

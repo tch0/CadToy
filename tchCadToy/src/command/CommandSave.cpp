@@ -38,9 +38,9 @@ void CommandSave::onUpdate() {
             if (doc.isSaved()) {
                 // 已关联文件，直接保存
                 if (doc.saveToFile()) {
-                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullFileName()));
+                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullPath()));
                 } else {
-                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), doc.getFullFileName()));
+                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), doc.getFullPath()));
                 }
                 m_state = CommandSaveState::kCompleted;
             } else {
@@ -72,7 +72,7 @@ void CommandSave::onUpdate() {
                     // 用户确认了选择，执行保存
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(m_selectedPath)) {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullFileName()));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullPath()));
                     } else {
                         Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), m_selectedPath));
                     }
