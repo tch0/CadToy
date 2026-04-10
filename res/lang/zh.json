@@ -56,6 +56,9 @@
   "fileDialog.button.open": "打开",
   "fileDialog.button.save": "保存",
   "fileDialog.button.cancel": "取消",
+  
+  "messageBox.defaultTitle": "错误",
+  "messageBox.ok": "确定",
 
   "window.renderingInfo.title": "实时渲染信息",
   "window.renderingInfo.viewport.title": "视口信息",
@@ -123,5 +126,10 @@
 
   "command.saveas.saved": "已另存为: {}",
   "command.saveas.failed": "另存为失败: {}",
-  "command.saveas.canceled": "另存为已取消。"
+  "command.saveas.canceled": "另存为已取消。",
+
+  "command.open.opened": "文件已打开: {}",
+  "command.open.failed": "文件打开失败: {}",
+  "command.open.canceled": "文件打开已取消。",
+  "command.open.switched": "切换到已打开的文档: {}"
 }

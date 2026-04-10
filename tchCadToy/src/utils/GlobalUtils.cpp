@@ -19,7 +19,6 @@
 
 
 namespace tch {
-
 namespace Utils {
 
 // 全局输出函数，在命令栏中输出信息
@@ -174,7 +173,7 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         PlatformUtils::Path parentPath = s_currentPath.parent();
         if (!parentPath.empty() && parentPath.string() != s_currentPath.string()) {
             if (ImGui::Selectable("[..]##parent", false, ImGuiSelectableFlags_AllowDoubleClick)) {
-                if (ImGui::IsMouseDoubleClicked(0)) {
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     s_currentPath = parentPath;
                     s_fileName.clear();
                     refreshFileList();
@@ -187,7 +186,7 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         for (const auto& dir : s_dirs) {
             std::string label = "[D] " + dir + "/##dir" + std::to_string(dirIndex++);
             if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)) {
-                if (ImGui::IsMouseDoubleClicked(0)) {
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     s_currentPath = s_currentPath / dir;
                     s_fileName.clear();
                     refreshFileList();
@@ -203,8 +202,8 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             if (ImGui::Selectable(label.c_str(), selected)) {
                 s_fileName = file;
             }
-            // 双击文件确认（打开模式）
-            if (isOpen && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+            // 双击文件确认（打开或者保存）
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                 s_fileName = file;
                 PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
                 outFullPath = fullPath.string();  // 返回 UTF-8
@@ -270,10 +269,12 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
         availWidth = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + availWidth - buttonsTotalWidth);
         
+        // 按下保存/打开按钮、文件名不为空时按下Enter
         const std::string& confirmLabel = isOpen ? loc.get("fileDialog.button.open") : loc.get("fileDialog.button.save");
-        if (ImGui::Button(confirmLabel.c_str(), ImVec2(btnWidth, 0))) {
+        if (ImGui::Button(confirmLabel.c_str(), ImVec2(btnWidth, 0))
+            || (canConfirm && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))) {
             PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
-            outFullPath = fullPath.string();  // 返回 UTF-8
+            outFullPath = fullPath.string();  // 返回UTF-8路径
             s_lastPath = s_currentPath;
             bReturned = true;
             bShowDialog = false;
@@ -311,6 +312,67 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
     // 对话框关闭时重置状态
     if (!bShowDialog && !s_currentPath.empty()) {
         s_currentPath = PlatformUtils::Path();
+    }
+}
+
+// ============================================================================
+// 消息框实现
+// ============================================================================
+
+namespace {
+    // 消息框静态状态
+    std::string s_messageBoxTitle;      // 标题
+    std::string s_messageBoxContent;    // 内容
+}
+
+void showMessageBox(bool& bShow, const std::string& message, const std::string& title) {
+    auto& loc = LocalizationManager::getInstance();
+    
+    // 初始化消息框内容（仅在第一次显示时）
+    if (bShow && s_messageBoxContent.empty()) {
+        s_messageBoxContent = message;
+        s_messageBoxTitle = title.empty() ? loc.get("messageBox.defaultTitle") : title;
+    }
+    
+    // 设置模态对话框
+    ImGui::OpenPopup(s_messageBoxTitle.c_str());
+    
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+    
+    if (ImGui::BeginPopupModal(s_messageBoxTitle.c_str(), &bShow,
+                               ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize)) {
+        
+        // 显示消息内容
+        ImGui::TextWrapped("%s", s_messageBoxContent.c_str());
+        
+        ImGui::Spacing();
+        ImGui::Spacing();
+        
+        // 确定按钮（居中）
+        float scale = getUIScaleFactor();
+        float btnWidth = 80 * scale;
+        float windowWidth = ImGui::GetWindowSize().x;
+        ImGui::SetCursorPosX((windowWidth - btnWidth) * 0.5f);
+        
+        if (ImGui::Button(loc.get("messageBox.ok").c_str(), ImVec2(btnWidth, 0))
+            || ImGui::IsKeyPressed(ImGuiKey_Enter)
+            || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)
+            || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            bShow = false;
+            s_messageBoxContent.clear();
+            s_messageBoxTitle.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::EndPopup();
+    }
+    
+    // 对话框关闭时重置状态
+    if (!bShow) {
+        s_messageBoxContent.clear();
+        s_messageBoxTitle.clear();
     }
 }
 
@@ -374,5 +436,4 @@ bool writeTextFile(const std::string& filePathUtf8, const std::string& content) 
 }
 
 } // namespace Utils
-
 } // namespace tch

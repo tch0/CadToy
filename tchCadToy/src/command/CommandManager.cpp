@@ -9,6 +9,7 @@
 // 项目头文件
 #include "CommandClose.h"
 #include "CommandLine.h"
+#include "CommandOpen.h"
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
 #include "CommandTest.h"
@@ -34,6 +35,7 @@ CommandManager::CommandManager() :
     registerCommand<CommandTest>("TEST", {});
     registerCommand<CommandLine>("LINE", {"L"});
     registerCommand<CommandClose>("CLOSE", {});
+    registerCommand<CommandOpen>("OPEN", {});
     registerCommand<CommandSave>("SAVE", {});
     registerCommand<CommandSaveAs>("SAVEAS", {});
     registerCommand<CommandUndo>("UNDO", {});

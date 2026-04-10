@@ -18,6 +18,7 @@ std::vector<Document> DocManager::s_documents;
 std::size_t DocManager::s_currentDocIndex = 0;
 std::size_t DocManager::s_docCounter = 0;
 std::vector<std::string> DocManager::s_recentFiles;
+const std::size_t DocManager::InvalidDocIndex = static_cast<std::size_t>(-1);
 
 // 初始化文档管理器
 void DocManager::initialize() {

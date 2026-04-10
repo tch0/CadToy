@@ -698,9 +698,10 @@ void Renderer::drawOptionsDialog() {
         
         // 应用
         bool applyClicked = ImGui::Button(loc.get("optionsDialog.apply").c_str(), ImVec2(buttonWidth, buttonHeight));
-        // 确认
+        // 确定：点击确定或者按下Enter
         ImGui::SameLine();
-        bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(buttonWidth, buttonHeight));
+        bool okClicked = ImGui::Button(loc.get("optionsDialog.ok").c_str(), ImVec2(buttonWidth, buttonHeight))
+                         || (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter));
         // 取消：点击取消按钮或者按下Esc
         ImGui::SameLine();
         bool cancelClicked = ImGui::Button(loc.get("optionsDialog.cancel").c_str(), ImVec2(buttonWidth, buttonHeight))
@@ -856,15 +857,15 @@ void Renderer::drawPropertyBar() {
 // 绘制文件栏
 void Renderer::drawFileBar() {
     // 待切换的文件索引，-1表示无待切换文件
-    static std::size_t s_pendingFileIndexToSwitch = -1;
+    static std::size_t s_pendingDocIndexToSwitch = DocManager::InvalidDocIndex;
     
     // 处理上一帧的待切换文档
-    if (s_pendingFileIndexToSwitch != static_cast<std::size_t>(-1)) {
-        DocManager::setCurrentDocumentIndex(s_pendingFileIndexToSwitch);
+    if (s_pendingDocIndexToSwitch != DocManager::InvalidDocIndex) {
+        DocManager::setCurrentDocumentIndex(s_pendingDocIndexToSwitch);
         // 切换文档后，自动滚动命令行历史到最底部
         s_bScrollCommandLineHistoryToBottom = true;
         // 重置待切换标记
-        s_pendingFileIndexToSwitch = -1;
+        s_pendingDocIndexToSwitch = DocManager::InvalidDocIndex;
     }
     
     // 获取窗口大小
@@ -900,20 +901,20 @@ void Renderer::drawFileBar() {
         // 创建新文档
         if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
             // 创建新文档
-            std::size_t newFileIndex = DocManager::createNewDocument();
+            std::size_t newDocIndex = DocManager::createNewDocument();
             // 新建文档并切换也需要取消当前命令
             CommandManager::getInstance().cancelCurrentCommand();
             // 设置待切换的文件索引，在下一帧执行切换
-            s_pendingFileIndexToSwitch = newFileIndex;
+            s_pendingDocIndexToSwitch = newDocIndex;
         }
         
         // 遍历文档列表，绘制每一个打开文档
         std::size_t documentCount = DocManager::getDocumentCount();
         // 待关闭的文件索引，-1表示无文件待关闭
-        static std::size_t s_docIndexToBeClosed = -1;
+        static std::size_t s_docIndexToBeClosed = DocManager::InvalidDocIndex;
         for (std::size_t i = 0; i < documentCount; i++) {
             // 获取文件名
-            std::string tabText = DocManager::getFileName(i);
+            std::string tabText = DocManager::getFileName(i) + StringUtils::format("##TabButton{}", i);
             
             // 设置标签项标志
             ImGuiTabItemFlags tabItemFlags = ImGuiTabItemFlags_None;
@@ -928,7 +929,7 @@ void Renderer::drawFileBar() {
                     // 切换文档时，取消当前命令执行
                     CommandManager::getInstance().cancelCurrentCommand();
                     // 设置待切换的文档索引，在下一帧执行切换
-                    s_pendingFileIndexToSwitch = i;
+                    s_pendingDocIndexToSwitch = i;
                 }
                 ImGui::EndTabItem();
             }
@@ -946,10 +947,10 @@ void Renderer::drawFileBar() {
             }
         }
         // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
-        if (s_docIndexToBeClosed != static_cast<std::size_t>(-1)) {
+        if (s_docIndexToBeClosed != DocManager::InvalidDocIndex) {
             CommandManager::getInstance().cancelCurrentCommand();
             DocManager::closeDocument(s_docIndexToBeClosed);
-            s_docIndexToBeClosed = -1;
+            s_docIndexToBeClosed = DocManager::InvalidDocIndex;
         }
         
         ImGui::EndTabBar();

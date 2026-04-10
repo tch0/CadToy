@@ -21,6 +21,10 @@ float getUIScaleFactor();
 // 获取当前文档对应Database
 Database* getWorkingDatabase();
 
+// ============================================================================
+// 对话框接口
+// ============================================================================
+
 /**
  * @brief 显示文件对话框（模态）
  * @param bShowDialog 控制显示/隐藏，ImGui 会管理此值
@@ -36,6 +40,20 @@ Database* getWorkingDatabase();
 void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath,
                    bool isOpen = true, const std::string& initialPath = "",
                    const std::string& title = "");
+
+/**
+ * @brief 显示消息框（模态对话框）
+ * @param bShow 控制显示/隐藏，调用后置为true，关闭后ImGui会设置为false
+ * @param message 要显示的消息内容（支持多行，使用\n换行）
+ * @param title 对话框标题，为空则使用默认标题"错误"
+ * 
+ * @note 消息框包含一个确定按钮，按Esc或点击按钮均可关闭
+ */
+void showMessageBox(bool& bShow, const std::string& message, const std::string& title = "");
+
+// ============================================================================
+// 文件读写接口
+// ============================================================================
 
 /**
  * @brief 读取文本文件内容

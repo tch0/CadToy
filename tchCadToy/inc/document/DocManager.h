@@ -23,6 +23,9 @@ private:
     DocManager() {}
     
 public:
+    // 无效索引，-1，用于初始化和判断
+    static const std::size_t InvalidDocIndex;
+    
     // 初始化文档管理器
     static void initialize();
     

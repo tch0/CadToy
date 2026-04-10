@@ -56,6 +56,9 @@
   "fileDialog.button.open": "Open",
   "fileDialog.button.save": "Save",
   "fileDialog.button.cancel": "Cancel",
+  
+  "messageBox.defaultTitle": "Error",
+  "messageBox.ok": "OK",
 
   "window.renderingInfo.title": "Real Time Rendering Info",
   "window.renderingInfo.viewport.title": "Viewport Information",
@@ -123,5 +126,10 @@
 
   "command.saveas.saved": "Saved as: {}",
   "command.saveas.failed": "Failed to save as: {}",
-  "command.saveas.canceled": "Save as canceled."
+  "command.saveas.canceled": "Save as canceled.",
+
+  "command.open.opened": "Opened file: {}",
+  "command.open.failed": "Failed to open file: {}",
+  "command.open.canceled": "File open canceled.",
+  "command.open.switched": "Switched to already opened document: {}"
 }
