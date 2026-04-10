@@ -10,6 +10,7 @@
 #include "CommandClose.h"
 #include "CommandLine.h"
 #include "CommandSave.h"
+#include "CommandSaveAs.h"
 #include "CommandTest.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
@@ -34,6 +35,7 @@ CommandManager::CommandManager() :
     registerCommand<CommandLine>("LINE", {"L"});
     registerCommand<CommandClose>("CLOSE", {});
     registerCommand<CommandSave>("SAVE", {});
+    registerCommand<CommandSaveAs>("SAVEAS", {});
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
     // registerCommand<CommandCircle>("CIRCLE", {"C"});

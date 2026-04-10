@@ -119,5 +119,9 @@
 
   "command.save.saved": "Saved to: {}",
   "command.save.failed": "Failed to save: {}",
-  "command.save.canceled": "Save canceled."
+  "command.save.canceled": "Save canceled.",
+
+  "command.saveas.saved": "Saved as: {}",
+  "command.saveas.failed": "Failed to save as: {}",
+  "command.saveas.canceled": "Save as canceled."
 }

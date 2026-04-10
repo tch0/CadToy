@@ -119,5 +119,9 @@
 
   "command.save.saved": "已保存到: {}",
   "command.save.failed": "保存失败: {}",
-  "command.save.canceled": "保存已取消。"
+  "command.save.canceled": "保存已取消。",
+
+  "command.saveas.saved": "已另存为: {}",
+  "command.saveas.failed": "另存为失败: {}",
+  "command.saveas.canceled": "另存为已取消。"
 }
