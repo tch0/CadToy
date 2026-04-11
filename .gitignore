@@ -7,6 +7,10 @@
 # build folder
 /build/
 
+# for clangd, compile_commands.json is generated in build_tmp/, see .clangd for details
+/build_tmp/
+!/.vscode/settings.json
+
 # 3rd party generated and installed files
 /3rdparty-install/
 /3rdparty/build/
@@ -19,6 +23,8 @@
 /ImFileDialog/**
 !/ImFileDialog/CMakeLists.txt
 
-# for clangd, compile_commands.json is generated in build_tmp/, see .clangd for details
-/build_tmp/
-!/.vscode/settings.json
+# stb files, installed from 3rdparty/ImFileDialog, only track CMakelists.txt and a necessary source
+/stb/**
+!/stb/CMakeLists.txt
+!/stb/stb_impl.cpp
+

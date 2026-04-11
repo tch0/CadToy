@@ -244,6 +244,8 @@ elseif(APPLE)
 endif()
 
 add_subdirectory(imgui)
+add_subdirectory(stb)
+add_subdirectory(ImFileDialog)
 
 add_subdirectory(tchGeometry)       # basic geometry primitives and algorithms
 add_subdirectory(tchDatabase)       # databse and entities

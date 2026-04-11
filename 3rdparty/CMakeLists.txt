@@ -32,6 +32,10 @@ install(FILES ${imgui_headers} DESTINATION ../imgui)
 install(FILES ${imgui_backend_sources} DESTINATION ../imgui/backends)
 install(FILES ${imgui_backend_headers} DESTINATION ../imgui/backends)
 
-# install ImFileDialog header and source file to ImFileDialog
+# install ImFileDialog header and source file to ImFileDialog/
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ImFileDialog/ImFileDialog.h DESTINATION ../ImFileDialog/inc)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ImFileDialog/ImFileDialog.cpp DESTINATION ../ImFileDialog/src)
+
+# install stb headers to stb/
+# only install stb_image.h for now, add other if need in future
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/stb/stb_image.h DESTINATION ../stb/inc)

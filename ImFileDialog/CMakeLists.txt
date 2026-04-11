@@ -14,7 +14,7 @@ target_include_directories(ImFileDialog
 
 target_link_libraries(ImFileDialog
     PUBLIC
-        glfw
+        imgui
         stb
         ${essential_libs}
 )
