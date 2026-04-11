@@ -31,3 +31,7 @@ install(FILES ${imgui_sources} DESTINATION ../imgui)
 install(FILES ${imgui_headers} DESTINATION ../imgui)
 install(FILES ${imgui_backend_sources} DESTINATION ../imgui/backends)
 install(FILES ${imgui_backend_headers} DESTINATION ../imgui/backends)
+
+# install ImFileDialog header and source file to ImFileDialog
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ImFileDialog/ImFileDialog.h DESTINATION ../ImFileDialog/inc)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ImFileDialog/ImFileDialog.cpp DESTINATION ../ImFileDialog/src)

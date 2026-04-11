@@ -34,3 +34,7 @@
 	path = 3rdparty/minicoro
 	url = https://github.com/edubart/minicoro
 	branch = main
+[submodule "3rdparty/ImFileDialog"]
+	path = 3rdparty/ImFileDialog
+	url = https://github.com/tch0/ImFileDialog
+	branch = main

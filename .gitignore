@@ -15,6 +15,10 @@
 /imgui/**
 !/imgui/CMakeLists.txt
 
+# ImFileDialog files, installed from 3rdparty/ImFileDialog, only track CMakeLists.txt
+/ImFileDialog/**
+!/ImFileDialog/CMakeLists.txt
+
 # for clangd, compile_commands.json is generated in build_tmp/, see .clangd for details
 /build_tmp/
 !/.vscode/settings.json
