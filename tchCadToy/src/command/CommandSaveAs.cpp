@@ -41,8 +41,9 @@ void CommandSaveAs::onUpdate() {
             
         case CommandSaveAsState::kFileDialogShow:
         {
-            // 显示文件对话框（另存为模式）
-            Utils::showFileDialog(m_showDialog, m_dialogReturned, m_selectedPath, false);
+            // 显示文件对话框（另存为模式），传入当前文件名作为初始文件名
+            Document& doc = DocManager::getCurrentDocument();
+            Utils::showFileDialog(m_showDialog, m_dialogReturned, m_selectedPath, false, doc.getFileName());
             
             // 先检查对话框是否已关闭
             if (!m_showDialog) {

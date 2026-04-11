@@ -60,6 +60,15 @@
   "messageBox.defaultTitle": "错误",
   "messageBox.ok": "确定",
 
+  "dialog.yes": "是",
+  "dialog.no": "否",
+  "dialog.cancel": "取消",
+
+  "saveConfirmDialog.title": "确认保存",
+  "saveConfirmDialog.message": "是否将修改保存到 {}？",
+  "saveConfirmDialog.save": "保存",
+  "saveConfirmDialog.discard": "不保存",
+
   "window.renderingInfo.title": "实时渲染信息",
   "window.renderingInfo.viewport.title": "视口信息",
   "window.renderingInfo.viewport.size": "视口大小",
@@ -129,5 +138,8 @@
   "command.saveas.canceled": "另存为已取消。",
 
   "command.open.failed": "文件打开失败: {}",
-  "command.open.canceled": "文件打开已取消。"
+  "command.open.canceled": "文件打开已取消。",
+  "command.open.switched": "切换到已打开的文档: {}",
+
+  "command.close.canceled": "关闭已取消。"
 }

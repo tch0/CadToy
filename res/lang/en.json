@@ -60,6 +60,15 @@
   "messageBox.defaultTitle": "Error",
   "messageBox.ok": "OK",
 
+  "dialog.yes": "Yes",
+  "dialog.no": "No",
+  "dialog.cancel": "Cancel",
+
+  "saveConfirmDialog.title": "Confirm Save",
+  "saveConfirmDialog.message": "Do you want to save changes to {}?",
+  "saveConfirmDialog.save": "Save",
+  "saveConfirmDialog.discard": "Don't Save",
+
   "window.renderingInfo.title": "Real Time Rendering Info",
   "window.renderingInfo.viewport.title": "Viewport Information",
   "window.renderingInfo.viewport.size": "Viewport Size",
@@ -129,5 +138,8 @@
   "command.saveas.canceled": "Save as canceled.",
 
   "command.open.failed": "Failed to open file: {}",
-  "command.open.canceled": "File open canceled."
+  "command.open.canceled": "File open canceled.",
+  "command.open.switched": "Switched to already opened document: {}",
+
+  "command.close.canceled": "Close canceled."
 }

@@ -16,6 +16,7 @@
 #include "Global.h"
 #include "PlatformUtils.h"
 #include "LocalizationManager.h"
+#include "StringUtils.h"
 
 
 namespace tch {
@@ -42,8 +43,7 @@ Database* getWorkingDatabase() {
 
 namespace {
     // 静态变量保存对话框状态（全部使用 PlatformUtils::Path，内部 UTF-8）
-    PlatformUtils::Path s_lastPath;    // 上次使用的路径
-    PlatformUtils::Path s_currentPath; // 当前浏览路径
+    PlatformUtils::Path s_currentPath; // 当前浏览路径（同时作为上次路径）
     std::string s_fileName;            // 当前输入的文件名（UTF-8）
     std::vector<std::string> s_dirs;   // 当前目录的子目录名（UTF-8）
     std::vector<std::string> s_files;  // 当前目录的 .cad.json 文件名（UTF-8，不含后缀）
@@ -104,22 +104,34 @@ namespace {
 }
 
 void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath,
-                   bool isOpen, const std::string& initialPath, const std::string& title) {
+                   bool isOpen, const std::string& initialFileName, 
+                   const std::string& initialPath, const std::string& title) {
     
     auto& loc = LocalizationManager::getInstance();
     
-    // 初始化路径
-    if (s_currentPath.empty()) {
+    // 检测是否是本次显示的第一帧（bShowDialog 从 false 变为 true）
+    static bool s_wasShowing = false;
+    bool isFirstFrame = bShowDialog && !s_wasShowing;
+    s_wasShowing = bShowDialog;
+    
+    // 第一帧初始化路径和文件名
+    if (isFirstFrame) {
+        // 设置路径
         if (!initialPath.empty()) {
             s_currentPath = PlatformUtils::Path(initialPath);
-        } else if (!s_lastPath.empty()) {
-            s_currentPath = s_lastPath;
-        } else {
+        } else if (s_currentPath.empty()) {
             // 使用可执行文件所在目录
             s_currentPath = PlatformUtils::Path(g_pathCwd);
         }
-        s_fileName.clear();
         refreshFileList();
+        
+        // 设置文件名
+        if (!initialFileName.empty()) {
+            s_fileName = initialFileName;
+        } else if (s_fileName.empty() && !isOpen) {
+            // 保存模式下文件名为空，使用默认名
+            s_fileName = "unnamed";
+        }
     }
     
     std::string windowTitle = title.empty() ? (isOpen ? loc.get("fileDialog.title.open") : loc.get("fileDialog.title.save")) : title;
@@ -157,7 +169,6 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
                 }
                 if (ImGui::Selectable(display.c_str())) {
                     s_currentPath = *it;
-                    s_fileName.clear();
                     refreshFileList();
                 }
             }
@@ -175,7 +186,6 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             if (ImGui::Selectable("[..]##parent", false, ImGuiSelectableFlags_AllowDoubleClick)) {
                 if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     s_currentPath = parentPath;
-                    s_fileName.clear();
                     refreshFileList();
                 }
             }
@@ -188,7 +198,6 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)) {
                 if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     s_currentPath = s_currentPath / dir;
-                    s_fileName.clear();
                     refreshFileList();
                 }
             }
@@ -202,15 +211,13 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             if (ImGui::Selectable(label.c_str(), selected)) {
                 s_fileName = file;
             }
-            // 双击文件确认（打开或者保存）
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+            // 双击文件确认（仅打开模式）
+            if (isOpen && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                 s_fileName = file;
                 PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
                 outFullPath = fullPath.string();  // 返回 UTF-8
-                s_lastPath = s_currentPath;
                 bReturned = true;
                 bShowDialog = false;
-                s_currentPath = PlatformUtils::Path();
                 ImGui::CloseCurrentPopup();
             }
         }
@@ -275,10 +282,8 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             || (canConfirm && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter)))) {
             PlatformUtils::Path fullPath = s_currentPath / (s_fileName + FILE_EXTENSION);
             outFullPath = fullPath.string();  // 返回UTF-8路径
-            s_lastPath = s_currentPath;
             bReturned = true;
             bShowDialog = false;
-            s_currentPath = PlatformUtils::Path();
             ImGui::CloseCurrentPopup();
         }
         
@@ -293,7 +298,6 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
             || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             bReturned = false;
             bShowDialog = false;
-            s_currentPath = PlatformUtils::Path();
             ImGui::CloseCurrentPopup();
         }
         
@@ -310,8 +314,8 @@ void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath
     }
     
     // 对话框关闭时重置状态
-    if (!bShowDialog && !s_currentPath.empty()) {
-        s_currentPath = PlatformUtils::Path();
+    if (!bShowDialog) {
+        s_wasShowing = false;
     }
 }
 
@@ -377,6 +381,116 @@ void showMessageBox(bool& bShow, const std::string& message, const std::string& 
 }
 
 // ============================================================================
+// 是/否/取消三态对话框实现
+// ============================================================================
+
+namespace {
+    // 三态对话框静态状态
+    std::string s_triStateTitle;        // 标题
+    std::string s_triStateMessage;      // 消息内容
+    std::string s_triStateYesLabel;     // 是按钮标签
+    std::string s_triStateNoLabel;      // 否按钮标签
+    std::string s_triStateCancelLabel;  // 取消按钮标签
+    TriStateResult* s_triStateResult = nullptr;  // 结果输出指针
+}
+
+void showYesNoCancelDialog(bool& bShow, TriStateResult& result,
+                          const std::string& title, const std::string& message,
+                          const std::string& yesLabel, const std::string& noLabel,
+                          const std::string& cancelLabel) {
+    auto& loc = LocalizationManager::getInstance();
+    
+    // 初始化对话框内容（仅在第一次显示时）
+    if (bShow && s_triStateResult == nullptr) {
+        s_triStateTitle = title;
+        s_triStateMessage = message;
+        s_triStateYesLabel = yesLabel.empty() ? loc.get("dialog.yes") : yesLabel;
+        s_triStateNoLabel = noLabel.empty() ? loc.get("dialog.no") : noLabel;
+        s_triStateCancelLabel = cancelLabel.empty() ? loc.get("dialog.cancel") : cancelLabel;
+        s_triStateResult = &result;
+    }
+    
+    // 设置模态对话框
+    ImGui::OpenPopup(s_triStateTitle.c_str());
+    
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    
+    // 初始窗口大小（考虑缩放）
+    float scale = getUIScaleFactor();
+    ImGui::SetNextWindowSize(ImVec2(600 * scale, 400 * scale), ImGuiCond_FirstUseEver);
+    
+    // 去掉 AlwaysAutoResize，允许用户调整窗口大小
+    if (ImGui::BeginPopupModal(s_triStateTitle.c_str(), &bShow,
+                               ImGuiWindowFlags_NoMove)) {
+        
+        // 显示消息内容
+        ImGui::TextWrapped("%s", s_triStateMessage.c_str());
+        
+        // 按钮布局计算
+        float btnWidth = 150 * scale;       // 按钮宽度
+        float btnHeight = 30 * scale;       // 按钮高度
+        float btnSpacing = 30 * scale;      // 按钮间隔
+        float buttonsTotalWidth = btnWidth * 3 + btnSpacing * 2;
+        
+        // 计算按钮位置（底部居中）
+        float windowWidth = ImGui::GetWindowSize().x;
+        float windowHeight = ImGui::GetWindowSize().y;
+        float startX = (windowWidth - buttonsTotalWidth) * 0.5f;
+        float btnY = windowHeight - btnHeight - ImGui::GetStyle().WindowPadding.y * 2;
+        
+        // 是 按钮（ImGui默认支持Enter触发有焦点的按钮）
+        ImGui::SetCursorPos(ImVec2(startX, btnY));
+        if (ImGui::Button(s_triStateYesLabel.c_str(), ImVec2(btnWidth, btnHeight))) {
+            *s_triStateResult = TriStateResult::kYes;
+            bShow = false;
+            s_triStateResult = nullptr;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();  // 首次显示时设置默认焦点到是按钮
+        
+        // 否 按钮
+        ImGui::SetCursorPos(ImVec2(startX + btnWidth + btnSpacing, btnY));
+        if (ImGui::Button(s_triStateNoLabel.c_str(), ImVec2(btnWidth, btnHeight))) {
+            *s_triStateResult = TriStateResult::kNo;
+            bShow = false;
+            s_triStateResult = nullptr;
+            ImGui::CloseCurrentPopup();
+        }
+        
+        // 取消 按钮（Esc键也响应）
+        ImGui::SetCursorPos(ImVec2(startX + (btnWidth + btnSpacing) * 2, btnY));
+        if (ImGui::Button(s_triStateCancelLabel.c_str(), ImVec2(btnWidth, btnHeight))
+            || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            *s_triStateResult = TriStateResult::kCancel;
+            bShow = false;
+            s_triStateResult = nullptr;
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::EndPopup();
+    }
+    
+    // 对话框关闭时重置状态
+    if (!bShow && s_triStateResult != nullptr) {
+        s_triStateResult = nullptr;
+    }
+}
+
+void showSaveConfirmDialog(bool& bShow, TriStateResult& result,
+                          const std::string& fileName,
+                          const std::string& title) {
+    auto& loc = LocalizationManager::getInstance();
+    
+    std::string dialogTitle = title.empty() ? loc.get("saveConfirmDialog.title") : title;
+    std::string message = StringUtils::format(loc.get("saveConfirmDialog.message"), fileName);
+    std::string saveLabel = loc.get("saveConfirmDialog.save");
+    std::string discardLabel = loc.get("saveConfirmDialog.discard");
+    
+    showYesNoCancelDialog(bShow, result, dialogTitle, message, saveLabel, discardLabel);
+}
+
+// ============================================================================
 // 文件读写封装接口
 // ============================================================================
 
@@ -397,7 +511,7 @@ bool readTextFile(const std::string& filePathUtf8, std::string& outContent) {
         
         // 读取文件内容
         file.seekg(0, std::ios::end);
-        std::streamsize size = file.tellg();
+        auto size = file.tellg();
         file.seekg(0, std::ios::beg);
         
         if (size > 0) {
