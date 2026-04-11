@@ -14,6 +14,9 @@ list(APPEND imgui_headers
 add_library(imgui STATIC
     ${imgui_sources}
     ${imgui_headers}
+    # misc/cpp sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/misc/cpp/imgui_stdlib.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
 target_include_directories(imgui

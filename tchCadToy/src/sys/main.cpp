@@ -94,6 +94,11 @@ int main(int argc, char* argv[])
     Renderer::initialize(window);
     LOG_INFO("Renderer initialized successfully!");
     
+    // 初始化文件对话框的纹理相关函数(如果调用了ImFileDialog，就必须初始化，否则运行时会调用空函数指针导致崩溃)
+    LOG_INFO("Initializing FileDialog...");
+    initializeImFileDialog();
+    LOG_INFO("FileDialog initialized successfully!");
+    
     // 主循环
     LOG_INFO("Entering main loop...");
     while (!glfwWindowShouldClose(window)) {

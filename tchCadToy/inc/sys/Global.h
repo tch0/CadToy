@@ -37,3 +37,6 @@ void buildCwd(const char* exePath);
 
 // create important resource paths
 void checkAndCreateImportantDirs();
+
+// initialize ImFileDialog texture callbacks
+void initializeImFileDialog();

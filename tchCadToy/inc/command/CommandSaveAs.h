@@ -15,16 +15,20 @@ class CommandSaveAs : public Command {
 private:
     // 另存为命令状态枚举
     enum class CommandSaveAsState {
-        kFileDialogEntry,       // 进入文件对话框状态
-        kFileDialogShow,        // 显示文件对话框并等待用户选择
+        kFileDialogEntry,       // 进入原始文件对话框状态
+        kFileDialogShow,        // 显示原始文件对话框并等待用户选择
+        kImFileDialogEntry,     // 进入ImFileDialog状态（文件路径编码问题暂未解决，暂未使用）
+        kImFileDialogShow,      // 显示ImFileDialog并等待用户选择（文件路径编码问题暂未解决，暂未使用）
         kCompleted              // 完成状态
     };
     
     CommandSaveAsState m_state;     // 当前状态
+    
+    // 原始文件对话框相关
     bool m_showDialog;              // 控制对话框显示
     bool m_dialogReturned;          // 对话框是否返回结果
     std::string m_selectedPath;     // 用户选择的路径
-
+    
 public:
     CommandSaveAs();
     

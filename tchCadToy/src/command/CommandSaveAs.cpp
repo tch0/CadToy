@@ -4,6 +4,7 @@
 // C++ 标准库
 
 // 第三方库
+#include <ImFileDialog.h>
 
 // 项目头文件
 #include "DocManager.h"
@@ -60,6 +61,49 @@ void CommandSaveAs::onUpdate() {
                     // 用户取消或关闭对话框
                     Utils::cmdLinePrint(loc.get("command.saveas.canceled"));
                 }
+                m_state = CommandSaveAsState::kCompleted;
+            }
+            break;
+        }
+        
+        case CommandSaveAsState::kImFileDialogEntry:
+        {
+            // 获取初始文件名
+            Document& doc = DocManager::getCurrentDocument();
+            std::string fileName = doc.getFileName();
+            if (fileName.empty()) {
+                fileName = "unnamed";
+            }
+            
+            // 打开ImFileDialog（只调用一次）
+            ifd::FileDialog::getInstance().save("SaveAsDialog",
+                loc.get("fileDialog.title.save").c_str(),
+                "*.json {.json}",
+                fileName);
+            
+            m_state = CommandSaveAsState::kImFileDialogShow;
+            break;
+        }
+            
+        case CommandSaveAsState::kImFileDialogShow:
+        {
+            // 检查对话框是否完成
+            if (ifd::FileDialog::getInstance().isDone("SaveAsDialog")) {
+                if (ifd::FileDialog::getInstance().hasResult()) {
+                    // 用户确认了选择
+                    std::string result = ifd::FileDialog::getInstance().getResult().string();
+                    Document& doc = DocManager::getCurrentDocument();
+                    if (doc.saveToFile(result)) {
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), doc.getFullPath()));
+                    } else {
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.failed"), result));
+                    }
+                } else {
+                    // 用户取消
+                    Utils::cmdLinePrint(loc.get("command.saveas.canceled"));
+                }
+                // 关闭对话框
+                ifd::FileDialog::getInstance().close();
                 m_state = CommandSaveAsState::kCompleted;
             }
             break;

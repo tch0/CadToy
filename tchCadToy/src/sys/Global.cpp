@@ -4,6 +4,7 @@
 #include <filesystem>
 
 // 第三方库
+#include <ImFileDialog.h>
 
 // 项目头文件
 #include "SysConfig.h"
@@ -75,4 +76,36 @@ void createDirIfNotExist(const fs::path& p)
 // create important resource paths
 void checkAndCreateImportantDirs()
 {
+}
+
+// initialize ImFileDialog texture callbacks
+void initializeImFileDialog()
+{
+    ifd::FileDialog::getInstance().createTexture = [](const uint8_t* data, int w, int h, ifd::Format fmt) -> void* {
+        GLuint tex;
+    
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        
+        if (fmt == ifd::Format::BGRA) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+        } else if (fmt == ifd::Format::RGBA) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        } else {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        }
+    
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    
+        return (void*)tex;
+    };
+    ifd::FileDialog::getInstance().deleteTexture = [](void* tex) {
+        GLuint texID = (GLuint)tex;
+        glDeleteTextures(1, &texID);
+    };
 }

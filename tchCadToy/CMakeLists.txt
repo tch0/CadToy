@@ -17,6 +17,7 @@ target_link_libraries(tchCadToy
     PUBLIC
         tchDatabase
         tchPlatform
+        ImFileDialog
         ${3rdparty_libs}
         ${essential_libs}
         general_cxx_compiler_flags
