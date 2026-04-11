@@ -14,7 +14,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/glm/glm DESTINATION include)
 # install rapidjson headers manually
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/rapidjson DESTINATION include)
 # install magic_enum headers manually
-file(GLOB magic_enum_headers ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/*.hpp)
+file(GLOB magic_enum_headers ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/magic_enum/*.hpp)
 install(FILES ${magic_enum_headers} DESTINATION include/magic_enum)
 # install minicoro header
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/minicoro/minicoro.h DESTINATION include/minicoro)
@@ -24,13 +24,17 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include/GLFW DESTINATION incl
 
 # install imgui sources to imgui/
 file(GLOB imgui_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.cpp)
-file(GLOB imgui_backend_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.cpp)
 file(GLOB imgui_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/*.h)
-file(GLOB imgui_backend_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.h)
+file(GLOB imgui_backends_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.cpp)
+file(GLOB imgui_backends_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends/*.h)
+file(GLOB imgui_misc_cpp_sources ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/*.cpp)
+file(GLOB imgui_misc_cpp_headers ${CMAKE_CURRENT_SOURCE_DIR}/imgui/misc/cpp/*.h)
 install(FILES ${imgui_sources} DESTINATION ../imgui)
 install(FILES ${imgui_headers} DESTINATION ../imgui)
-install(FILES ${imgui_backend_sources} DESTINATION ../imgui/backends)
-install(FILES ${imgui_backend_headers} DESTINATION ../imgui/backends)
+install(FILES ${imgui_backends_sources} DESTINATION ../imgui/backends)
+install(FILES ${imgui_backends_headers} DESTINATION ../imgui/backends)
+install(FILES ${imgui_misc_cpp_sources} DESTINATION ../imgui/misc/cpp)
+install(FILES ${imgui_misc_cpp_headers} DESTINATION ../imgui/misc/cpp)
 
 # install ImFileDialog header and source file to ImFileDialog/
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ImFileDialog/ImFileDialog.h DESTINATION ../ImFileDialog/inc)

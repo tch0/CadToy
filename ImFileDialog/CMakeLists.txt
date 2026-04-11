@@ -17,6 +17,7 @@ target_link_libraries(ImFileDialog
         imgui
         stb
         ${essential_libs}
+        general_cxx_compiler_flags
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${ImFileDialog_headers})
