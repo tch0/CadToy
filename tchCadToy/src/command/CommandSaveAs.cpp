@@ -15,6 +15,7 @@
 namespace tch {
 
 CommandSaveAs::CommandSaveAs() :
+    // m_state初始化为kFileDialogEntry即可启用内部实现的文件对话框
     m_state(CommandSaveAsState::kImFileDialogEntry),
     m_showDialog(false),
     m_dialogReturned(false),

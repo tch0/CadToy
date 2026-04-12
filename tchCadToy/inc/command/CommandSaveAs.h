@@ -17,8 +17,8 @@ private:
     enum class CommandSaveAsState {
         kFileDialogEntry,       // 进入原始文件对话框状态
         kFileDialogShow,        // 显示原始文件对话框并等待用户选择
-        kImFileDialogEntry,     // 进入ImFileDialog状态（文件路径编码问题暂未解决，暂未使用）
-        kImFileDialogShow,      // 显示ImFileDialog并等待用户选择（文件路径编码问题暂未解决，暂未使用）
+        kImFileDialogEntry,     // 进入ImFileDialog状态
+        kImFileDialogShow,      // 显示ImFileDialog并等待用户选择
         kCompleted              // 完成状态
     };
     
