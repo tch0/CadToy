@@ -15,7 +15,7 @@
 namespace tch {
 
 CommandSaveAs::CommandSaveAs() :
-    m_state(CommandSaveAsState::kFileDialogEntry),
+    m_state(CommandSaveAsState::kImFileDialogEntry),
     m_showDialog(false),
     m_dialogReturned(false),
     m_selectedPath() {
@@ -78,7 +78,7 @@ void CommandSaveAs::onUpdate() {
             // 打开ImFileDialog（只调用一次）
             ifd::FileDialog::getInstance().save("SaveAsDialog",
                 loc.get("fileDialog.title.save").c_str(),
-                "*.json {.json}",
+                "*.cad.json {.json},.*",
                 fileName);
             
             m_state = CommandSaveAsState::kImFileDialogShow;
@@ -91,7 +91,7 @@ void CommandSaveAs::onUpdate() {
             if (ifd::FileDialog::getInstance().isDone("SaveAsDialog")) {
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     // 用户确认了选择
-                    std::string result = ifd::FileDialog::getInstance().getResult().string();
+                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(result)) {
                         Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), doc.getFullPath()));
