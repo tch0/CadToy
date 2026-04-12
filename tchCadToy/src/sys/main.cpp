@@ -53,9 +53,15 @@ int main(int argc, char* argv[])
     LOG_INFO("Initializing GLFW...");
     if (!glfwInit()) {
         LOG_ERROR("Failed to initialize GLFW!");
+        glfwTerminate();
         return -1;
     }
     LOG_INFO("GLFW initialized successfully!");
+    
+    // OpenGL版本3.3，核心模式：移除老式的废弃的OpenGL函数
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     
     // 创建窗口
     LOG_INFO("Creating window...");
@@ -71,6 +77,9 @@ int main(int argc, char* argv[])
     LOG_INFO("Setting GLFW context...");
     glfwMakeContextCurrent(window);
     LOG_INFO("Context set successfully!");
+    
+    // 启用V-Sync(垂直同步)，强制渲染循环与显示器的刷新率同步
+    glfwSwapInterval(1);
     
     // 初始化OpenGL函数指针（使用glad）
     LOG_INFO("Initializing glad...");
