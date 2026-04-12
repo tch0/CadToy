@@ -37,7 +37,7 @@
 [submodule "3rdparty/ImFileDialog"]
 	path = 3rdparty/ImFileDialog
 	url = https://github.com/tch0/ImFileDialog
-	branch = main
+	branch = For3rdpartyUse
 [submodule "3rdparty/stb"]
 	path = 3rdparty/stb
 	url = https://github.com/nothings/stb.git
