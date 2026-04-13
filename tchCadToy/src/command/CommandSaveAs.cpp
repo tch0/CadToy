@@ -71,16 +71,16 @@ void CommandSaveAs::onUpdate() {
         {
             // 获取初始文件名
             Document& doc = DocManager::getCurrentDocument();
-            std::string fileName = doc.getFileName();
-            if (fileName.empty()) {
-                fileName = "unnamed";
+            std::string fullFileName = doc.getFullFileName();
+            if (fullFileName.empty()) {
+                fullFileName = "unnamed";
             }
             
             // 打开ImFileDialog（只调用一次）
             ifd::FileDialog::getInstance().save("SaveAsDialog",
                 loc.get("fileDialog.title.save").c_str(),
                 "*.cad.json {.json},.*",
-                fileName);
+                fullFileName);
             
             m_state = CommandSaveAsState::kImFileDialogShow;
             break;
