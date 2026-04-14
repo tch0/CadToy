@@ -4,6 +4,7 @@
 // C++ 标准库
 
 // 第三方库
+#include <ImFileDialog.h>
 
 // 项目头文件
 #include "DocManager.h"
@@ -65,7 +66,8 @@ void CommandClose::onUpdate() {
                 switch (m_saveConfirmResult) {
                     case Utils::TriStateResult::kYes:
                         // 用户选择保存
-                        m_state = CommandCloseState::kSaveDialogEntry;
+                        // 修改为kFileDialogEntry启用内部文件对话框，或kImFileDialogEntry启用ImFileDialog
+                        m_state = CommandCloseState::kImFileDialogEntry;
                         break;
                     case Utils::TriStateResult::kNo:
                         // 用户选择不保存，直接关闭
@@ -81,19 +83,19 @@ void CommandClose::onUpdate() {
             break;
         }
             
-        case CommandCloseState::kSaveDialogEntry:
+        case CommandCloseState::kFileDialogEntry:
         {
-            // 初始化文件保存对话框
+            // 初始化内部文件对话框
             m_showFileDialog = true;
             m_dialogReturned = false;
             m_selectedPath.clear();
-            m_state = CommandCloseState::kSaveDialogShow;
+            m_state = CommandCloseState::kFileDialogShow;
             break;
         }
             
-        case CommandCloseState::kSaveDialogShow:
+        case CommandCloseState::kFileDialogShow:
         {
-            // 显示文件保存对话框，传入当前文件名作为初始文件名
+            // 显示内部文件对话框，传入当前文件名作为初始文件名
             Document& doc = DocManager::getCurrentDocument();
             Utils::showFileDialog(m_showFileDialog, m_dialogReturned, m_selectedPath, false, doc.getFileName());
             
@@ -115,6 +117,52 @@ void CommandClose::onUpdate() {
                     Utils::cmdLinePrint(loc.get("command.close.canceled"));
                     m_state = CommandCloseState::kCompleted;
                 }
+            }
+            break;
+        }
+        
+        case CommandCloseState::kImFileDialogEntry:
+        {
+            // 获取初始文件名
+            Document& doc = DocManager::getCurrentDocument();
+            std::string fullFileName = doc.getFullFileName();
+            if (fullFileName.empty()) {
+                fullFileName = "unnamed";
+            }
+            
+            // 打开ImFileDialog（只调用一次）
+            ifd::FileDialog::getInstance().save("CloseSaveDialog",
+                loc.get("fileDialog.title.save").c_str(),
+                "*.cad.json {.json},.*",
+                fullFileName);
+            
+            m_state = CommandCloseState::kImFileDialogShow;
+            break;
+        }
+            
+        case CommandCloseState::kImFileDialogShow:
+        {
+            // 检查对话框是否完成
+            if (ifd::FileDialog::getInstance().isDone("CloseSaveDialog")) {
+                if (ifd::FileDialog::getInstance().hasResult()) {
+                    // 用户确认了保存路径
+                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    Document& doc = DocManager::getCurrentDocument();
+                    if (doc.saveToFile(result)) {
+                        // 保存成功，关闭文档
+                        m_state = CommandCloseState::kCloseDocument;
+                    } else {
+                        // 保存失败，取消关闭
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), result));
+                        m_state = CommandCloseState::kCompleted;
+                    }
+                } else {
+                    // 用户取消保存，取消关闭
+                    Utils::cmdLinePrint(loc.get("command.close.canceled"));
+                    m_state = CommandCloseState::kCompleted;
+                }
+                // 关闭对话框
+                ifd::FileDialog::getInstance().close();
             }
             break;
         }

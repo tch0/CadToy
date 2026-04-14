@@ -16,8 +16,10 @@ enum class CommandCloseState {
     kCheckModified,         // 检查文档是否已修改
     kSaveConfirmEntry,      // 进入保存确认对话框
     kSaveConfirmShow,       // 显示保存确认对话框
-    kSaveDialogEntry,       // 进入文件保存对话框（如果需要保存）
-    kSaveDialogShow,        // 显示文件保存对话框
+    kFileDialogEntry,       // 进入内部文件对话框（如果需要保存）
+    kFileDialogShow,        // 显示内部文件对话框
+    kImFileDialogEntry,     // 进入ImFileDialog状态
+    kImFileDialogShow,      // 显示ImFileDialog
     kCloseDocument,         // 执行关闭文档
     kCompleted              // 完成状态
 };

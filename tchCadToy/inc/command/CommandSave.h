@@ -16,8 +16,10 @@ private:
     // 保存命令状态枚举
     enum class CommandSaveState {
         kDocumentSavedQuery,    // 查询文档是否已关联文件
-        kFileDialogEntry,       // 进入文件对话框状态
-        kFileDialogShow,        // 显示文件对话框并等待用户选择
+        kFileDialogEntry,       // 进入内部文件对话框状态
+        kFileDialogShow,        // 显示内部文件对话框并等待用户选择
+        kImFileDialogEntry,     // 进入ImFileDialog状态
+        kImFileDialogShow,      // 显示ImFileDialog并等待用户选择
         kCompleted              // 完成状态
     };
     

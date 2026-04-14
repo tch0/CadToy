@@ -4,6 +4,7 @@
 // C++ 标准库
 
 // 第三方库
+#include <ImFileDialog.h>
 
 // 项目头文件
 #include "DocManager.h"
@@ -14,7 +15,8 @@
 namespace tch {
 
 CommandOpen::CommandOpen() :
-    m_state(CommandOpenState::kFileDialogEntry),
+    // m_state初始化为kFileDialogEntry即可启用内部实现的文件对话框
+    m_state(CommandOpenState::kImFileDialogEntry),
     m_showDialog(false),
     m_dialogReturned(false),
     m_selectedPath() {
@@ -92,6 +94,77 @@ void CommandOpen::onUpdate() {
                     // 用户取消或关闭对话框
                     Utils::cmdLinePrint(loc.get("command.open.canceled"));
                 }
+                m_state = CommandOpenState::kCompleted;
+            }
+            break;
+        }
+        
+        case CommandOpenState::kImFileDialogEntry:
+        {
+            // 打开ImFileDialog（只调用一次）
+            // 打开时不需要传入文件名，使用单选模式
+            ifd::FileDialog::getInstance().open("OpenDialog",
+                loc.get("fileDialog.title.open").c_str(),
+                "*.cad.json {.json},.*");
+            
+            m_state = CommandOpenState::kImFileDialogShow;
+            break;
+        }
+            
+        case CommandOpenState::kImFileDialogShow:
+        {
+            // 检查对话框是否完成
+            if (ifd::FileDialog::getInstance().isDone("OpenDialog")) {
+                if (ifd::FileDialog::getInstance().hasResult()) {
+                    // 用户确认了选择
+                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    
+                    // 查重：遍历所有文档，检查该文件是否已打开
+                    bool alreadyOpened = false;
+                    std::size_t existingDocIndex = DocManager::InvalidDocIndex;
+                    std::size_t docCount = DocManager::getDocumentCount();
+                    
+                    for (std::size_t i = 0; i < docCount; ++i) {
+                        if (DocManager::getFilePath(i) == result) {
+                            alreadyOpened = true;
+                            existingDocIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // 文件已打开
+                    if (alreadyOpened && existingDocIndex != DocManager::InvalidDocIndex) {
+                        // 且不是当前文档，则需要切换
+                        if (existingDocIndex != DocManager::getCurrentDocumentIndex()) {
+                            DocManager::setPendingSwitchIndexFromCommand(existingDocIndex);
+                        }
+                        // 直接调用finish提前结束命令
+                        finish();
+                        // 关闭对话框
+                        ifd::FileDialog::getInstance().close();
+                        break;
+                    } else {
+                        // 文件未打开，执行打开
+                        std::size_t docIndex = DocManager::openFile(result);
+                        if (docIndex != DocManager::InvalidDocIndex) {
+                            // 打开成功
+                            DocManager::setPendingSwitchIndexFromCommand(docIndex);
+                            // 同样提前结束命令
+                            finish();
+                            // 关闭对话框
+                            ifd::FileDialog::getInstance().close();
+                            break;
+                        } else {
+                            // 打开失败
+                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), result));
+                        }
+                    }
+                } else {
+                    // 用户取消
+                    Utils::cmdLinePrint(loc.get("command.open.canceled"));
+                }
+                // 关闭对话框
+                ifd::FileDialog::getInstance().close();
                 m_state = CommandOpenState::kCompleted;
             }
             break;
