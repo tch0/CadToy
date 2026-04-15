@@ -11,6 +11,7 @@
 #include "Logger.h"
 #include "Global.h"
 #include "PlatformUtils.h"
+#include "ImFileDialogConfigManager.h"
 
 using namespace tch;
 namespace fs = std::filesystem;
@@ -108,4 +109,7 @@ void initializeImFileDialog()
         GLuint texID = static_cast<GLuint>(reinterpret_cast<uintptr_t>(tex));
         glDeleteTextures(1, &texID);
     };
+    
+    // 初始化ImFileDialog配置管理器
+    ImFileDialogConfigManager::getInstance().initialize();
 }
