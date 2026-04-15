@@ -11,20 +11,27 @@
 /build_tmp/
 !/.vscode/settings.json
 
-# 3rd party generated and installed files
+# 3rd party generated files and installed library and header files
 /3rdparty-install/
 /3rdparty/build/
+/3rdparty/build_mingw/
 
-# imgui files, installed from 3rdparty/imgui, do not track them!
-/imgui/**
-!/imgui/CMakeLists.txt
+# 3rdparty-src files, installed from 3rdparty/, do not track them!
+# only track CMakeLists.txt and necessary source files
+# imgui
+/3rdparty-src/imgui/**
+!/3rdparty-src/imgui/CMakeLists.txt
+# ImFileDialog
+/3rdparty-src/ImFileDialog/**
+!/3rdparty-src/ImFileDialog/CMakeLists.txt
+# stb
+/3rdparty-src/stb/**
+!/3rdparty-src/stb/CMakeLists.txt
+!/3rdparty-src/stb/stb_impl.cpp
 
-# ImFileDialog files, installed from 3rdparty/ImFileDialog, only track CMakeLists.txt
-/ImFileDialog/**
-!/ImFileDialog/CMakeLists.txt
-
-# stb files, installed from 3rdparty/ImFileDialog, only track CMakelists.txt and a necessary source
-/stb/**
-!/stb/CMakeLists.txt
-!/stb/stb_impl.cpp
-
+# different compilers/configurations/generators building test
+/build_clangcl/
+/build_mingw/
+/build_clang/
+/build_ninja/
+/build_release/

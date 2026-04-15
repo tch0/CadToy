@@ -243,9 +243,9 @@ elseif(APPLE)
     # todo
 endif()
 
-add_subdirectory(imgui)
-add_subdirectory(stb)
-add_subdirectory(ImFileDialog)
+add_subdirectory(3rdparty-src/imgui)
+add_subdirectory(3rdparty-src/stb)
+add_subdirectory(3rdparty-src/ImFileDialog)
 
 add_subdirectory(tchGeometry)       # basic geometry primitives and algorithms
 add_subdirectory(tchDatabase)       # databse and entities
