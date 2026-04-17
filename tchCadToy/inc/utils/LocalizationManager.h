@@ -2,7 +2,6 @@
 
 // C++ 标准库
 #include <filesystem>
-#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -20,9 +19,6 @@ namespace tch {
  */
 class LocalizationManager {
 private:
-    // 静态实例
-    static std::unique_ptr<LocalizationManager> s_instance;
-    
     // 当前语言
     std::string m_currentLanguage;
     
@@ -36,14 +32,10 @@ private:
     bool loadLanguage(const std::string& langCode, const std::filesystem::path& filePath);
 
 public:
-    // 获取实例
     static LocalizationManager& getInstance();
     
     // 初始化
     bool initialize();
-    
-    // 清理
-    void cleanup();
     
     // 设置当前语言
     void setLanguage(const std::string& langCode);

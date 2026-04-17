@@ -17,20 +17,14 @@
 
 namespace tch {
 
-// 静态实例初始化
-std::unique_ptr<LocalizationManager> LocalizationManager::s_instance = nullptr;
-
 // 构造函数
 LocalizationManager::LocalizationManager() {
     m_currentLanguage = "en";
 }
 
-// 获取实例
 LocalizationManager& LocalizationManager::getInstance() {
-    if (!s_instance) {
-        s_instance.reset(new LocalizationManager());
-    }
-    return *s_instance;
+    static LocalizationManager instance;
+    return instance;
 }
 
 // 初始化
@@ -64,12 +58,6 @@ bool LocalizationManager::initialize() {
     
     LOG_INFO("LocalizationManager initialized successfully. Loaded {} languages.", m_languages.size());
     return true;
-}
-
-// 清理
-void LocalizationManager::cleanup() {
-    m_languages.clear();
-    s_instance.reset();
 }
 
 // 加载语言资源文件
