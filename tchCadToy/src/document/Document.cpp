@@ -3,6 +3,7 @@
 
 // C++ 标准库
 #include <algorithm>
+#include <filesystem>
 
 // 第三方库
 #include <rapidjson/document.h>
@@ -12,7 +13,6 @@
 // 项目头文件
 #include "Logger.h"
 #include "GlobalUtils.h"
-#include "PlatformUtils.h"
 
 
 namespace tch {
@@ -40,11 +40,10 @@ Document::Document(const std::string& fileName) :
 }
 
 // 从路径解析文件名和后缀
-void Document::parseFilePath(const std::string& path) {
-    m_fullPath = path;
+void Document::parseFilePath(const std::filesystem::path& path) {
+    m_filePath = path;
     
-    PlatformUtils::Path filePath(path);
-    std::string filename = filePath.filename();
+    std::string filename = PathUtils::toString(path.filename());
     
     // 特殊处理 .cad.json 后缀
     const std::string CAD_JSON_EXT = ".cad.json";
@@ -103,17 +102,17 @@ void Document::addToCommandExecutionHistory(const std::string& content) {
 // 数据库相关方法
 // ============================================================================
 
-bool Document::loadFromFile(const std::string& filePath) {
+bool Document::loadFromFile(const std::filesystem::path& filePath) {
     if (filePath.empty()) {
         LOG_ERROR("File path is empty");
         return false;
     }
     
     try {
-        // 使用封装接口读取文件（内部自动处理编码转换）
+        // 使用封装接口读取文件
         std::string jsonStr;
         if (!Utils::readTextFile(filePath, jsonStr)) {
-            LOG_ERROR("Failed to read file: {}", filePath);
+            LOG_ERROR("Failed to read file: {}", PathUtils::toString(filePath));
             return false;
         }
         
@@ -122,13 +121,13 @@ bool Document::loadFromFile(const std::string& filePath) {
         doc.Parse(jsonStr.c_str());
         
         if (doc.HasParseError()) {
-            LOG_ERROR("Failed to parse JSON from file: {}", filePath);
+            LOG_ERROR("Failed to parse JSON from file: {}", PathUtils::toString(filePath));
             return false;
         }
         
         // 加载到数据库
         if (!m_database->loadFromJson(doc)) {
-            LOG_ERROR("Failed to load database from JSON: {}", filePath);
+            LOG_ERROR("Failed to load database from JSON: {}", PathUtils::toString(filePath));
             return false;
         }
         
@@ -137,20 +136,20 @@ bool Document::loadFromFile(const std::string& filePath) {
         markSaved(true);
         return true;
     } catch (const std::exception& e) {
-        LOG_ERROR("Exception loading file: {} - {}", filePath, e.what());
+        LOG_ERROR("Exception loading file: {} - {}", PathUtils::toString(filePath), e.what());
         return false;
     }
 }
 
 bool Document::loadFromFile() {
-    if (m_fullPath.empty()) {
+    if (m_filePath.empty()) {
         LOG_ERROR("No file path set for document");
         return false;
     }
-    return loadFromFile(m_fullPath);
+    return loadFromFile(m_filePath);
 }
 
-bool Document::saveToFile(const std::string& filePath) {
+bool Document::saveToFile(const std::filesystem::path& filePath) {
     if (filePath.empty()) {
         LOG_ERROR("File path is empty");
         return false;
@@ -162,28 +161,28 @@ bool Document::saveToFile(const std::string& filePath) {
         
         m_database->saveToJson(writer);
         
-        // 使用封装接口写入文件（内部自动处理编码转换）
+        // 使用封装接口写入文件
         if (!Utils::writeTextFile(filePath, buffer.GetString())) {
-            LOG_ERROR("Failed to write file: {}", filePath);
+            LOG_ERROR("Failed to write file: {}", PathUtils::toString(filePath));
             return false;
         }
         
-        // 解析路径并标记为已保存（内部统一使用 UTF-8）
+        // 解析路径并标记为已保存
         parseFilePath(filePath);
         markSaved(true);
         return true;
     } catch (const std::exception& e) {
-        LOG_ERROR("Exception saving file: {} - {}", filePath, e.what());
+        LOG_ERROR("Exception saving file: {} - {}", PathUtils::toString(filePath), e.what());
         return false;
     }
 }
 
 bool Document::saveToFile() {
-    if (m_fullPath.empty()) {
+    if (m_filePath.empty()) {
         LOG_ERROR("No file path set for document");
         return false;
     }
-    return saveToFile(m_fullPath);
+    return saveToFile(m_filePath);
 }
 
 void Document::markDatabaseModified() {

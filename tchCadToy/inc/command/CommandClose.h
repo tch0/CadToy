@@ -1,7 +1,7 @@
 #pragma once
 
 // C++ 标准库
-#include <string>
+#include <filesystem>
 
 // 第三方库
 
@@ -27,13 +27,13 @@ enum class CommandCloseState {
 // 关闭文档命令
 class CommandClose : public Command {
 private:
-    CommandCloseState m_state;          // 当前状态
-    bool m_showSaveConfirm;             // 控制保存确认对话框显示
-    bool m_showFileDialog;              // 控制文件对话框显示
-    bool m_dialogReturned;              // 对话框返回结果
-    std::string m_selectedPath;         // 用户选择的路径
-    Utils::TriStateResult m_saveConfirmResult; // 保存确认结果
-
+    CommandCloseState m_state;                  // 当前状态
+    Utils::TriStateResult m_saveConfirmResult;  // 保存确认结果
+    bool m_showSaveConfirm;                     // 控制保存确认对话框显示
+    // 内部文件对话框相关
+    bool m_showFileDialog;                      // 控制文件对话框显示
+    bool m_dialogReturned;                      // 对话框返回结果
+    std::filesystem::path m_selectedPath;       // 用户选择的路径
 public:
     CommandClose();
     

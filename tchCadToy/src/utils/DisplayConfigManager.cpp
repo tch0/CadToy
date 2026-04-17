@@ -17,7 +17,7 @@
 #include "Logger.h"
 #include "Global.h"
 #include "GlobalUtils.h"
-#include "PlatformUtils.h"
+
 
 namespace tch {
 
@@ -51,15 +51,14 @@ void DisplayConfigManager::initialize(GLFWwindow* window) {
         return;
     }
     
-    // 构建配置文件路径（使用 PlatformUtils::Path）
-    PlatformUtils::Path configPath = PlatformUtils::Path(g_pathCwd) / "config" / "DisplayConfig.json";
-    m_configFilePath = configPath.string();
+    // 构建配置文件路径（使用 std::filesystem::path）
+    m_configFilePath = g_pathCwd / "config" / "DisplayConfig.json";
     
     // 创建config目录（如果不存在）
-    PlatformUtils::Path configDir = PlatformUtils::Path(g_pathCwd) / "config";
-    if (!configDir.exists()) {
-        std::filesystem::create_directories(configDir.local());
-        LOG_INFO("DisplayConfigManager: Created config directory: {}", configDir.string());
+    std::filesystem::path configDir = g_pathCwd / "config";
+    if (!std::filesystem::exists(configDir)) {
+        std::filesystem::create_directories(configDir);
+        LOG_INFO("DisplayConfigManager: Created config directory: {}", PathUtils::toString(configDir));
     }
     
     // 读取配置文件
@@ -77,7 +76,7 @@ void DisplayConfigManager::initialize(GLFWwindow* window) {
     
     // 立即应用当前配置
     onConfigChanged();
-    LOG_INFO("DisplayConfigManager: Initialized with window, config file: {}", m_configFilePath);
+    LOG_INFO("DisplayConfigManager: Initialized with window, config file: {}", PathUtils::toString(m_configFilePath));
 }
 
 // 设置窗口字体大小，范围18-50
@@ -210,14 +209,14 @@ int DisplayConfigManager::generateDefaultFontSize(float dpiScale) {
 void DisplayConfigManager::loadFromFile() {
     std::string content;
     if (!Utils::readTextFile(m_configFilePath, content)) {
-        LOG_INFO("DisplayConfigManager: Config file not found, will create on save: {}", 
-                 m_configFilePath);
+        LOG_INFO("DisplayConfigManager: Config file not found, will create on save: {}",
+                 PathUtils::toString(m_configFilePath));
         return;
     }
     
     rapidjson::Document doc;
     if (doc.Parse(content.c_str()).HasParseError()) {
-        LOG_ERROR("DisplayConfigManager: Failed to parse config file: {}", m_configFilePath);
+        LOG_ERROR("DisplayConfigManager: Failed to parse config file: {}", PathUtils::toString(m_configFilePath));
         return;
     }
     
@@ -298,7 +297,7 @@ void DisplayConfigManager::saveToFile() {
     
     if (!Utils::writeTextFile(m_configFilePath, buffer.GetString())) {
         LOG_ERROR("DisplayConfigManager: Failed to write config file: {}", 
-                  m_configFilePath);
+                  PathUtils::toString(m_configFilePath));
         return;
     }
     

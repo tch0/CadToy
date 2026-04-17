@@ -10,11 +10,11 @@
 #include "SysConfig.h"
 #include "Logger.h"
 #include "Global.h"
-#include "PlatformUtils.h"
+#include "GlobalUtils.h"
 #include "ImFileDialogConfigManager.h"
 
+
 using namespace tch;
-namespace fs = std::filesystem;
 
 // check which OS current is
 void checkOS()
@@ -41,42 +41,43 @@ void checkSystemEndian()
 // build current working directory from exe path
 void buildCwd(const char* exePath)
 {
-    fs::path cwdPath = fs::absolute(fs::path(exePath));
-    cwdPath.remove_filename();
-    // 转换为 UTF-8 存储
-    g_pathCwd = PlatformUtils::Path::fromLocal(cwdPath.string()).string();
-    globalLogger().info(std::format("cwd: {}", g_pathCwd));
+    g_pathCwd = std::filesystem::absolute(std::filesystem::path(exePath));
+    g_pathCwd.remove_filename();
+    globalLogger().info(std::format("cwd: {}", PathUtils::toString(g_pathCwd)));
 }
 
 // create a directory p if it does not exist
-void createDirIfNotExist(const fs::path& p)
+void createDirIfNotExist(const std::filesystem::path& p)
 {
     try
     {
         std::error_code ec;
-        if (fs::exists(p, ec))
+        if (std::filesystem::exists(p, ec))
         {
-            if (fs::is_directory(p, ec))
+            if (std::filesystem::is_directory(p, ec))
             {
                 return;
             }
-            globalLogger().warning(std::format("file {} exists, but not a directory, we will delete it and create a same name directory!", (p).string()));
-            fs::remove(p, ec);
+            globalLogger().warning(std::format("file {} exists, but not a directory, we will delete it and create a same name directory!", PathUtils::toString(p)));
+            std::filesystem::remove(p, ec);
         }
-        if (!fs::create_directories(p, ec))
+        if (!std::filesystem::create_directories(p, ec))
         {
             globalLogger().warning(std::format("create directory failed, error code: {}, {}!", ec.value(), ec.message()));
         }
     }
-    catch(const fs::filesystem_error& e)
+    catch(const std::filesystem::filesystem_error& e)
     {
-        globalLogger().warning(std::format("filesystem_error exception caught: \nwhat: {}\npath1: {}\npath2: {}\n", e.what(), e.path1().string(), e.path2().string()));
+        globalLogger().warning(std::format("filesystem_error exception caught: \nwhat: {}\npath1: {}\npath2: {}\n", e.what(), PathUtils::toString(e.path1()), PathUtils::toString(e.path2())));
     }
 }
 
 // create important resource paths
 void checkAndCreateImportantDirs()
 {
+    createDirIfNotExist(g_pathCwd / "config");
+    createDirIfNotExist(g_pathCwd / "fonts");
+    createDirIfNotExist(g_pathCwd / "res");
 }
 
 // initialize ImFileDialog texture callbacks

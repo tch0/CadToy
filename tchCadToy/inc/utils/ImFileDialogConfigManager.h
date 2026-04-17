@@ -1,7 +1,7 @@
 #pragma once
 
 // C++ 标准库
-#include <string>
+#include <filesystem>
 
 // 第三方库
 
@@ -32,7 +32,7 @@ private:
     // 确保配置目录存在
     void ensureConfigDirExists();
     
-    std::string m_configFilePath;
+    std::filesystem::path m_configFilePath;
 };
 
 } // namespace tch

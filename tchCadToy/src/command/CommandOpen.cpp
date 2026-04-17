@@ -40,7 +40,7 @@ void CommandOpen::onUpdate() {
             m_state = CommandOpenState::kFileDialogShow;
             break;
         }
-            
+        
         case CommandOpenState::kFileDialogShow:
         {
             // 显示文件对话框（打开模式）
@@ -87,7 +87,7 @@ void CommandOpen::onUpdate() {
                             break;
                         } else {
                             // 打开失败
-                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), m_selectedPath));
+                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), PathUtils::toString(m_selectedPath)));
                         }
                     }
                 } else {
@@ -110,14 +110,14 @@ void CommandOpen::onUpdate() {
             m_state = CommandOpenState::kImFileDialogShow;
             break;
         }
-            
+        
         case CommandOpenState::kImFileDialogShow:
         {
             // 检查对话框是否完成
             if (ifd::FileDialog::getInstance().isDone("OpenDialog")) {
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     // 用户确认了选择
-                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    std::filesystem::path result = ifd::FileDialog::getInstance().getResult();
                     
                     // 查重：遍历所有文档，检查该文件是否已打开
                     bool alreadyOpened = false;
@@ -156,7 +156,7 @@ void CommandOpen::onUpdate() {
                             break;
                         } else {
                             // 打开失败
-                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), result));
+                            Utils::cmdLinePrint(StringUtils::format(loc.get("command.open.failed"), PathUtils::toString(result)));
                         }
                     }
                 } else {
@@ -169,7 +169,7 @@ void CommandOpen::onUpdate() {
             }
             break;
         }
-            
+        
         case CommandOpenState::kCompleted:
         {
             // 命令完成

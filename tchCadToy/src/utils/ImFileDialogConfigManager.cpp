@@ -14,7 +14,6 @@
 #include "Global.h"
 #include "GlobalUtils.h"
 #include "Logger.h"
-#include "PlatformUtils.h"
 
 
 namespace tch {
@@ -34,30 +33,29 @@ ImFileDialogConfigManager::~ImFileDialogConfigManager() {
 }
 
 void ImFileDialogConfigManager::initialize() {
-    PlatformUtils::Path configPath = PlatformUtils::Path(g_pathCwd) / "config" / "ImFileDialogConfig.json";
-    m_configFilePath = configPath.string();
+    m_configFilePath = g_pathCwd / "config" / "ImFileDialogConfig.json";
     
     loadFromFile();
 }
 
 void ImFileDialogConfigManager::ensureConfigDirExists() {
-    PlatformUtils::Path configDir = PlatformUtils::Path(g_pathCwd) / "config";
-    if (!configDir.exists()) {
-        std::filesystem::create_directories(configDir.local());
-        LOG_INFO("ImFileDialogConfigManager: Created config directory: {}", configDir.string());
+    std::filesystem::path configDir = g_pathCwd / "config";
+    if (!std::filesystem::exists(configDir)) {
+        std::filesystem::create_directories(configDir);
+        LOG_INFO("ImFileDialogConfigManager: Created config directory: {}", PathUtils::toString(configDir));
     }
 }
 
 void ImFileDialogConfigManager::loadFromFile() {
     std::string content;
     if (!Utils::readTextFile(m_configFilePath, content)) {
-        LOG_INFO("ImFileDialogConfigManager: Config file not found, will create on save: {}", m_configFilePath);
+        LOG_INFO("ImFileDialogConfigManager: Config file not found, will create on save: {}", PathUtils::toString(m_configFilePath));
         return;
     }
     
     rapidjson::Document doc;
     if (doc.Parse(content.c_str()).HasParseError() || !doc.IsObject()) {
-        LOG_ERROR("ImFileDialogConfigManager: Failed to parse config file: {}", m_configFilePath);
+        LOG_ERROR("ImFileDialogConfigManager: Failed to parse config file: {}", PathUtils::toString(m_configFilePath));
         return;
     }
     
@@ -72,7 +70,7 @@ void ImFileDialogConfigManager::loadFromFile() {
         }
     }
     
-    LOG_INFO("ImFileDialogConfigManager: Loaded {} favorites from {}", favorites.Size(), m_configFilePath);
+    LOG_INFO("ImFileDialogConfigManager: Loaded {} favorites from {}", favorites.Size(), PathUtils::toString(m_configFilePath));
 }
 
 void ImFileDialogConfigManager::saveToFile() {
@@ -100,11 +98,11 @@ void ImFileDialogConfigManager::saveToFile() {
     writer.EndObject();
     
     if (!Utils::writeTextFile(m_configFilePath, buffer.GetString())) {
-        LOG_ERROR("ImFileDialogConfigManager: Failed to write config file: {}", m_configFilePath);
+        LOG_ERROR("ImFileDialogConfigManager: Failed to write config file: {}", PathUtils::toString(m_configFilePath));
         return;
     }
     
-    LOG_INFO("ImFileDialogConfigManager: Saved {} favorites to {}", u8Favorites.size(), m_configFilePath);
+    LOG_INFO("ImFileDialogConfigManager: Saved {} favorites to {}", u8Favorites.size(), PathUtils::toString(m_configFilePath));
 }
 
 } // namespace tch

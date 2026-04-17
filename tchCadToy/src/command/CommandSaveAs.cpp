@@ -54,9 +54,9 @@ void CommandSaveAs::onUpdate() {
                     // 用户确认了选择，执行另存为
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(m_selectedPath)) {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), doc.getFullPath()));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), PathUtils::toString(doc.getFilePath())));
                     } else {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.failed"), m_selectedPath));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.failed"), PathUtils::toString(m_selectedPath)));
                     }
                 } else {
                     // 用户取消或关闭对话框
@@ -92,12 +92,12 @@ void CommandSaveAs::onUpdate() {
             if (ifd::FileDialog::getInstance().isDone("SaveAsDialog")) {
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     // 用户确认了选择
-                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    std::filesystem::path result = ifd::FileDialog::getInstance().getResult();
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(result)) {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), doc.getFullPath()));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.saved"), PathUtils::toString(doc.getFilePath())));
                     } else {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.failed"), result));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.saveas.failed"), PathUtils::toString(result)));
                     }
                 } else {
                     // 用户取消

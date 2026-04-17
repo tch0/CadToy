@@ -26,7 +26,6 @@
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
 #include "StringUtils.h"
-#include "PlatformUtils.h"
 
 namespace tch {
 
@@ -415,16 +414,16 @@ void Renderer::initializeImGui() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     
     // 1. 加载Consolas字体用于英文显示
-    PlatformUtils::Path consolasPath = PlatformUtils::Path(g_pathCwd) / "fonts" / "consolas.ttf";
-    std::string consolasPathStr = consolasPath.local();  // ImGui 需要本地编码路径
+    std::filesystem::path consolasPath = g_pathCwd / "fonts" / "consolas.ttf";
+    std::string consolasPathStr = PathUtils::toString(consolasPath);
     
-    LOG_INFO("Attempting to load English font from: {}", consolasPath.string());
+    LOG_INFO("Attempting to load English font from: {}", consolasPathStr);
     
     // 尝试加载Consolas字体
     ImFont* consolasFont = io.Fonts->AddFontFromFileTTF(consolasPathStr.c_str(), 18.0f);
     
     if (!consolasFont) {
-        LOG_WARNING("Failed to load Consolas font: {}", consolasPath.string());
+        LOG_WARNING("Failed to load Consolas font: {}", consolasPathStr);
         LOG_INFO("Using default ImGui font instead");
         io.Fonts->AddFontDefault();
     }
@@ -434,8 +433,8 @@ void Renderer::initializeImGui() {
     config.MergeMode = true;
     
     // 3. 加载微软雅黑字体用于中文显示
-    PlatformUtils::Path msyhPath = PlatformUtils::Path(g_pathCwd) / "fonts" / "MSYH.TTC";
-    std::string msyhPathStr = msyhPath.local();  // ImGui 需要本地编码路径
+    std::filesystem::path msyhPath = g_pathCwd / "fonts" / "MSYH.TTC";
+    std::string msyhPathStr = PathUtils::toString(msyhPath);
     
     LOG_INFO("Attempting to load Chinese font from: {}", msyhPathStr);
     
@@ -958,7 +957,7 @@ void Renderer::drawFileBar() {
             // 添加工具提示
             if (ImGui::IsItemHovered()) {
                 const std::string& fullFileName = DocManager::getFullFileName(i);
-                const std::string& filePath = DocManager::getFilePath(i);
+                std::string filePath = PathUtils::toString(DocManager::getFilePath(i));
                 ImGui::SetTooltip(filePath.empty() ? fullFileName.c_str() : filePath.c_str());
             }
             

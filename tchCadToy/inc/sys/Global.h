@@ -1,7 +1,7 @@
 #pragma once
 
 // C++ 标准库
-#include <string>
+#include <filesystem>
 
 // 第三方库
 #include <glad/gl.h>
@@ -12,8 +12,8 @@
 
 // global variables
 
-// cwd: current working directory (UTF-8 encoding)
-inline std::string g_pathCwd;
+// cwd: current working directory
+inline std::filesystem::path g_pathCwd;
 
 // system endian, true for big endian (like arm), false for little endian (like x86)
 inline bool g_bBigEndian {true};

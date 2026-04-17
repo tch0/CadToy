@@ -2,8 +2,8 @@
 #include "LocalizationManager.h"
 
 // C++ 标准库
-#include <sstream>
 #include <vector>
+#include <filesystem>
 
 // 第三方库
 #include <rapidjson/document.h>
@@ -13,7 +13,7 @@
 #include "Logger.h"
 #include "Global.h"
 #include "GlobalUtils.h"
-#include "PlatformUtils.h"
+
 
 namespace tch {
 
@@ -35,25 +35,25 @@ LocalizationManager& LocalizationManager::getInstance() {
 
 // 初始化
 bool LocalizationManager::initialize() {
-    // 构建语言资源文件路径（使用 PlatformUtils::Path）
-    PlatformUtils::Path langDir = PlatformUtils::Path(g_pathCwd) / "res" / "lang";
+    // 构建语言资源文件路径（使用 std::filesystem::path）
+    std::filesystem::path langDir = g_pathCwd / "res" / "lang";
     
     // 检查语言资源目录是否存在
-    if (!langDir.exists()) {
-        LOG_WARNING("Language directory not found: {}", langDir.string());
+    if (!std::filesystem::exists(langDir)) {
+        LOG_WARNING("Language directory not found: {}", PathUtils::toString(langDir));
         return false;
     }
     
     // 加载英语资源
-    PlatformUtils::Path enPath = langDir / "en.json";
-    if (!loadLanguage("en", enPath.string())) {
-        LOG_WARNING("Failed to load English language file: {}", enPath.string());
+    std::filesystem::path enPath = langDir / "en.json";
+    if (!loadLanguage("en", enPath)) {
+        LOG_WARNING("Failed to load English language file: {}", PathUtils::toString(enPath));
     }
     
     // 加载中文资源
-    PlatformUtils::Path zhPath = langDir / "zh.json";
-    if (!loadLanguage("zh", zhPath.string())) {
-        LOG_WARNING("Failed to load Chinese language file: {}", zhPath.string());
+    std::filesystem::path zhPath = langDir / "zh.json";
+    if (!loadLanguage("zh", zhPath)) {
+        LOG_WARNING("Failed to load Chinese language file: {}", PathUtils::toString(zhPath));
     }
     
     // 检查是否成功加载了至少一种语言
@@ -73,10 +73,9 @@ void LocalizationManager::cleanup() {
 }
 
 // 加载语言资源文件
-bool LocalizationManager::loadLanguage(const std::string& langCode, const std::string& filePath) {
+bool LocalizationManager::loadLanguage(const std::string& langCode, const std::filesystem::path& filePath) {
     // 检查文件是否存在
-    PlatformUtils::Path path(filePath);
-    if (!path.exists()) {
+    if (!std::filesystem::exists(filePath)) {
         return false;
     }
     
@@ -90,7 +89,7 @@ bool LocalizationManager::loadLanguage(const std::string& langCode, const std::s
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(content.c_str());
     if (!result) {
-        LOG_ERROR("Failed to parse language file: {}", filePath);
+        LOG_ERROR("Failed to parse language file: {}", PathUtils::toString(filePath));
         LOG_ERROR("Error Info: {}", rapidjson::GetParseError_En(result.Code()));
         
         // 尝试计算错误发生的行号和列号
@@ -113,7 +112,7 @@ bool LocalizationManager::loadLanguage(const std::string& langCode, const std::s
     
     // 检查是否为对象
     if (!doc.IsObject()) {
-        LOG_ERROR("Language file is not a valid JSON object: {}", filePath);
+        LOG_ERROR("Language file is not a valid JSON object: {}", PathUtils::toString(filePath));
         return false;
     }
     

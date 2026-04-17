@@ -39,9 +39,9 @@ void CommandSave::onUpdate() {
             if (doc.isSaved()) {
                 // 已关联文件，直接保存
                 if (doc.saveToFile()) {
-                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullPath()));
+                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), PathUtils::toString(doc.getFilePath())));
                 } else {
-                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), doc.getFullPath()));
+                    Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(doc.getFilePath())));
                 }
                 m_state = CommandSaveState::kCompleted;
             } else {
@@ -75,9 +75,9 @@ void CommandSave::onUpdate() {
                     // 用户确认了选择，执行保存
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(m_selectedPath)) {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullPath()));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), PathUtils::toString(doc.getFilePath())));
                     } else {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), m_selectedPath));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(m_selectedPath)));
                     }
                 } else {
                     // 用户取消或关闭对话框
@@ -106,19 +106,19 @@ void CommandSave::onUpdate() {
             m_state = CommandSaveState::kImFileDialogShow;
             break;
         }
-            
+        
         case CommandSaveState::kImFileDialogShow:
         {
             // 检查对话框是否完成
             if (ifd::FileDialog::getInstance().isDone("SaveDialog")) {
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     // 用户确认了选择
-                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    std::filesystem::path result = ifd::FileDialog::getInstance().getResult();
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(result)) {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), doc.getFullPath()));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.saved"), PathUtils::toString(doc.getFilePath())));
                     } else {
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), result));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(result)));
                     }
                 } else {
                     // 用户取消

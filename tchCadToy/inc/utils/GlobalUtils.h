@@ -2,6 +2,7 @@
 
 // C++ 标准库
 #include <string>
+#include <filesystem>
 
 // 第三方库
 
@@ -10,8 +11,41 @@
 
 
 namespace tch {
+
+// =========================================================================================================================
+// 路径工具命名空间
+// =========================================================================================================================
+namespace PathUtils {
+
+// std::filesystem::path和UTF-8编码的std::string字符串之间的转换函数：
+// 所有字符串与路径互相转换都应该使用下面的函数
+// 项目中不应该再使用任何std::filesystem::path(std::string)和std::filesystem::path::string
+
+// UTF-8 string -> filesystem::path
+inline std::filesystem::path toPath(const std::string& utf8String) {
+    return std::filesystem::path(reinterpret_cast<const char8_t*>(utf8String.data()),
+                                 reinterpret_cast<const char8_t*>(utf8String.data()) + utf8String.size());
+}
+
+// filesystem::path -> UTF-8 string
+inline std::string toString(const std::filesystem::path& path) {
+    const std::u8string u8 = path.u8string();
+    return std::string(u8.begin(), u8.end());
+}
+
+} // namespace PathUtils
+
+
+// =========================================================================================================================
+// 通用全局函数命名空间
+// =========================================================================================================================
+
 namespace Utils {
 
+// ============================================================================
+// 全局函数
+// ============================================================================
+    
 // 全局输出函数，在命令栏中输出信息
 void cmdLinePrint(const std::string& message);
 
@@ -41,14 +75,11 @@ enum class TriStateResult {
  * @param initialFileName 初始文件名，为空则使用上次文件名或默认"unnamed"
  * @param initialPath 初始路径，为空则使用上次路径或 g_pathCwd(第一次进入)
  * @param title 对话框标题，为空使用默认标题
- * 
- * @note 返回的路径是 UTF-8 编码，如需用于系统 API（如 fstream），
- *       请使用 PlatformUtils::Path 或 PlatformUtils::utf8ToLocal() 转换
  */
-void showFileDialog(bool& bShowDialog, bool& bReturned, std::string& outFullPath,
-                   bool isOpen = true, 
+void showFileDialog(bool& bShowDialog, bool& bReturned, std::filesystem::path& outFullPath,
+                   bool isOpen = true,
                    const std::string& initialFileName = "",
-                   const std::string& initialPath = "",
+                   const std::filesystem::path& initialPath = std::filesystem::path(),
                    const std::string& title = "");
 
 /**
@@ -71,8 +102,8 @@ void showMessageBox(bool& bShow, const std::string& message, const std::string& 
  * @param noLabel "否"按钮标签，为空使用默认"否"
  * @param cancelLabel "取消"按钮标签，为空使用默认"取消"
  * 
- * @note 按钮布局：是 | 否 | 取消（右对齐）
- *       支持快捷键：Enter=是，Esc=取消
+ * @note 按钮布局：是 | 否 | 取消（居中）
+ *       支持快捷键：Enter=当前焦点按钮（默认是"是"），Esc=取消
  */
 void showYesNoCancelDialog(bool& bShow, TriStateResult& result,
                           const std::string& title, const std::string& message,
@@ -99,23 +130,19 @@ void showSaveConfirmDialog(bool& bShow, TriStateResult& result,
 
 /**
  * @brief 读取文本文件内容
- * @param filePathUtf8 文件路径（UTF-8 编码）
+ * @param filePath 文件路径
  * @param outContent 输出的文件内容
  * @return 是否成功读取
- * 
- * @note 内部自动处理编码转换，调用者只需传入 UTF-8 路径
  */
-bool readTextFile(const std::string& filePathUtf8, std::string& outContent);
+bool readTextFile(const std::filesystem::path& filePath, std::string& outContent);
 
 /**
  * @brief 写入文本文件内容
- * @param filePathUtf8 文件路径（UTF-8 编码）
+ * @param filePath 文件路径
  * @param content 要写入的内容
  * @return 是否成功写入
- * 
- * @note 内部自动处理编码转换，调用者只需传入 UTF-8 路径
  */
-bool writeTextFile(const std::string& filePathUtf8, const std::string& content);
+bool writeTextFile(const std::filesystem::path& filePath, const std::string& content);
 
 } // namespace Utils
 } // namespace tch

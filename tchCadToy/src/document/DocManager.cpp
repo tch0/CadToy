@@ -3,12 +3,14 @@
 
 // C++ 标准库
 #include <algorithm>
+#include <filesystem>
 
 // 第三方库
 
 // 项目头文件
 #include "Document.h"
 #include "Logger.h"
+#include "GlobalUtils.h"
 
 
 namespace tch {
@@ -17,7 +19,7 @@ namespace tch {
 std::vector<Document> DocManager::s_documents;
 std::size_t DocManager::s_currentDocIndex = 0;
 std::size_t DocManager::s_docCounter = 0;
-std::vector<std::string> DocManager::s_recentFiles;
+std::vector<std::filesystem::path> DocManager::s_recentFiles;
 std::size_t DocManager::s_pendingIndexToBeSwitched = static_cast<std::size_t>(-1);
 const std::size_t DocManager::InvalidDocIndex = static_cast<std::size_t>(-1);
 
@@ -46,14 +48,14 @@ std::size_t DocManager::createNewDocument() {
 }
 
 // 打开文件，返回文档索引
-std::size_t DocManager::openFile(const std::string& filePath) {
+std::size_t DocManager::openFile(const std::filesystem::path& filePath) {
     try {
         // 创建文档（带 Database），文件名临时为 "unnamed"，后续加载后会覆盖
         Document newDocument("unnamed");
         
         // 尝试加载文件
         if (!newDocument.loadFromFile(filePath)) {
-            LOG_ERROR("Failed to load file: {}", filePath);
+            LOG_ERROR("Failed to load file: {}", PathUtils::toString(filePath));
             return -1;  // 加载失败，返回无效索引
         }
         
@@ -76,29 +78,29 @@ bool DocManager::saveFile(std::size_t index) {
     }
     
     Document& document = s_documents[index];
-    if (document.getFullPath().empty()) {
+    if (document.getFilePath().empty()) {
         // 没有路径，需要另存为
         return false;
     }
     
     if (!document.saveToFile()) {
-        LOG_ERROR("Failed to save document: {}", document.getFullPath());
+        LOG_ERROR("Failed to save document: {}", PathUtils::toString(document.getFilePath()));
         return false;
     }
     
     // 添加到最近文件
-    addToRecentFiles(document.getFullPath());
+    addToRecentFiles(document.getFilePath());
     return true;
 }
 
 // 另存为
-bool DocManager::saveFileAs(std::size_t index, const std::string& filePath) {
+bool DocManager::saveFileAs(std::size_t index, const std::filesystem::path& filePath) {
     if (index >= s_documents.size()) {
         return false;
     }
     
     if (!s_documents[index].saveToFile(filePath)) {
-        LOG_ERROR("Failed to save document as: {}", filePath);
+        LOG_ERROR("Failed to save document as: {}", PathUtils::toString(filePath));
         return false;
     }
     
@@ -223,21 +225,21 @@ bool DocManager::isDocumentSaved(std::size_t index) {
 }
 
 // 获取文件路径
-const std::string& DocManager::getFilePath(std::size_t index) {
-    static std::string emptyString;
+const std::filesystem::path& DocManager::getFilePath(std::size_t index) {
+    static std::filesystem::path emptyPath;
     if (index < s_documents.size()) {
-        return s_documents[index].getFullPath();
+        return s_documents[index].getFilePath();
     }
-    return emptyString;
+    return emptyPath;
 }
 
 // 获取最近打开的文件
-const std::vector<std::string>& DocManager::getRecentFiles() {
+const std::vector<std::filesystem::path>& DocManager::getRecentFiles() {
     return s_recentFiles;
 }
 
 // 添加到最近文件
-void DocManager::addToRecentFiles(const std::string& filePath) {
+void DocManager::addToRecentFiles(const std::filesystem::path& filePath) {
     // 移除已存在的路径
     auto it = std::find(s_recentFiles.begin(), s_recentFiles.end(), filePath);
     if (it != s_recentFiles.end()) {

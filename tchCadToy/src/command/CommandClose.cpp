@@ -16,11 +16,11 @@ namespace tch {
 
 CommandClose::CommandClose() :
     m_state(CommandCloseState::kCheckModified),
+    m_saveConfirmResult(Utils::TriStateResult::kCancel),
     m_showSaveConfirm(false),
     m_showFileDialog(false),
     m_dialogReturned(false),
-    m_selectedPath(),
-    m_saveConfirmResult(Utils::TriStateResult::kCancel) {
+    m_selectedPath() {
 }
 
 void CommandClose::onUpdate() {
@@ -109,7 +109,7 @@ void CommandClose::onUpdate() {
                         m_state = CommandCloseState::kCloseDocument;
                     } else {
                         // 保存失败，取消关闭
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), m_selectedPath));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(m_selectedPath)));
                         m_state = CommandCloseState::kCompleted;
                     }
                 } else {
@@ -146,14 +146,14 @@ void CommandClose::onUpdate() {
             if (ifd::FileDialog::getInstance().isDone("CloseSaveDialog")) {
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     // 用户确认了保存路径
-                    std::string result = ifd::u8_to_string(ifd::FileDialog::getInstance().getResult().u8string());
+                    std::filesystem::path result = ifd::FileDialog::getInstance().getResult();
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(result)) {
                         // 保存成功，关闭文档
                         m_state = CommandCloseState::kCloseDocument;
                     } else {
                         // 保存失败，取消关闭
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), result));
+                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(result)));
                         m_state = CommandCloseState::kCompleted;
                     }
                 } else {

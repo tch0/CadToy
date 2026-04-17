@@ -1,6 +1,7 @@
 #pragma once
 
 // C++ 标准库
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <memory>
@@ -14,14 +15,14 @@
 
 namespace tch {
 
-// CAD文档，关联到系统中的文件（如果保存了的话）、保存视口、命令历史等一系列文档相关的信息
+// CAD文档：关联到系统中的文件（如果保存了的话），保存视口、命令历史等一系列文档相关的信息
 class Document {
 private:
-    std::string m_fileName;         // 文件名（不含后缀）
-    std::string m_fileExtension;    // 文件后缀，暂时仅支持.cad.json
-    std::string m_fullPath;         // 文档关联文件的完整路径
-    bool m_modified;                // 是否已修改
-    bool m_saved;                   // 是否已保存，即关联到文件系统中的某个文件
+    std::string m_fileName;             // 文件名（不含后缀）
+    std::string m_fileExtension;        // 文件后缀，暂时仅支持.cad.json
+    std::filesystem::path m_filePath;   // 文档关联文件的路径
+    bool m_modified;                    // 是否已修改
+    bool m_saved;                       // 是否已保存，即关联到文件系统中的某个文件
     std::vector<std::string> m_commandLineHistory;          // 命令行输出历史
     std::vector<std::string> m_commandExecutionHistory;     // 命令执行历史
     TransformManager m_transformManager;                    // 文档专属变换管理器
@@ -56,7 +57,7 @@ public:
     std::string getFullFileName() const { return m_fileName + m_fileExtension; }
     
     // 获取文件完整路径
-    const std::string& getFullPath() const { return m_fullPath; }
+    const std::filesystem::path& getFilePath() const { return m_filePath; }
     
     // 检查文档是否被修改
     bool isModified() const { return m_modified; }
@@ -98,11 +99,11 @@ public:
     Database* getDatabase() const { return m_database.get(); }
     
     // 从文件加载（使用 Database 反序列化）
-    bool loadFromFile(const std::string& filePath);
+    bool loadFromFile(const std::filesystem::path& filePath);
     bool loadFromFile();
     
     // 保存到文件（使用 Database 序列化）
-    bool saveToFile(const std::string& filePath);
+    bool saveToFile(const std::filesystem::path& filePath);
     bool saveToFile();
     
     // 标记数据库已修改
@@ -110,7 +111,7 @@ public:
 
 private:
     // 从路径解析文件名和后缀
-    void parseFilePath(const std::string& path);
+    void parseFilePath(const std::filesystem::path& path);
 };
 
 } // namespace tch

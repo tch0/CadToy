@@ -1,6 +1,7 @@
 #pragma once
 
 // C++ 标准库
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -9,6 +10,7 @@
 // 第三方库
 
 // 项目头文件
+
 
 namespace tch {
 
@@ -31,7 +33,7 @@ private:
     LocalizationManager();
     
     // 加载语言资源文件
-    bool loadLanguage(const std::string& langCode, const std::string& filePath);
+    bool loadLanguage(const std::string& langCode, const std::filesystem::path& filePath);
 
 public:
     // 获取实例

@@ -98,6 +98,7 @@
         - 没有配置时使用默认字号18 * DPI。
         - 对每一个显示器尺寸和DPI的组合，保存一个配置，互不影响。
         - 窗口移动到其他屏幕、修改了DPI缩放比例（通过监听DPI变化以及窗口移动做到）则切换配置。
+- 字符串与路径编码问题
 
 
 Todo：
@@ -141,6 +142,9 @@ Todo：
     - 同时需要考虑仅支持单选而不能框选的模式（更一般地，定制允许的选择模式）。
     - 后续考虑实现更完善的选择功能的时候再来做。
 - 检查研究程序最小化后的行为：此时可能不必要执行很多行为，但也要保证基本的正确性和数据有效性。
+- Logger中日志文件读写目前并未启用，后续如果要启用，需要仔细检查相关逻辑，特别是路径编码问题。
+- GLFuncs.cpp中也有文件读写操作，也需要处理路径编码问题，不过目前没有用到，后续整理时再来。
+- EntityRenderer中关于Shader的逻辑可能还需要整理，Shader定义了一堆函数并没有用到。
 
 其他待实现细节研究：
 - 选择点时，按住Shift强制进入正交模式，会有marker标记
@@ -150,6 +154,44 @@ Todo：
 - 后续夹点实现：可以在InputContext中实现GripTask，在onUpdate中查询各个task是否激活，决定调用各个task的onUpdate
 - 命令执行中的分支选择历史与点输入历史，待研究。
 - 命令栏在输入命令时，也就是输入框不为空时，画布是锁定的，动态输入模式下光标都是锁定的，不会响应任何选择、点击操作。
+
+## 字符串与路径编码问题
+
+本地字符串：
+- 所有项目字符串都保存在`std::string`中，使用UTF-8编码，所有`std::string`都默认为UTF-8编码。
+- ImGui也仅支持UTF-8编码，直接`std::string::c_str`即可用于输出。
+- 重点在于路径的处理上。
+
+路径编码：
+- `std::filesystem::path`原生支持本地编码和UTF-8，自动处理，不再需要任何封装。
+- 但是`std::filesystem::path`的`string u8string`接口分别返回本地编码和UTF-8编码。
+- 而主程序只使用`std::string`来存放UTF-8编码，所以在`std::filesystem::path`和本地项目中的字符串的边界需要进行合适转换：
+    - 不能直接调用`string`接口返回本地编码，然后通过接口去做编码转换。这反而饶了远路。
+    - 最简单的方式是直接调用`u8string`得到`std::u8string`，但项目中是不支持`char8_t`字符串的，因为不方便输出，而`char8_t`是可以安全转换为`char`的。
+    - 在项目中引入任何`char8_t`字符串也容易造成混淆。
+- 所以可以约定：
+    - `std::filesystem::path`和本地UTF-8编码`std::string`之间的转换不应该使用原生的`std::filesystem::path`的API。
+    - 所有路径操作应该统一转换为`path`之后再去进行，不应该自己拼接字符串，也不要拼接`path`和UTF-8`string`字符串。ASCII常量字符串则不受影响可以直接和`path`拼接。
+    - 调用文件API时尽量使用C++标准库`fstream`，以`path`作为参数。
+    - 项目中不使用任何`std::u8string`来存储字符串。
+    - 定义转换接口`PathUtils::toPath/toString`来替代`std::filesystem::path(std::string)`构造和`std::filesystem::path::string()`接口作为字符串和路径之间的桥梁。
+    - 项目中不应该在任何地方再使用`std::filesystem::path(std::string)`和`std::filesystem::path::string()`。
+- 转换接口：
+    - 几乎不会有性能损失，inline下`toPath`直接头尾指针构造不会有性能损失，`toString`则多构造了一次，损失非常小。
+```C++
+namespace PathUtils {
+// UTF-8 string -> filesystem::path
+inline std::filesystem::path toPath(const std::string& utf8String) {
+    return std::filesystem::path(reinterpret_cast<const char8_t*>(utf8String.data()),
+                                 reinterpret_cast<const char8_t*>(utf8String.data()) + utf8String.size());
+}
+// filesystem::path -> UTF-8 string
+inline std::string toString(const std::filesystem::path& path) {
+    const std::u8string u8 = path.u8string();
+    return std::string(u8.begin(), u8.end());
+}
+} // namespace PathUtils
+```
 
 ## BUG
 

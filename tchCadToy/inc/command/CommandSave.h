@@ -1,7 +1,7 @@
 #pragma once
 
 // C++ 标准库
-#include <string>
+#include <filesystem>
 
 // 第三方库
 
@@ -23,10 +23,11 @@ private:
         kCompleted              // 完成状态
     };
     
-    CommandSaveState m_state;       // 当前状态
-    bool m_showDialog;              // 控制对话框显示
-    bool m_dialogReturned;          // 对话框是否返回结果
-    std::string m_selectedPath;     // 用户选择的路径
+    CommandSaveState m_state;               // 当前状态
+    // 内部文件对话框相关
+    bool m_showDialog;                      // 控制对话框显示
+    bool m_dialogReturned;                  // 对话框是否返回结果
+    std::filesystem::path m_selectedPath;   // 用户选择的路径
 
 public:
     CommandSave();

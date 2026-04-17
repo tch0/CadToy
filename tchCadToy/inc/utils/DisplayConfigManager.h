@@ -1,7 +1,7 @@
 #pragma once
 
 // C++ 标准库
-#include <string>
+#include <filesystem>
 #include <unordered_map>
 
 // 第三方库
@@ -95,7 +95,7 @@ private:
     
     // 成员变量
     std::unordered_map<ConfigKey, int, ConfigKeyHash> m_configs;    // 配置映射表
-    std::string m_configFilePath;                                   // 配置文件路径
+    std::filesystem::path m_configFilePath;                         // 配置文件路径
     GLFWwindow* m_window;                                           // 关联的GLFW窗口
     int m_currentFontSize;                                          // 当前字体大小
     bool m_initialized;                                             // 是否已初始化
