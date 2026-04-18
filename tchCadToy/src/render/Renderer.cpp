@@ -25,6 +25,7 @@
 #include "DisplayConfigManager.h"
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
+#include "PropertyBarContent.h"
 #include "StringUtils.h"
 
 namespace tch {
@@ -638,10 +639,11 @@ void Renderer::drawPropertyBar() {
     std::string windowName = loc.get("propertyBar.title") + "##PropertyBar";
     ImGui::Begin(windowName.c_str(), &s_propertyBarVisible, flags);
     
-    // 等待添加实际属性
+    // 绘制属性栏内容
+    PropertyBarContent::getInstance().draw();
     
-    // 监听属性栏宽度变化
-    s_propertyBarWidth = ImGui::GetWindowSize().x;
+    // 监听属性栏宽度变化，限制属性栏最小宽度为200
+    s_propertyBarWidth = std::max(ImGui::GetWindowSize().x, 200.0f);
     
     ImGui::End();
 }
@@ -663,7 +665,7 @@ void Renderer::drawFileBar() {
     
     ImGuiWindowFlags tabWindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | 
                                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav | 
-                                     ImGuiWindowFlags_NoSavedSettings;
+                                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
     // 在 Begin 之前 Push 样式变量
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(15.0f, 3.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20.0f, 4.0f));

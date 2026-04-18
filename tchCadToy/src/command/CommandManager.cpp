@@ -15,6 +15,7 @@
 #include "CommandSaveAs.h"
 #include "CommandLine.h"
 #include "CommandOptions.h"
+#include "CommandProperties.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
 #include "Logger.h"
@@ -47,6 +48,8 @@ CommandManager::CommandManager() :
     
     // 配置类命令
     registerCommand<CommandOptions>("OPTIONS", {"OP"});
+    registerCommand<CommandPropertiesShow>("PROPERTIES", {"PR"});
+    registerCommand<CommandPropertiesClose>("PROPERTIESCLOSE", {"PRCLOSE"});
     // undo类命令
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
@@ -65,7 +68,6 @@ CommandManager::CommandManager() :
     // registerCommand<CommandPan>("PAN", {"P"});
     // registerCommand<CommandLayer>("LAYER", {"LA"});
     // registerCommand<CommandQuit>("QUIT", {"EXIT"});
-    // registerCommand<CommandProperties>("PROPERTIES", {"PR", "MO"});
     
     // 所有命令注册完成后，建立补全候选池
     rebuildCommandCompletionPool();
