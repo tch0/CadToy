@@ -691,14 +691,12 @@ void Renderer::drawFileBar() {
         
         // 创建新文档
         if (ImGui::TabItemButton(" + ", ImGuiTabItemFlags_Trailing)) {
-            // 创建新文档
-            std::size_t newDocIndex = DocManager::createNewDocument();
             // 新建文档并切换也需要取消当前命令
             CommandManager::getInstance().cancelCurrentCommand();
+            // 创建新文档
+            std::size_t newDocIndex = DocManager::createNewDocument();
             // 直接切换文档
             DocManager::setCurrentDocumentIndex(newDocIndex);
-            // 切换文档后，滚动命令行历史到最底部
-            s_bScrollCommandLineHistoryToBottom = true;
         }
         
         // 遍历文档列表，绘制每一个打开文档

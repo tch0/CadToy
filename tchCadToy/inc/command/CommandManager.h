@@ -74,9 +74,6 @@ public:
     std::string getRunningCommandName();
     
 private:
-    // 静态实例
-    static std::shared_ptr<CommandManager> s_instance;
-    
     // 活动命令
     std::shared_ptr<Command> m_activeCommand;
     

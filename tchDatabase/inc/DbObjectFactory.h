@@ -16,7 +16,7 @@ class DbObjectFactory {
 public:
     using Creator = std::function<std::unique_ptr<DbObject>()>;
     
-    static DbObjectFactory& instance();
+    static DbObjectFactory& getInstance();
     
     template<typename T>
     void registerType(DbObject::Type type) {

@@ -17,7 +17,7 @@
 
 namespace tch {
 
-DbObjectFactory& DbObjectFactory::instance() {
+DbObjectFactory& DbObjectFactory::getInstance() {
     static DbObjectFactory registry;
     return registry;
 }

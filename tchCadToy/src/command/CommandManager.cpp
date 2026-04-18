@@ -8,8 +8,9 @@
 
 // 项目头文件
 #include "CommandTest.h"
-#include "CommandClose.h"
+#include "CommandNew.h"
 #include "CommandOpen.h"
+#include "CommandClose.h"
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
 #include "CommandLine.h"
@@ -26,9 +27,6 @@
 
 namespace tch {
 
-// 静态成员初始化
-std::shared_ptr<CommandManager> CommandManager::s_instance = nullptr;
-
 // 构造函数
 CommandManager::CommandManager() :
     m_activeCommand(nullptr) {
@@ -36,8 +34,9 @@ CommandManager::CommandManager() :
     // 测试命令
     registerCommand<CommandTest>("TEST", {});
     // 打开保存关闭类命令
-    registerCommand<CommandClose>("CLOSE", {});
+    registerCommand<CommandNew>("NEW", {});
     registerCommand<CommandOpen>("OPEN", {});
+    registerCommand<CommandClose>("CLOSE", {});
     registerCommand<CommandSave>("SAVE", {});
     registerCommand<CommandSaveAs>("SAVEAS", {});
     // 实体创建类命令
@@ -74,10 +73,8 @@ CommandManager::CommandManager() :
 
 // 获取单例实例
 CommandManager& CommandManager::getInstance() {
-    if (s_instance == nullptr) {
-        s_instance = std::make_shared<CommandManager>();
-    }
-    return *s_instance;
+    static CommandManager instance;
+    return instance;
 }
 
 // 注册命令模板实现
@@ -125,8 +122,9 @@ std::vector<CommandCompletionItem> CommandManager::getCompletionCandidates(const
         if (cmp == 0) {
             results.push_back(item);
         }
-        // 已过所有匹配项，因补全池已排序，后续肯定不匹配，提前退出
-        else if (cmp > 0) {
+        // CommandCompletionItem按照别名优先、然后比较key的方式排序，补全池中顺序是：所有别名按key递增排序、所有全名按key递增排序，
+        // 所以要保证所有别名已经比较完、后续都是全名时，才能确保已经比较了所有可能的匹配项、后续肯定不匹配，此时提前退出。
+        else if (!item.isAlias && cmp > 0) {
             break;
         }
     }

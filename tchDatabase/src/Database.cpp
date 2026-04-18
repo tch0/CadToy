@@ -392,7 +392,7 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     // 读取图层
     if (value.HasMember("layers") && value["layers"].IsArray()) {
         for (const auto& layerValue : value["layers"].GetArray()) {
-            std::unique_ptr<DbObject> obj = DbObjectFactory::instance().createFromJson(layerValue);
+            std::unique_ptr<DbObject> obj = DbObjectFactory::getInstance().createFromJson(layerValue);
             if (obj && obj->type() == DbObject::kLayer) {
                 ObjectId id = obj->id();
                 if (id == 0) {
@@ -414,7 +414,7 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     // 读取实体
     if (value.HasMember("entities") && value["entities"].IsArray()) {
         for (const auto& entityValue : value["entities"].GetArray()) {
-            std::unique_ptr<DbObject> obj = DbObjectFactory::instance().createFromJson(entityValue);
+            std::unique_ptr<DbObject> obj = DbObjectFactory::getInstance().createFromJson(entityValue);
             if (obj) {
                 ObjectId id = obj->id();
                 if (id == 0) {

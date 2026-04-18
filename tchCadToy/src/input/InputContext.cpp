@@ -19,9 +19,6 @@
 
 namespace tch {
 
-// 静态实例
-std::shared_ptr<InputContext> InputContext::s_instance = nullptr;
-
 // 构造函数
 InputContext::InputContext() :
     m_inCommandExecution(false),
@@ -49,10 +46,8 @@ InputContext::InputContext() :
 
 // 获取单例实例
 InputContext& InputContext::getInstance() {
-    if (s_instance == nullptr) {
-        s_instance = std::make_shared<InputContext>();
-    }
-    return *s_instance;
+    static InputContext instance;
+    return instance;
 }
 
 // 命令执行状态管理，CommandManager通过这个接口来管理这个标记，命令开始执行时置为true，执行结束/取消执行后置回false

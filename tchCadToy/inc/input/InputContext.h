@@ -39,10 +39,6 @@ enum class SpecialKeyEventType {
 
 // 输入上下文类，用于命令状态机模式的输入管理
 class InputContext {
-private:
-    // 静态实例
-    static std::shared_ptr<InputContext> s_instance;
-    
 public:
     // 构造函数
     InputContext();
