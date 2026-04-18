@@ -1148,6 +1148,10 @@ void CanvasRenderer::drawSelection() {
         }
         // 添加预览点（鼠标当前位置）
         screenPoints.push_back(transformManager.worldToScreen(interactionData.selectionPreviewPointWorld));
+        // 多边形选择下只有起始点和预览点2个点时无法绘制填充，所以此时需要临时添加一个点以支持绘制预览线段
+        if (screenPoints.size() == 2) {
+            screenPoints.push_back(screenPoints.back());
+        }
     }
     
     switch (interactionData.selectionMode) {
