@@ -55,9 +55,6 @@ public:
     // 检查是否有活动命令
     bool hasActiveCommand();
     
-    // 获取活动命令（用于预览）
-    std::shared_ptr<Command> getActiveCommand();
-    
     // 执行命令
     void executeCommand(const std::string& command);
     
@@ -75,7 +72,7 @@ public:
     
 private:
     // 活动命令
-    std::shared_ptr<Command> m_activeCommand;
+    std::unique_ptr<Command> m_activeCommand;
     
     // 当前正在运行的命令全名
     std::string m_currentCommandName;

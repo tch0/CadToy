@@ -310,14 +310,6 @@ void Renderer::drawAll() {
     s_canvasRenderer.drawSelection();
     s_canvasRenderer.drawCursor();
     s_canvasRenderer.drawCursorMarker();
-    
-    // TODO: 临时措施，还未实现图形引擎，先简单绘制活动命令的预览
-    if (CommandManager::getInstance().hasActiveCommand()) {
-        auto activeCommand = CommandManager::getInstance().getActiveCommand();
-        if (activeCommand) {
-            activeCommand->drawPreview();
-        }
-    }
 }
 
 // 绘制光标测试窗口

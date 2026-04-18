@@ -33,9 +33,6 @@ public:
     
     // 命令更新方法
     void onUpdate() override;
-    
-    // 绘制预览
-    void drawPreview() override;
 };
 
 } // namespace tch

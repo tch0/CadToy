@@ -143,12 +143,6 @@ bool CommandManager::hasActiveCommand() {
     return m_activeCommand != nullptr;
 }
 
-// 获取活动命令（用于预览）
-std::shared_ptr<Command> CommandManager::getActiveCommand() {
-    return m_activeCommand;
-}
-
-
 // 执行命令
 void CommandManager::executeCommand(const std::string& command) {
     tchAssert(m_activeCommand == nullptr, "There should be no active commnd when executing a new command. Please use cancelCurrentCommandAndExecute.");
