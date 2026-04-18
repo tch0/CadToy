@@ -44,6 +44,7 @@ public:
     // 光标相关
     static void setCrossCursorSize(float size); // 设置十字光标大小
     static float getCrossCursorSize(); // 获取十字光标大小
+    static void setPickBoxSize(float size); // 设置拾取框大小
     static float getPickBoxSize(); // 获取拾取框大小
     static glm::dvec3 getCursorPosWorld(); // 获取当前光标世界坐标
 
@@ -96,10 +97,6 @@ public:
     // 属性栏相关方法
     static bool isPropertyBarVisible(); // 获取属性栏是否可见
     static void setPropertyBarVisible(bool visible); // 设置属性栏是否可见
-    
-    // 选项对话框相关方法
-    static void showOptionsDialog(bool visible); // 显示或隐藏选项对话框
-    static void drawOptionsDialog(); // 绘制选项对话框
     
     // 焦点检查相关方法
     static bool focusIsOnWindow(const std::string& windowName); // 检查焦点是否位于指定窗口或其子窗口，通用方法

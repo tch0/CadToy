@@ -7,12 +7,13 @@
 // 第三方库
 
 // 项目头文件
+#include "CommandTest.h"
 #include "CommandClose.h"
-#include "CommandLine.h"
 #include "CommandOpen.h"
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
-#include "CommandTest.h"
+#include "CommandLine.h"
+#include "CommandOptions.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
 #include "Logger.h"
@@ -32,14 +33,26 @@ std::shared_ptr<CommandManager> CommandManager::s_instance = nullptr;
 CommandManager::CommandManager() :
     m_activeCommand(nullptr) {
     // 注册命令
+    // 测试命令
     registerCommand<CommandTest>("TEST", {});
-    registerCommand<CommandLine>("LINE", {"L"});
+    // 打开保存关闭类命令
     registerCommand<CommandClose>("CLOSE", {});
     registerCommand<CommandOpen>("OPEN", {});
     registerCommand<CommandSave>("SAVE", {});
     registerCommand<CommandSaveAs>("SAVEAS", {});
+    // 实体创建类命令
+    registerCommand<CommandLine>("LINE", {"L"});
+    // 实体编辑类命令
+    
+    // 标注类命令
+    
+    // 配置类命令
+    registerCommand<CommandOptions>("OPTIONS", {"OP"});
+    // undo类命令
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
+    
+    // 未实现命令
     // registerCommand<CommandCircle>("CIRCLE", {"C"});
     // registerCommand<CommandRect>("RECTANG", {"REC"});
     // registerCommand<CommandArc>("ARC", {"A"});
@@ -54,7 +67,6 @@ CommandManager::CommandManager() :
     // registerCommand<CommandLayer>("LAYER", {"LA"});
     // registerCommand<CommandQuit>("QUIT", {"EXIT"});
     // registerCommand<CommandProperties>("PROPERTIES", {"PR", "MO"});
-    // registerCommand<CommandOptions>("OPTIONS", {"OP"});
     
     // 所有命令注册完成后，建立补全候选池
     rebuildCommandCompletionPool();
