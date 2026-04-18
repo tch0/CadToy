@@ -3,7 +3,6 @@
 
 // C++ 标准库
 #include <algorithm>
-#include <memory>
 
 // 第三方库
 #include <glm/glm.hpp>
@@ -41,7 +40,7 @@ InputContext::InputContext() :
     m_selectedEntities(),
     m_lastSpecialKeyEvent(SpecialKeyEventType::kNone),
     m_inputContextInfoVisible(false),
-    m_selectionTask(std::make_unique<SelectionTask>()) {
+    m_selectionTask() {
 }
 
 // 获取单例实例
@@ -66,8 +65,7 @@ bool InputContext::isInCommandExecution() const {
 // 是否处于命令执行中或者任何任务(例如选择交互、夹点编辑交互)执行中
 bool InputContext::isAnyCommandOrTaskRunning() const
 {
-    return m_inCommandExecution ||
-        (m_selectionTask && m_selectionTask->isSelecting());
+    return m_inCommandExecution || m_selectionTask.isSelecting();
 }
 
 // 提示信息相关
@@ -83,7 +81,7 @@ void InputContext::setErrorPrompt(const std::string& errorPrompt) {
     m_errorPrompt = errorPrompt;
 }
 
-// 输入状态管理
+// 交互状态管理
 InputStatus InputContext::getCurrentStatus() {
     // 状态获取到之后需要及时清理：
     //      对于kNone/kEnterInput/kCanceled之外的一切输入状态，都会在对应getXXX调用中清理，waitForxxx之后要得到输入，必须调用getxxx获取输入并清理状态
@@ -95,7 +93,8 @@ InputStatus InputContext::getCurrentStatus() {
     return status;
 }
 
-void InputContext::resetStatus() {
+// 清除所有交互状态，除了交互数据，提供给选择任务使用
+void InputContext::resetStatusExceptInteractionData() {
     m_currentStatus = InputStatus::kNone;
     m_allowedTypes.clear();
     m_prompt = "";
@@ -113,6 +112,12 @@ void InputContext::resetStatus() {
     m_inputKeyword = "";
     m_keywordOptions.clear();
     m_selectedEntities.clear();
+}
+
+// 清除所有交互状态，包括交互数据
+void InputContext::resetStatus() {
+    resetStatusExceptInteractionData();
+    m_interactionData.reset();
 }
 
 // 允许的输入类型管理
@@ -160,7 +165,7 @@ void InputContext::handleLeftMouseClick() {
     }
     else {
         // 处理选择任务中的点输入
-        if (m_selectionTask && m_selectionTask->isSelecting()) {
+        if (m_selectionTask.isSelecting()) {
             // 正在选择
             // 从InputHandler获取光标位置
             glm::vec2 screenPos = InputHandler::getCursorPosition();
@@ -397,6 +402,7 @@ void InputContext::parseInput(const std::string& input) {
     
     // 保持当前状态为kNone，等待下一次输入
     m_currentStatus = InputStatus::kNone;
+    return;
 }
 
 // 预览功能（暂时空实现）
@@ -407,8 +413,7 @@ void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
 // 处理Enter/Space输入
 void InputContext::handleEnterSpace(const std::string& input) {
     // 选择或者命令执行中，解析输入
-    if ((m_selectionTask && m_selectionTask->isSelecting()) ||
-        m_inCommandExecution) {
+    if (m_selectionTask.isSelecting() || m_inCommandExecution) {
         parseInput(input);
     }
     else {
@@ -427,8 +432,7 @@ void InputContext::handleEnterSpace(const std::string& input) {
 
 // 处理Escape输入
 void InputContext::handleEscape(const std::string& input) {
-    if ((m_selectionTask && m_selectionTask->isSelecting()) ||
-        m_inCommandExecution) {
+    if (m_selectionTask.isSelecting() || m_inCommandExecution) {
         // 选择或者命令执行中，设置取消状态
         m_currentStatus = InputStatus::kCanceled;
         // 更新命令提示，添加取消标记和用户输入
@@ -473,6 +477,9 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
     // 保存基点
     m_basePoint = basePoint;
     m_bHasBasePoint = true;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待点输入（无基点）
@@ -490,6 +497,9 @@ void InputContext::waitForPoint(const std::string& prompt, const std::vector<std
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidPoint"); // *无效点*
     // 没有基点
     m_bHasBasePoint = false;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待数值输入
@@ -503,6 +513,9 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     // 数值范围
     m_floatLimitMin = min;
     m_floatLimitMax = max;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待数值输入，同时允许关键字
@@ -522,6 +535,9 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     // 数值范围
     m_floatLimitMin = min;
     m_floatLimitMax = max;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待整数输入
@@ -537,6 +553,9 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max) {
     // 数值范围
     m_intLimitMin = min;
     m_intLimitMax = max;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待整数输入，同时允许关键字
@@ -558,6 +577,9 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max, c
     // 数值范围
     m_intLimitMin = min;
     m_intLimitMax = max;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待浮点数输入
@@ -571,6 +593,9 @@ void InputContext::waitForFloat(const std::string& prompt, double min, double ma
     // 浮点数范围
     m_floatLimitMin = min;
     m_floatLimitMax = max;
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待字符串输入
@@ -579,6 +604,9 @@ void InputContext::waitForString(const std::string& prompt) {
     setAllowedTypes({InputType::kString});
     // 设置错误提示（字符串一般不会失效）
     m_errorPrompt = "";
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待关键字输入
@@ -589,6 +617,9 @@ void InputContext::waitForKeyword(const std::string& prompt, const std::vector<s
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidKeyword"); // *无效关键字*
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待回车输入
@@ -598,6 +629,9 @@ void InputContext::waitForEnter(const std::string& prompt) {
     setAllowedTypes({});
     // 设置错误提示
     m_errorPrompt = "";
+    
+    // 设置光标模式为十字光标
+    m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
 // 等待实体选择输入
@@ -659,7 +693,7 @@ void InputContext::drawInfoWindow() {
     // 选择任务执行状态 - 显示是否正在进行选择
     ImGui::Text("%s: %s", 
                 loc.get("window.inputContextInfo.inSelectionTask").c_str(),
-                (m_selectionTask && m_selectionTask->isSelecting()) ? "true" : "false");
+                m_selectionTask.isSelecting() ? "true" : "false");
     
     // 当前状态 - 显示输入状态机的当前状态
     auto statusIt = inputStatusToString.find(m_currentStatus);
@@ -790,16 +824,18 @@ void InputContext::drawInfoWindow() {
                m_interactionData.isSelectionActive ? "true" : "false");
     
     // 选择初始点
-    ImGui::Text("  %s: (%.2f, %.2f)", 
+    ImGui::Text("  %s: (%.2f, %.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionInitialPoint").c_str(), 
                m_interactionData.selectionInitialPointWorld.x, 
-               m_interactionData.selectionInitialPointWorld.y);
+               m_interactionData.selectionInitialPointWorld.y,
+               m_interactionData.selectionInitialPointWorld.z);
     
     // 选择预览点
-    ImGui::Text("  %s: (%.2f, %.2f)", 
+    ImGui::Text("  %s: (%.2f, %.2f, %.2f)", 
                loc.get("window.inputContextInfo.selectionPreviewPoint").c_str(), 
                m_interactionData.selectionPreviewPointWorld.x, 
-               m_interactionData.selectionPreviewPointWorld.y);
+               m_interactionData.selectionPreviewPointWorld.y,
+               m_interactionData.selectionPreviewPointWorld.z);
     
     // 选择点数量
     ImGui::Text("  %s: %zu", 
@@ -819,15 +855,15 @@ void InputContext::onUpdate() {
     // 如果调用了waitForEntity来选择实体
     if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
         // 且选择任务还没有启动，那么此处启动选择任务
-        if (m_selectionTask == nullptr || !m_selectionTask->isSelecting()) {
+        if (!m_selectionTask.isSelecting()) {
             activateSelectionTask(SelectionMode::kSingle);
         }
     }
     
     // 更新选择任务
-    if (m_selectionTask && m_selectionTask->isSelecting()) {
-        m_selectionTask->onUpdate();
-        if (m_selectionTask->isCompleted()) {
+    if (m_selectionTask.isSelecting()) {
+        m_selectionTask.onUpdate();
+        if (m_selectionTask.isCompleted()) {
             // 选择任务结束后，重置输入上下文状态
             resetStatus();
             
@@ -841,11 +877,11 @@ void InputContext::onUpdate() {
             // 比如选择中Esc，命令可能直接结束
             if (m_inCommandExecution)
             {
-                m_currentStatus = m_selectionTask->getInputStatus();
+                m_currentStatus = m_selectionTask.getInputStatus();
             }
             
             // 重置选择任务
-            m_selectionTask->reset();
+            m_selectionTask.reset();
         }
     }
 }
@@ -853,22 +889,14 @@ void InputContext::onUpdate() {
 // 激活选择任务
 void InputContext::activateSelectionTask(SelectionMode mode) {
     // 重置选择任务
-    if (m_selectionTask == nullptr) {
-        m_selectionTask = std::make_unique<SelectionTask>();
-    }
-    else {
-        m_selectionTask->reset();
-    }
+    m_selectionTask.reset();
     
     // 开始选择任务，传递命令执行状态
-    m_selectionTask->start(isInCommandExecution(), mode == SelectionMode::kSingle);
+    m_selectionTask.start(isInCommandExecution(), mode == SelectionMode::kSingle);
     
     // 设置选择模式
     m_interactionData.selectionMode = mode;
     m_interactionData.isSelectionActive = true;
-    
-    // 重置活动任务
-    m_activeTask.reset();
 }
 
 } // namespace tch

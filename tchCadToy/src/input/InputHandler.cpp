@@ -297,6 +297,9 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
             // 其实这里从原理上来说是不需要判断的，前面已经检测过了鼠标不在ImGui上，那么只要进入这里就一定是在视口上的，
             // 但这个逻辑保留在这里就好，以后如果需要支持同时多视口显示，直接从这里扩展就行
             s_mouseMiddleButtonPressedInViewport = Renderer::isPointInViewport(s_cursorPosition);
+            
+            // 保存当前光标并设置平移光标
+            InputContext::getInstance().getInteractionData().pushAndSetCursor(CursorMode::kPanning);
         }
         
         // 将鼠标按钮事件传递给输入上下文处理
@@ -316,6 +319,9 @@ void InputHandler::handleMousePress(int button, int action, int mods) {
         // 当鼠标中键被释放时，重置标志
         if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
             s_mouseMiddleButtonPressedInViewport = false;
+            
+            // 恢复原来的光标
+            InputContext::getInstance().getInteractionData().popCursor();
         }
         
         s_mouseButtons[button] = false;

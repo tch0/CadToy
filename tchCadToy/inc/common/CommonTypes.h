@@ -69,11 +69,14 @@ enum class SelectionMode {
 
 // 交互数据结构体，用于InputContext和Renderer交换瞬态数据
 struct InteractionData {
+private:
+    // 光标栈：用于临时切换光标，如平移时，因为平移不参与任何输入且可能在任何时候发生，所以以这种方式实现
+    std::vector<std::pair<CursorMode, CursorMarker>> cursorStack;
+    
+public:
     // 光标相关数据
     CursorMode cursorMode = CursorMode::kDefault;       // 当前光标模式
     CursorMarker cursorMarker = CursorMarker::kNone;     // 当前光标标记
-    glm::vec2 cursorScreenPos = glm::vec2(0.0f, 0.0f);  // 光标屏幕坐标
-    glm::dvec3 cursorWorldPos = glm::dvec3(0.0, 0.0, 0.0); // 光标世界坐标
     
     // 选择相关数据
     bool isSelectionActive = false;                     // 是否正在进行选择
@@ -84,18 +87,36 @@ struct InteractionData {
     
     // 后续可添加的其他数据
     // 例如：
-    // - 其他选择数据：栏选、套索、多边形
     // - 捕捉相关数据
     // - 极轴追踪相关数据
     // - 命令预览相关数据
     // - 选择集相关数据
     
+    // 压入当前光标状态并设置新光标
+    void pushAndSetCursor(CursorMode mode, CursorMarker marker = CursorMarker::kNone) {
+        cursorStack.push_back({cursorMode, cursorMarker});
+        cursorMode = mode;
+        cursorMarker = marker;
+    }
+    
+    // 从栈弹出恢复光标状态
+    void popCursor() {
+        if (!cursorStack.empty()) {
+            auto [mode, marker] = cursorStack.back();
+            cursorMode = mode;
+            cursorMarker = marker;
+            cursorStack.pop_back();
+        } else {
+            cursorMode = CursorMode::kDefault;
+            cursorMarker = CursorMarker::kNone;
+        }
+    }
+    
     // 重置光标状态
     void resetCursor() {
         cursorMode = CursorMode::kDefault;
         cursorMarker = CursorMarker::kNone;
-        cursorScreenPos = glm::vec2(0.0f, 0.0f);
-        cursorWorldPos = glm::dvec3(0.0, 0.0, 0.0);
+        cursorStack.clear();
     }
     
     // 重置选择状态

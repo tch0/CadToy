@@ -1,7 +1,6 @@
 #pragma once
 
 // C++ 标准库
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -11,7 +10,6 @@
 // 项目头文件
 #include "CommonTypes.h"
 #include "SelectionTask.h"
-#include "Task.h"
 
 namespace tch {
 
@@ -95,12 +93,8 @@ private:
     // 交互数据
     InteractionData m_interactionData;
     
-    // 当前活动任务
-    std::unique_ptr<Task> m_activeTask;
-    
     // 选择任务
-    std::unique_ptr<SelectionTask> m_selectionTask;
-    
+    SelectionTask m_selectionTask;
 public:
     // 获取单例实例
     static InputContext& getInstance();
@@ -116,9 +110,10 @@ public:
     const std::string& getPrompt() const;
     void setErrorPrompt(const std::string& errorPrompt);
     
-    // 输入状态管理
+    // 交互状态管理
     InputStatus getCurrentStatus();
-    void resetStatus();
+    void resetStatusExceptInteractionData(); // 清除所有交互状态，除了交互数据，提供给选择任务使用
+    void resetStatus(); // 清除所有交互状态，包括交互数据
     
     // 允许的输入类型管理
     void setAllowedTypes(const std::vector<InputType>& types);

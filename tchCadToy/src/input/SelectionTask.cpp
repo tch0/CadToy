@@ -70,38 +70,41 @@ void SelectionTask::onUpdate() {
     m_previewPointWorld = Renderer::getTransformManager().screenToWorld(m_previewPointScreen);
     interactionData.selectionPreviewPointWorld = m_previewPointWorld;
     
-    // 根据选择模式设置光标模式
-    switch (m_state) {
-        case SelectionState::kSingleSelectionEntry:
-        case SelectionState::kSingleSelectionQuery:
-            // 单选模式下使用仅拾取框光标
-            interactionData.cursorMode = CursorMode::kPickbox;
-            // 单选模式下不显示任何标记
-            interactionData.cursorMarker = CursorMarker::kNone;
-            break;
-        default:
-            // 其他选择模式使用十字光标
-            interactionData.cursorMode = CursorMode::kCrosshair;
-            // 根据选择模式设置光标标记
-            switch (m_selectionMode) {
-                case SelectionMode::kWindow:
-                case SelectionMode::kWindowLasso:
-                case SelectionMode::kWindowPolygon:
-                    interactionData.cursorMarker = CursorMarker::kWindowSelect;
-                    break;
-                case SelectionMode::kCrossing:
-                case SelectionMode::kCrossingLasso:
-                case SelectionMode::kCrossingPolygon:
-                    interactionData.cursorMarker = CursorMarker::kCrossingSelect;
-                    break;
-                case SelectionMode::kFence:
-                    interactionData.cursorMarker = CursorMarker::kNone;
-                    break;
-                default:
-                    interactionData.cursorMarker = CursorMarker::kNone;
-                    break;
-            }
-            break;
+    // 平移模式下选择相关的光标不会覆盖平移光标，平移结束后则会立即覆盖
+    if (interactionData.cursorMode != CursorMode::kPanning) {
+        // 根据选择模式设置光标模式
+        switch (m_state) {
+            case SelectionState::kSingleSelectionEntry:
+            case SelectionState::kSingleSelectionQuery:
+                // 单选模式下使用仅拾取框光标
+                interactionData.cursorMode = CursorMode::kPickbox;
+                // 单选模式下不显示任何标记
+                interactionData.cursorMarker = CursorMarker::kNone;
+                break;
+            default:
+                // 其他选择模式使用十字光标
+                interactionData.cursorMode = CursorMode::kCrosshair;
+                // 根据选择模式设置光标标记
+                switch (m_selectionMode) {
+                    case SelectionMode::kWindow:
+                    case SelectionMode::kWindowLasso:
+                    case SelectionMode::kWindowPolygon:
+                        interactionData.cursorMarker = CursorMarker::kWindowSelect;
+                        break;
+                    case SelectionMode::kCrossing:
+                    case SelectionMode::kCrossingLasso:
+                    case SelectionMode::kCrossingPolygon:
+                        interactionData.cursorMarker = CursorMarker::kCrossingSelect;
+                        break;
+                    case SelectionMode::kFence:
+                        interactionData.cursorMarker = CursorMarker::kNone;
+                        break;
+                    default:
+                        interactionData.cursorMarker = CursorMarker::kNone;
+                        break;
+                }
+                break;
+        }
     }
     
     // 检查Shift状态，设置光标标记
@@ -218,7 +221,7 @@ void SelectionTask::onUpdate() {
                     interactionData.selectionPointsWorld = m_selectionPointsWorld;
                     
                     // 套索模式是按住鼠标左键的状态下通过移动鼠标进入的，没有任何交互被接收，需要手动重置输入上下文状态
-                    InputContext::getInstance().resetStatus();
+                    InputContext::getInstance().resetStatusExceptInteractionData();
                 }
             }
             // 鼠标左键已经抬起，切换到框选
@@ -372,7 +375,7 @@ void SelectionTask::onUpdate() {
                     interactionData.selectionPointsWorld = m_selectionPointsWorld;
                     
                     // 套索模式是按住鼠标左键的状态下通过移动鼠标进入的，没有任何交互被接收，需要手动重置输入上下文状态
-                    InputContext::getInstance().resetStatus();
+                    InputContext::getInstance().resetStatusExceptInteractionData();
                 }
             }
             // 鼠标左键已经抬起，进入正常的选择流程
@@ -501,12 +504,6 @@ void SelectionTask::reset() {
     m_currentPrompt = "";
     m_isCommandActive = false;
     m_inputStatus = InputStatus::kNone;
-    
-    // 重置光标状态
-    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
-    interactionData.cursorMode = CursorMode::kDefault;
-    interactionData.cursorMarker = CursorMarker::kNone;
-    interactionData.isSelectionActive = false;
 }
 
 bool SelectionTask::isSelecting() const {
@@ -624,10 +621,6 @@ void SelectionTask::finishSelection() {
     m_state = SelectionState::kCompleted;
     m_completed = true;
     
-    // 重置交互数据
-    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
-    interactionData.reset();
-    
     // 重置输入上下文状态
     InputContext::getInstance().resetStatus();
 }
@@ -637,10 +630,6 @@ void SelectionTask::cancelSelection() {
     // 管理任务状态
     m_state = SelectionState::kCompleted;
     m_completed = true;
-    
-    // 重置交互数据
-    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
-    interactionData.reset();
     
     // 重置输入上下文状态
     InputContext::getInstance().resetStatus();
