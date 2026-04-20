@@ -13,10 +13,12 @@
 #include "InputContext.h"
 #include "InputHandler.h"
 #include "Renderer.h"
+#include "GLFuncs.h"
+
 
 namespace tch {
 
-// Canvas顶点着色器
+// Canvas顶点着色器: 进行投影变换，传递纹理坐标
 static const char* CANVAS_VERTEX_SHADER = R"(
 #version 330 core
 
@@ -37,7 +39,7 @@ void main()
 }
 )";
 
-// Canvas片段着色器
+// Canvas片段着色器: 支持虚线纹理采样
 static const char* CANVAS_FRAGMENT_SHADER = R"(
 #version 330 core
 
@@ -172,9 +174,10 @@ AAGuard::~AAGuard() {
 }
 
 // 构造函数
-CanvasRenderer::CanvasRenderer() 
+CanvasRenderer::CanvasRenderer()
     : m_vao(0)
     , m_vbo(0)
+    , m_canvasProgram(0)
     , m_dashTexture(0)
     , m_mvpLocation(-1)
     , m_isDashedLocation(-1)
@@ -204,34 +207,32 @@ void CanvasRenderer::initDashTexture() {
 
 // 初始化渲染器
 bool CanvasRenderer::initialize() {
-    // 使用嵌入的着色器源码
-    m_canvasShader.setShaderSource(CANVAS_VERTEX_SHADER, CANVAS_FRAGMENT_SHADER);
-    
-    GLuint shaderId = m_canvasShader.getShaderId();
-    
-    LOG_INFO("Canvas shader program ID: {}", shaderId);
-    
-    if (shaderId == 0) {
+    // 创建着色器程序
+    m_canvasProgram = createShaderProgramFromSource(CANVAS_VERTEX_SHADER, CANVAS_FRAGMENT_SHADER);
+
+    LOG_INFO("Canvas shader program ID: {}", m_canvasProgram);
+
+    if (m_canvasProgram == 0) {
         LOG_ERROR("Failed to create canvas shader program");
         return false;
     }
     
     // 获取uniform位置
-    m_mvpLocation = glGetUniformLocation(shaderId, "uProjection");
+    m_mvpLocation = glGetUniformLocation(m_canvasProgram, "uProjection");
     if (m_mvpLocation == -1) {
         LOG_WARNING("Failed to get uProjection uniform location");
     } else {
         LOG_INFO("Canvas shader uProjection location: {}", m_mvpLocation);
     }
     
-    m_isDashedLocation = glGetUniformLocation(shaderId, "uIsDashed");
+    m_isDashedLocation = glGetUniformLocation(m_canvasProgram, "uIsDashed");
     if (m_isDashedLocation == -1) {
         LOG_WARNING("Failed to get uIsDashed uniform location");
     } else {
         LOG_INFO("Canvas shader uIsDashed location: {}", m_isDashedLocation);
     }
     
-    m_dashScaleLocation = glGetUniformLocation(shaderId, "uDashScale");
+    m_dashScaleLocation = glGetUniformLocation(m_canvasProgram, "uDashScale");
     if (m_dashScaleLocation == -1) {
         LOG_WARNING("Failed to get uDashScale uniform location");
     } else {
@@ -286,6 +287,11 @@ void CanvasRenderer::cleanup() {
     if (m_vbo) {
         glDeleteBuffers(1, &m_vbo);
         m_vbo = 0;
+    }
+    
+    if (m_canvasProgram) {
+        glDeleteProgram(m_canvasProgram);
+        m_canvasProgram = 0;
     }
     
     if (m_dashTexture) {
@@ -501,7 +507,7 @@ void CanvasRenderer::drawGrid() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // 使用shader绘制
-    m_canvasShader.use();
+    glUseProgram(m_canvasProgram);
     glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
     setDashedMode(false);
     
@@ -552,7 +558,7 @@ void CanvasRenderer::drawAxes() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // 使用shader绘制
-    m_canvasShader.use();
+    glUseProgram(m_canvasProgram);
     glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
     setDashedMode(false);
     
@@ -699,7 +705,7 @@ void CanvasRenderer::drawCursor() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // 使用shader绘制
-    m_canvasShader.use();
+    glUseProgram(m_canvasProgram);
     glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
     setDashedMode(false);
     
@@ -735,7 +741,7 @@ void CanvasRenderer::drawCursorMarker() {
     
     glm::vec4 markerColor(1.0f, 1.0f, 1.0f, 1.0f);
     
-    m_canvasShader.use();
+    glUseProgram(m_canvasProgram);
     glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
     
     glDisable(GL_DEPTH_TEST);
@@ -1132,7 +1138,7 @@ void CanvasRenderer::drawSelection() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // 使用shader绘制
-    m_canvasShader.use();
+    glUseProgram(m_canvasProgram);
     glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
     
     // 绑定虚线纹理

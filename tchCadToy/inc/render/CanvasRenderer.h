@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "Shader.h"
+
 
 namespace tch {
 
@@ -55,7 +55,7 @@ class CanvasRenderer {
 private:
     // 顶点结构体
     struct Vertex {
-        glm::vec2 position;  // 屏幕坐标位置
+        glm::vec2 position;  // 屏幕坐标位置，标准鼠标坐标系y轴向下
         glm::vec4 color;     // RGBA颜色
         float texCoord;      // 沿线段方向的纹理坐标（0到线段长度）
     };
@@ -70,7 +70,7 @@ private:
     glm::mat4 m_view;        // 视图矩阵
     
     // Shader
-    Shader m_canvasShader;  // 统一的画布着色器（支持实线和虚线模式）
+    GLuint m_canvasProgram;  // 统一的画布着色器程序（支持实线和虚线模式）
     
     // 虚线纹理
     GLuint m_dashTexture;  // 一维虚线纹理

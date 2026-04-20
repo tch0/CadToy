@@ -1,29 +1,30 @@
 #pragma once
 
 // C++ 标准库
-#include <vector>
 
 // 第三方库
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 
 // 项目头文件
-#include "Shader.h"
+
 
 namespace tch {
+
+// 顶点数据结构，后续应该移动到图形引擎相关头文件中。
+// 用于实体渲染的顶点格式，包含位置、颜色、状态标志和线宽
+struct Vertex {
+    glm::vec3 position;     // 位置（世界坐标）
+    glm::vec3 color;        // 基础颜色 (RGB)
+    uint32_t flags;         // 状态标志位：bit0=预选高亮(加宽2个像素), bit1=选中高亮(绘制为虚线), bit2=暗显(颜色变浅)
+    float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
+};
 
 // 实体渲染器类
 // 负责使用现代OpenGL shader渲染3D世界空间中的实体（线段、多边形等）
 // 使用FBO离屏渲染，支持几何着色器实现可变线宽
 class EntityRenderer {
 private:
-    // 顶点结构体
-    struct Vertex {
-        glm::vec3 position;  // 世界坐标位置
-        glm::vec4 color;     // RGBA颜色
-        float texCoord;      // 沿线段方向的纹理坐标（用于虚线）
-    };
-    
     // FBO（帧缓冲对象）
     GLuint m_fbo;                 // 离屏渲染帧缓冲
     GLuint m_colorTexture;        // 颜色附件纹理
@@ -37,24 +38,21 @@ private:
     GLuint m_vao;  // 顶点数组对象
     GLuint m_vbo;  // 顶点缓冲对象
     
-    // 实体着色器（顶点+几何+片段）
-    Shader m_entityShader;            // 实体着色器程序
-    GLint m_mvpLocation;              // uMVP uniform位置
-    GLint m_isDashedLocation;         // uIsDashed uniform位置（0=实线，1=虚线）
-    GLint m_dashScaleLocation;        // uDashScale uniform位置
-    GLint m_useVertexColorLocation;   // uUseVertexColor uniform位置
+    // 无线宽着色器程序
+    GLuint m_noLWProgram;
+    GLint m_noLWMvpLoc;
+    GLint m_noLWViewportSizeLoc;
+    
+    // 有线宽着色器程序
+    GLuint m_withLWProgram;
+    GLint m_withLWMvpLoc;
+    GLint m_withLWViewportSizeLoc;
     
     // 全屏四边形VAO/VBO（用于FBO纹理渲染到屏幕）
     GLuint m_quadVAO;        // 四边形顶点数组对象
     GLuint m_quadVBO;        // 四边形顶点缓冲对象
-    Shader m_quadShader;     // 四边形着色器程序
-    GLint m_quadTextureLocation;  // uTexture uniform位置
-    
-    // 虚线纹理
-    GLuint m_dashTexture;  // 一维虚线纹理
-    
-    // 顶点缓冲
-    std::vector<Vertex> m_vertices;  // 顶点数据缓冲区
+    GLuint m_quadProgram;    // 四边形着色器程序
+    GLint m_quadTextureLoc;  // uTexture uniform位置
     
 public:
     EntityRenderer();
@@ -72,21 +70,14 @@ public:
     
 private:
     // 初始化方法
-    void initDashTexture();  // 初始化虚线纹理
     void ensureFBOSize(int width, int height);  // 确保FBO尺寸足够
     void setupQuadVAO();  // 设置全屏四边形VAO
     
     // 渲染辅助方法
-    void setDashedMode(bool isDashed, float period = 8.0f);  // 设置虚线模式，period为虚线周期像素数
     void renderToFBO(const glm::mat4& mvp, int viewportLeft, int viewportBottom, 
                      int viewportWidth, int viewportHeight);  // 渲染实体到FBO
     void renderTextureToScreen();  // 将FBO纹理渲染到屏幕
     void renderGeometry(const glm::mat4& mvp);  // 渲染几何体
-    
-    // 顶点管理
-    void clearVertices();  // 清空顶点缓冲
-    void addVertex(const glm::vec3& pos, const glm::vec4& color, float texCoord = 0.0f);  // 添加顶点
-    void flushVertices();  // 上传顶点数据到GPU
 };
 
 } // namespace tch

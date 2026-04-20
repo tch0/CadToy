@@ -2,6 +2,8 @@
 #include "EntityRenderer.h"
 
 // C++ 标准库
+#include <cstddef>
+#include <vector>
 
 // 第三方库
 #include <glm/gtc/type_ptr.hpp>
@@ -9,140 +11,301 @@
 // 项目头文件
 #include "Logger.h"
 #include "DocManager.h"
+#include "GLFuncs.h"
+
 
 namespace tch {
 
+// ==============================================================================================================================
+// 着色器实现说明：
+//      当前只实现了线框渲染，可以传入任何线段类型进行渲染，足以应对绝大部分情况，三角面渲染则还未实现（有宽度的多段线、某些实体填充等）
+//      无线宽版本线框渲染
+//          用于绘制所有宽度为1个像素的线框
+//          支持选中、暗显，因为预选高亮是加宽2个像素，所以不支持预选，预选实体需要使用有线宽版本进行绘制
+//      有线宽版本线框渲染
+//          用于绘制所有宽度大于1个像素的线框
+//          完整支持了选中、暗显、预选高亮，支持绘制有线宽实体
+//      多种状态：选中实体绘制为虚线、预选高亮则加宽2个像素、暗显则是显示为一个更暗的颜色
+//          这些状态可以随意组合，当然无线宽版本中组合预选高亮也没有效果，有线宽版本可以随意组合
+//          实际中只有暗显+选中状态是合理有效的组合状态，其他状态组合并不应该实际发生（锁定图层实体暗显但不会预选高亮、选中实体也不会再预选高亮）
+//      
 // ============================================================================
-// 嵌入式着色器源码
+// 线框渲染: 无线宽版本顶点着色器
+// 说明: 仅传递位置、颜色和状态标志，不做几何变换以外的特殊处理。
 // ============================================================================
-
-// 实体顶点着色器
-// 将世界坐标转换为裁剪空间坐标，传递颜色和纹理坐标
-static const char* ENTITY_VERTEX_SHADER = R"(
+static const char* WIREFRAME_VERTEX_SHADER_NO_LW = R"(
 #version 330 core
 
 layout (location = 0) in vec3 aPos;       // 世界坐标位置
-layout (location = 1) in vec4 aColor;     // RGBA颜色
-layout (location = 2) in float aTexCoord; // 沿线段方向的纹理坐标
+layout (location = 1) in vec3 aColor;     // 基础颜色 (RGB)
+layout (location = 2) in uint aFlags;     // 状态标志 (bit0=预选, bit1=选中, bit2=暗显)
+// layout (location = 3) in float aLineWidth; // 线宽（本版本忽略）
 
-uniform mat4 uMVP;  // 模型-视图-投影矩阵
+uniform mat4 uMVP;                        // 模型-视图-投影矩阵
 
-out vec4 vColor;     // 传递到几何着色器的颜色
-out float vTexCoord; // 传递到几何着色器的纹理坐标
+out vec3 vColor;
+out uint vFlags;
 
 void main() {
     gl_Position = uMVP * vec4(aPos, 1.0);
     vColor = aColor;
-    vTexCoord = aTexCoord;
+    vFlags = aFlags;
 }
 )";
 
-// 实体几何着色器
-// 将线段扩展为带宽度的四边形（三角形带）
-// 通过计算线段方向的法向量，在屏幕空间中生成带宽度的线条
-static const char* ENTITY_GEOMETRY_SHADER = R"(
+
+// ============================================================================
+// 线框渲染: 无线宽版本几何着色器
+// 功能: 
+//   1. 未选中的线段直接透传 (不生成纹理坐标)
+//   2. 选中的线段计算屏幕空间长度，生成纹理坐标 (0 ~ length/period)
+//   3. 始终传递 flags 供片段着色器使用
+// ============================================================================
+static const char* WIREFRAME_GEOMETRY_SHADER_NO_LW = R"(
 #version 330 core
 
-layout(lines) in;                      // 输入：线段（2个顶点）
-layout(triangle_strip, max_vertices = 4) out;  // 输出：四边形（4个顶点）
+layout(lines) in;
+layout(line_strip, max_vertices = 2) out;      // 输出仍为线段，不扩展
 
-uniform float uLineWidth;      // 线宽（像素）
-uniform vec2 uViewportSize;    // 视口尺寸
+uniform vec2 uViewportSize;                    // 视口宽高 (像素)
+uniform float uDashPeriod;                     // 虚线周期 (像素) 例如 8.0
 
-in vec4 vColor[];      // 来自顶点着色器的颜色
-in float vTexCoord[];  // 来自顶点着色器的纹理坐标
+in vec3 vColor[];
+in uint vFlags[];
 
-out vec4 gColor;      // 传递到片段着色器的颜色
-out float gTexCoord;  // 传递到片段着色器的纹理坐标
+out vec4 gColor;
+out float gTexCoord;                           // 纹理坐标 (选中时 = 屏幕长度/周期，未选中时 = -1)
+flat out uint gFlags;
 
 void main() {
-    // 获取线段端点的屏幕坐标（NDC -> 屏幕空间）
+    uint flags0 = vFlags[0];
+    bool isSelected = ((flags0 >> 1) & 1u) == 1u;
+
+    if (!isSelected) {
+        // 未选中：直接透传顶点，不生成纹理坐标
+        for (int i = 0; i < 2; ++i) {
+            gl_Position = gl_in[i].gl_Position;
+            gColor = vec4(vColor[i], 1.0);
+            gTexCoord = -1.0;                  // 无效值
+            gFlags = vFlags[i];
+            EmitVertex();
+        }
+        EndPrimitive();
+        return;
+    }
+
+    // 选中状态：计算屏幕空间纹理坐标
+    // 步骤1: 将裁剪坐标转换到屏幕像素坐标
     vec2 p0 = gl_in[0].gl_Position.xy / gl_in[0].gl_Position.w;
     vec2 p1 = gl_in[1].gl_Position.xy / gl_in[1].gl_Position.w;
-    
     p0 = (p0 + 1.0) * 0.5 * uViewportSize;
     p1 = (p1 + 1.0) * 0.5 * uViewportSize;
-    
-    // 计算线段方向和法向量
-    vec2 dir = normalize(p1 - p0);
-    vec2 normal = vec2(-dir.y, dir.x);
-    
-    // 计算偏移量（半宽度）
-    float halfWidth = uLineWidth * 0.5;
-    vec2 offset = normal * halfWidth;
-    
-    // 生成四个顶点（屏幕空间 -> NDC）
-    // 左上顶点
-    gl_Position = vec4((p0 + offset) / uViewportSize * 2.0 - 1.0, 
-                        gl_in[0].gl_Position.zw);
-    gColor = vColor[0];
-    gTexCoord = vTexCoord[0];
-    EmitVertex();
-    
-    // 左下顶点
-    gl_Position = vec4((p0 - offset) / uViewportSize * 2.0 - 1.0, 
-                        gl_in[0].gl_Position.zw);
-    gColor = vColor[0];
-    gTexCoord = vTexCoord[0];
-    EmitVertex();
-    
-    // 右上顶点
-    gl_Position = vec4((p1 + offset) / uViewportSize * 2.0 - 1.0, 
-                        gl_in[1].gl_Position.zw);
-    gColor = vColor[1];
-    gTexCoord = vTexCoord[1];
-    EmitVertex();
-    
-    // 右下顶点
-    gl_Position = vec4((p1 - offset) / uViewportSize * 2.0 - 1.0, 
-                        gl_in[1].gl_Position.zw);
-    gColor = vColor[1];
-    gTexCoord = vTexCoord[1];
-    EmitVertex();
-    
+
+    // 步骤2: 屏幕空间长度
+    float len = distance(p0, p1);
+    float texScale = (len > 0.0) ? len / uDashPeriod : 0.0;
+
+    // 步骤3: 输出两个顶点，纹理坐标分别为 0 和 texScale
+    for (int i = 0; i < 2; ++i) {
+        gl_Position = gl_in[i].gl_Position;
+        gColor = vec4(vColor[i], 1.0);
+        gTexCoord = (i == 0) ? 0.0 : texScale;
+        gFlags = vFlags[i];
+        EmitVertex();
+    }
     EndPrimitive();
 }
 )";
 
-// 实体片段着色器
-// 支持实线和虚线两种模式
-static const char* ENTITY_FRAGMENT_SHADER = R"(
+// ============================================================================
+// 线框渲染: 无线宽版本片段着色器
+// 功能: 
+//   1. 根据 flags 中的暗显位进行颜色变暗
+//   2. 根据纹理坐标 (有效时) 进行虚线裁剪 (数学方式，无纹理采样)
+// ============================================================================
+static const char* WIREFRAME_FRAGMENT_SHADER_NO_LW = R"(
 #version 330 core
 
-uniform sampler1D uDashTexture;   // 虚线纹理
-uniform int uIsDashed;            // 是否虚线模式（0=实线，1=虚线）
-uniform float uDashScale;         // 虚线缩放因子（1/周期）
-uniform int uUseVertexColor;      // 是否使用顶点颜色（1=是，0=使用uniform颜色）
-uniform vec4 uColor;              // uniform颜色
+in vec4 gColor;
+in float gTexCoord;
+flat in uint gFlags;
+out vec4 FragColor;
 
-in vec4 gColor;      // 来自几何着色器的颜色
-in float gTexCoord;  // 来自几何着色器的纹理坐标
-out vec4 FragColor;  // 输出颜色
+uniform float uDashRatio = 0.5;               // 实线比例 (0.5 = 一半实线一半虚线)
 
 void main() {
-    // 选择颜色来源
-    vec4 color;
-    if (uUseVertexColor == 1) {
-        color = gColor;
-    } else {
-        color = uColor;
+    vec4 color = gColor;
+
+    // 暗显处理 (根据 flags bit2)
+    bool isDimmed = ((gFlags >> 2) & 1u) == 1u;
+    if (isDimmed) {
+        // 混合暗色 (强度固定为0.6，也可通过 uniform 调节)
+        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.6);
     }
-    
-    // 虚线/实线处理
-    if (uIsDashed == 0) {
-        FragColor = color;
-    } else {
-        // 虚线模式：采样虚线纹理
-        float texPos = gTexCoord * uDashScale;
-        float alpha = texture(uDashTexture, texPos).r;
-        if (alpha < 0.5) discard;  // 透明部分丢弃
-        FragColor = color;
+
+    // 虚线处理 (仅当 gTexCoord >= 0 时表示选中实体)
+    if (gTexCoord >= 0.0) {
+        float t = fract(gTexCoord);           // 当前周期内位置 [0,1)
+        if (t > uDashRatio) discard;          // 超出实线比例的部分丢弃
     }
+
+    FragColor = color;
 }
 )";
 
+// ============================================================================
+// 线框渲染: 有线宽版本顶点着色器
+// 功能: 传递位置、颜色、状态标志、线宽，进行 MVP 变换
+// ============================================================================
+static const char* WIREFRAME_VERTEX_SHADER_WITH_LW = R"(
+#version 330 core
+
+layout (location = 0) in vec3 aPos;          // 世界坐标位置
+layout (location = 1) in vec3 aColor;        // 基础颜色 (RGB)
+layout (location = 2) in uint aFlags;        // 状态标志: bit0=预选, bit1=选中, bit2=暗显
+layout (location = 3) in float aLineWidth;   // 线宽 (屏幕像素基础值)
+
+uniform mat4 uMVP;                           // 模型-视图-投影矩阵
+
+out vec3 vColor;
+out uint vFlags;
+out float vLineWidth;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = aColor;
+    vFlags = aFlags;
+    vLineWidth = aLineWidth;
+}
+)";
+// ============================================================================
+// 线框渲染: 有线宽版本几何着色器
+// 功能: 
+//   1. 将线段扩展为带宽度的四边形 (屏幕空间固定像素宽度)
+//   2. 预选高亮时线宽增加2像素
+//   3. 传递暗显标志 (flat) 和中间区域标志 (flat) 以及纹理坐标
+//   4. 生成沿线段方向的归一化坐标和屏幕空间纹理坐标 (用于虚线周期)
+// ============================================================================
+static const char* WIREFRAME_GEOMETRY_SHADER_WITH_LW = R"(
+#version 330 core
+
+layout(lines) in;
+layout(triangle_strip, max_vertices = 4) out;
+
+uniform vec2 uViewportSize;      // 视口宽高 (像素)
+uniform float uDashPeriod;       // 虚线周期 (像素)，例如 8.0
+
+in vec3 vColor[];
+in uint vFlags[];
+in float vLineWidth[];
+
+// 输出到片段着色器
+out vec4 gColor;                 // 颜色 (插值)
+out float gTexCoord;             // 屏幕空间纹理坐标 (范围 0 ~ len/period) (插值)
+flat out int gIsSelected;        // 是否选中 (1=选中, 0=未选中)
+flat out float gDimmed;          // 暗显标志 (1.0=暗显)
+
+void main() {
+    uint flags0 = vFlags[0];
+    bool isPreHighlight = ((flags0 >> 0) & 1u) == 1u;
+    bool isSelected     = ((flags0 >> 1) & 1u) == 1u;
+    bool isDimmed       = ((flags0 >> 2) & 1u) == 1u;
+
+    // 计算最终线宽 (屏幕像素)
+    float baseWidth = (vLineWidth[0] + vLineWidth[1]) * 0.5;
+    float lineWidth = baseWidth;
+    if (isPreHighlight) {
+        lineWidth += 2.0;   // 预选加粗 2 像素
+    }
+
+    // 将线段端点转换到屏幕像素坐标
+    vec2 p0_ndc = gl_in[0].gl_Position.xy / gl_in[0].gl_Position.w;
+    vec2 p1_ndc = gl_in[1].gl_Position.xy / gl_in[1].gl_Position.w;
+    vec2 p0_screen = (p0_ndc + 1.0) * 0.5 * uViewportSize;
+    vec2 p1_screen = (p1_ndc + 1.0) * 0.5 * uViewportSize;
+
+    // 屏幕空间长度
+    float len = distance(p0_screen, p1_screen);
+    float texScale = (len > 0.0) ? len / uDashPeriod : 0.0;
+
+    // 计算垂直于线段方向的单位向量
+    vec2 dir = normalize(p1_screen - p0_screen);
+    vec2 normal = vec2(-dir.y, dir.x);
+    vec2 offset = normal * lineWidth * 0.5;
+
+    // 四个顶点屏幕坐标 (左下、左上、右下、右上)
+    vec2 quad_screen[4];
+    quad_screen[0] = p0_screen - offset;
+    quad_screen[1] = p0_screen + offset;
+    quad_screen[2] = p1_screen - offset;
+    quad_screen[3] = p1_screen + offset;
+
+    // 屏幕空间纹理坐标 (用于虚线周期)
+    float texCoord[4];
+    texCoord[0] = 0.0;
+    texCoord[1] = 0.0;
+    texCoord[2] = texScale;
+    texCoord[3] = texScale;
+
+    for (int i = 0; i < 4; ++i) {
+        // 屏幕坐标转回 NDC
+        vec2 ndc = quad_screen[i] / uViewportSize * 2.0 - 1.0;
+        gl_Position = vec4(ndc, 0.0, 1.0);   // 深度简化
+
+        // 颜色: 前两个顶点使用起点颜色，后两个使用终点颜色
+        vec3 col = (i < 2) ? vColor[0] : vColor[1];
+        gColor = vec4(col, 1.0);
+
+        gTexCoord = texCoord[i];
+        gIsSelected = isSelected ? 1 : 0;
+        gDimmed = isDimmed ? 1.0 : 0.0;
+
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+)";
+
+// ============================================================================
+// 线框渲染: 有线宽版本片段着色器
+// 功能: 
+//   1. 根据暗显标志降低颜色亮度
+//   2. 在预选或选中实体的中间区域 (30%~70%) 绘制反色虚线
+//   3. 虚线周期屏幕固定像素
+// ============================================================================
+static const char* WIREFRAME_FRAGMENT_SHADER_WITH_LW = R"(
+#version 330 core
+
+in vec4 gColor;
+in float gTexCoord;
+flat in int gIsSelected;
+flat in float gDimmed;
+out vec4 FragColor;
+
+uniform float uDashRatio = 0.5;       // 实线比例 (0~1)
+
+void main() {
+    vec4 color = gColor;
+
+    // 暗显处理
+    if (gDimmed > 0.5) {
+        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.6);
+    }
+
+    // 选中时整条线显示为虚线（原色，不反色）
+    if (gIsSelected == 1) {
+        float t = fract(gTexCoord);
+        if (t > uDashRatio) discard;
+    }
+
+    FragColor = color;
+}
+)";
+
+// ============================================================================
 // 全屏四边形顶点着色器
 // 用于将FBO纹理渲染到屏幕
+// ============================================================================
 static const char* QUAD_VERTEX_SHADER = R"(
 #version 330 core
 
@@ -157,8 +320,10 @@ void main() {
 }
 )";
 
+// ============================================================================
 // 全屏四边形片段着色器
 // 简单采样FBO纹理
+// ============================================================================
 static const char* QUAD_FRAGMENT_SHADER = R"(
 #version 330 core
 
@@ -176,23 +341,25 @@ void main() {
 // 构造函数与析构函数
 // ============================================================================
 
-// 构造函数：初始化所有成员变量为默认值
-EntityRenderer::EntityRenderer()
-    : m_fbo(0)
-    , m_colorTexture(0)
-    , m_depthStencilBuffer(0)
-    , m_windowWidth(0)
-    , m_windowHeight(0)
-    , m_vao(0)
-    , m_vbo(0)
-    , m_mvpLocation(-1)
-    , m_isDashedLocation(-1)
-    , m_dashScaleLocation(-1)
-    , m_useVertexColorLocation(-1)
-    , m_quadVAO(0)
-    , m_quadVBO(0)
-    , m_quadTextureLocation(-1)
-    , m_dashTexture(0)
+// 构造函数：初始化所有成员为默认值
+EntityRenderer::EntityRenderer() :
+    m_fbo(0),
+    m_colorTexture(0),
+    m_depthStencilBuffer(0),
+    m_windowWidth(0),
+    m_windowHeight(0),
+    m_vao(0),
+    m_vbo(0),
+    m_noLWProgram(0),
+    m_noLWMvpLoc(-1),
+    m_noLWViewportSizeLoc(-1),
+    m_withLWProgram(0),
+    m_withLWMvpLoc(-1),
+    m_withLWViewportSizeLoc(-1),
+    m_quadVAO(0),
+    m_quadVBO(0),
+    m_quadProgram(0),
+    m_quadTextureLoc(-1)
 {
 }
 
@@ -206,34 +373,62 @@ EntityRenderer::~EntityRenderer() {
 // ============================================================================
 
 // 初始化渲染器
-// 创建着色器程序、VAO/VBO、虚线纹理
+// 创建着色器程序、VAO/VBO
 bool EntityRenderer::initialize() {
-    // 创建实体着色器（顶点+几何+片段）
-    m_entityShader.setShaderSource(ENTITY_VERTEX_SHADER, ENTITY_FRAGMENT_SHADER, ENTITY_GEOMETRY_SHADER);
+    // 创建无线宽着色器程序
+    m_noLWProgram = createShaderProgramFromSource(
+        WIREFRAME_VERTEX_SHADER_NO_LW,
+        WIREFRAME_FRAGMENT_SHADER_NO_LW,
+        WIREFRAME_GEOMETRY_SHADER_NO_LW
+    );
     
-    GLuint shaderId = m_entityShader.getShaderId();
-    if (shaderId == 0) {
-        LOG_ERROR("Failed to create entity shader program");
+    if (m_noLWProgram == 0) {
+        LOG_ERROR("Failed to create no line width shader program");
         return false;
     }
     
-    // 获取实体着色器uniform位置
-    m_mvpLocation = glGetUniformLocation(shaderId, "uMVP");
-    m_isDashedLocation = glGetUniformLocation(shaderId, "uIsDashed");
-    m_dashScaleLocation = glGetUniformLocation(shaderId, "uDashScale");
-    m_useVertexColorLocation = glGetUniformLocation(shaderId, "uUseVertexColor");
+    // 获取无线宽着色器uniform位置
+    m_noLWMvpLoc = glGetUniformLocation(m_noLWProgram, "uMVP");
+    m_noLWViewportSizeLoc = glGetUniformLocation(m_noLWProgram, "uViewportSize");
     
-    // 创建四边形着色器（顶点+片段）
-    m_quadShader.setShaderSource(QUAD_VERTEX_SHADER, QUAD_FRAGMENT_SHADER);
+    // 设置固定uniform值
+    glUseProgram(m_noLWProgram);
+    glUniform1f(glGetUniformLocation(m_noLWProgram, "uDashPeriod"), 10.0f); // 虚线周期像素为单位的长度
+    glUniform1f(glGetUniformLocation(m_noLWProgram, "uDashRatio"), 0.5f); // 虚线中实线段的比例
+    glUseProgram(0);
     
-    GLuint quadShaderId = m_quadShader.getShaderId();
-    if (quadShaderId == 0) {
+    // 创建有线宽着色器程序
+    m_withLWProgram = createShaderProgramFromSource(
+        WIREFRAME_VERTEX_SHADER_WITH_LW,
+        WIREFRAME_FRAGMENT_SHADER_WITH_LW,
+        WIREFRAME_GEOMETRY_SHADER_WITH_LW
+    );
+    
+    if (m_withLWProgram == 0) {
+        LOG_ERROR("Failed to create with line width shader program");
+        return false;
+    }
+    
+    // 获取有线宽着色器uniform位置
+    m_withLWMvpLoc = glGetUniformLocation(m_withLWProgram, "uMVP");
+    m_withLWViewportSizeLoc = glGetUniformLocation(m_withLWProgram, "uViewportSize");
+    
+    // 设置固定uniform值
+    glUseProgram(m_withLWProgram);
+    glUniform1f(glGetUniformLocation(m_withLWProgram, "uDashPeriod"), 16.0f); // 虚线周期像素为单位的长度，有宽度的虚线周期稍长一点
+    glUniform1f(glGetUniformLocation(m_withLWProgram, "uDashRatio"), 0.5f); // 虚线中实线段的比例
+    glUseProgram(0);
+    
+    // 创建四边形着色器程序
+    m_quadProgram = createShaderProgramFromSource(QUAD_VERTEX_SHADER, QUAD_FRAGMENT_SHADER);
+    
+    if (m_quadProgram == 0) {
         LOG_ERROR("Failed to create quad shader program");
         return false;
     }
     
     // 获取四边形着色器uniform位置
-    m_quadTextureLocation = glGetUniformLocation(quadShaderId, "uTexture");
+    m_quadTextureLoc = glGetUniformLocation(m_quadProgram, "uTexture");
     
     // 创建实体渲染VAO/VBO
     glGenVertexArrays(1, &m_vao);
@@ -244,28 +439,28 @@ bool EntityRenderer::initialize() {
     // 预分配足够大的缓冲区（100000个顶点）
     glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
     
-    // 设置顶点属性
+    // 设置顶点属性（根据新的Vertex结构体，使用glm::vec3）
     // location 0: position (vec3)
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
     
-    // location 1: color (vec4)
+    // location 1: color (vec3)
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 3));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
     
-    // location 2: texCoord (float)
+    // location 2: flags (uint32)
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(float) * 7));
+    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, flags));
+    
+    // location 3: lineWeight (float)
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, lineWidth));
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     
-    // 初始化全屏四边形VAO和虚线纹理
+    // 初始化全屏四边形VAO
     setupQuadVAO();
-    initDashTexture();
-    
-    // 预分配顶点缓冲区容量
-    m_vertices.reserve(100000);
     
     LOG_INFO("EntityRenderer initialized successfully");
     return true;
@@ -300,6 +495,22 @@ void EntityRenderer::cleanup() {
         m_vbo = 0;
     }
     
+    // 清理着色器程序
+    if (m_noLWProgram) {
+        glDeleteProgram(m_noLWProgram);
+        m_noLWProgram = 0;
+    }
+    
+    if (m_withLWProgram) {
+        glDeleteProgram(m_withLWProgram);
+        m_withLWProgram = 0;
+    }
+    
+    if (m_quadProgram) {
+        glDeleteProgram(m_quadProgram);
+        m_quadProgram = 0;
+    }
+    
     // 清理四边形VAO/VBO
     if (m_quadVAO) {
         glDeleteVertexArrays(1, &m_quadVAO);
@@ -309,12 +520,6 @@ void EntityRenderer::cleanup() {
     if (m_quadVBO) {
         glDeleteBuffers(1, &m_quadVBO);
         m_quadVBO = 0;
-    }
-    
-    // 清理虚线纹理
-    if (m_dashTexture) {
-        glDeleteTextures(1, &m_dashTexture);
-        m_dashTexture = 0;
     }
 }
 
@@ -386,20 +591,6 @@ void EntityRenderer::ensureFBOSize(int width, int height) {
 // 初始化辅助方法
 // ============================================================================
 
-// 初始化虚线纹理
-// 创建一维纹理，4白4透明模式
-void EntityRenderer::initDashTexture() {
-    // 4白4透明虚线模式
-    unsigned char pattern[8] = {255, 255, 255, 255, 0, 0, 0, 0};
-    
-    glGenTextures(1, &m_dashTexture);
-    glBindTexture(GL_TEXTURE_1D, m_dashTexture);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 8, 0, GL_RED, GL_UNSIGNED_BYTE, pattern);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-}
-
 // 设置全屏四边形VAO
 // 用于将FBO纹理渲染到屏幕
 void EntityRenderer::setupQuadVAO() {
@@ -431,94 +622,86 @@ void EntityRenderer::setupQuadVAO() {
 }
 
 // ============================================================================
-// 顶点管理
-// ============================================================================
-
-// 清空顶点缓冲
-void EntityRenderer::clearVertices() {
-    m_vertices.clear();
-}
-
-// 添加顶点到缓冲区
-void EntityRenderer::addVertex(const glm::vec3& pos, const glm::vec4& color, float texCoord) {
-    m_vertices.push_back({pos, color, texCoord});
-}
-
-// 上传顶点数据到GPU
-void EntityRenderer::flushVertices() {
-    if (m_vertices.empty()) {
-        return;
-    }
-    
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertices.size() * sizeof(Vertex), m_vertices.data());
-}
-
-// ============================================================================
 // 渲染辅助方法
 // ============================================================================
 
-// 设置虚线模式
-// isDashed: 是否启用虚线
-// period: 虚线周期（像素数）
-void EntityRenderer::setDashedMode(bool isDashed, float period) {
-    glUniform1i(m_isDashedLocation, isDashed ? 1 : 0);
-    glUniform1f(m_dashScaleLocation, 1.0f / period);
-}
-
 // 渲染几何体
-// 收集实体顶点并绘制
+// 从图形引擎获取顶点数组并绘制
 void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
-    // TODO: 需要考虑透明实体的混合方式
     
-    // TODO: 实现实体渲染（待 Entity 类和 Document::getEntities() 接口完成后启用）
-    auto& doc = DocManager::getCurrentDocument();
-    // const auto& entities = doc.getEntities();
+    // 测试数据
+    // 测试用标志位定义
+    constexpr uint32_t FLAG_PRESELECT = 1 << 0;  // 预选高亮
+    constexpr uint32_t FLAG_SELECTED  = 1 << 1;  // 选中
+    constexpr uint32_t FLAG_DIMMED    = 1 << 2;  // 暗显
     
-    // clearVertices();
+    // 创建测试数据 - 8条线段，间隔100，长度50
+    // 无线宽版本：Y = 50 ~ 100（上方）
+    // 有线宽版本：Y = -100 ~ -50（下方）
+    std::vector<Vertex> noLWVertices;
+    std::vector<Vertex> withLWVertices;
     
-    // // 收集实体顶点
-    // for (const auto& entity : entities) {
-    //     auto segments = entity->getSegments();
-    //     float texCoord = 0.0f;
+    // 8条线段的数据定义
+    struct LineData {
+        float x;
+        uint32_t flags;
+        glm::vec3 color;
+        float lineWeight;
+    };
+    
+    LineData lines[] = {
+        {0.0f,   0,              glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 正常，白色，线宽1
+        {100.0f, FLAG_PRESELECT, glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 预选，白色，线宽1
+        {200.0f, FLAG_SELECTED,  glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 选中，白色，线宽1
+        {300.0f, FLAG_DIMMED,    glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 暗显，白色，线宽1
+        {400.0f, 0,              glm::vec3(1.0f, 0.0f, 0.0f), 3.0f},  // 正常，红色，线宽3
+        {500.0f, FLAG_PRESELECT, glm::vec3(1.0f, 0.0f, 0.0f), 3.0f},  // 预选，红色，线宽3
+        {600.0f, FLAG_SELECTED,  glm::vec3(1.0f, 0.0f, 0.0f), 5.0f},  // 选中，红色，线宽10
+        {700.0f, FLAG_DIMMED,    glm::vec3(0.0f, 0.0f, 1.0f), 5.0f},  // 暗显，蓝色，线宽10
+        {800.0f, FLAG_DIMMED | FLAG_SELECTED,    glm::vec3(1.0f, 0.0f, 0.0f), 5.0f}, // 暗显同时选中，红色，线宽5，三者组合只有这种情况是会实际发生的。
+    };
+    
+    // 生成顶点数据
+    for (const auto& line : lines) {
+        // 无线宽版本（上方 Y=50~100）
+        noLWVertices.push_back({glm::vec3(line.x, 50.0f, 0.0f), line.color, line.flags, line.lineWeight});
+        noLWVertices.push_back({glm::vec3(line.x, 150.0f, 0.0f), line.color, line.flags, line.lineWeight});
         
-    //     for (const auto& seg : segments) {
-    //         float length = glm::length(seg.end - seg.start);
-    //         addVertex(seg.start, seg.color, texCoord);
-    //         addVertex(seg.end, seg.color, texCoord + length);
-    //         texCoord += length;
-    //     }
-    // }
-    
-    if (m_vertices.empty())  {
-        return;
+        // 有线宽版本（下方 Y=-100~-50）
+        withLWVertices.push_back({glm::vec3(line.x, -50.0f, 0.0f), line.color, line.flags, line.lineWeight});
+        withLWVertices.push_back({glm::vec3(line.x, -150.0f, 0.0f), line.color, line.flags, line.lineWeight});
     }
     
-    // 上传顶点数据
-    flushVertices();
-    
-    // 使用实体着色器
-    m_entityShader.use();
-    glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
-    glUniform1i(m_isDashedLocation, 0);
-    glUniform1f(m_dashScaleLocation, 1.0f);
-    glUniform1i(m_useVertexColorLocation, 1);
-    
-    // 设置线宽（通过几何着色器实现）
-    float lineWidth = 1.0f;  // TODO: 从实体获取线宽
-    glUniform1f(glGetUniformLocation(m_entityShader.getShaderId(), "uLineWidth"), lineWidth);
-    glUniform2f(glGetUniformLocation(m_entityShader.getShaderId(), "uViewportSize"),
-                (float)m_windowWidth, (float)m_windowHeight);
-    
-    // 绑定虚线纹理
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_1D, m_dashTexture);
-    glUniform1i(glGetUniformLocation(m_entityShader.getShaderId(), "uDashTexture"), 0);
-    
-    // 渲染
+    // 绑定VAO和VBO（顶点属性已在initialize中设置）
     glBindVertexArray(m_vao);
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(m_vertices.size()));
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    
+    // 渲染无线宽批次
+    glUseProgram(m_noLWProgram);
+    glUniformMatrix4fv(m_noLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+    glUniform2f(m_noLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
+    
+    // 上传无线宽顶点数据
+    glBufferSubData(GL_ARRAY_BUFFER, 0, noLWVertices.size() * sizeof(Vertex), noLWVertices.data());
+    
+    // 绘制无线宽线段
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(noLWVertices.size()));
+    
+    // 渲染有线宽批次
+    glUseProgram(m_withLWProgram);
+    glUniformMatrix4fv(m_withLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+    glUniform2f(m_withLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
+    
+    // 上传有线宽顶点数据
+    glBufferSubData(GL_ARRAY_BUFFER, 0, withLWVertices.size() * sizeof(Vertex), withLWVertices.data());
+    
+    // 绘制有线宽线段
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(withLWVertices.size()));
+    
+    // 清理
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glUseProgram(0);
 }
 
 // 渲染实体到FBO
@@ -574,17 +757,19 @@ void EntityRenderer::renderTextureToScreen() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     // 使用四边形着色器
-    m_quadShader.use();
+    glUseProgram(m_quadProgram);
     
     // 绑定FBO颜色纹理
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glUniform1i(m_quadTextureLocation, 0);
+    glUniform1i(m_quadTextureLoc, 0);
     
     // 绘制全屏四边形
     glBindVertexArray(m_quadVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     glBindVertexArray(0);
+    
+    glUseProgram(0);
 }
 
 // ============================================================================
