@@ -215,7 +215,9 @@ void main() {
     float baseWidth = (vLineWidth[0] + vLineWidth[1]) * 0.5;
     float lineWidth = baseWidth;
     if (isPreHighlight) {
-        lineWidth += 2.0;   // 预选加粗 2 像素
+        float increment = max(2.0, baseWidth * 0.3); // 预选最小加粗2像素
+        increment = min(increment, 10.0);            // 也可加宽至线宽的30%, 最大10像素
+        lineWidth = baseWidth + increment;
     }
 
     // 将线段端点转换到屏幕像素坐标
