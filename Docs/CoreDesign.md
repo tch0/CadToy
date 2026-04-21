@@ -9,9 +9,11 @@
   - [CAD特定几何算法](#cad%E7%89%B9%E5%AE%9A%E5%87%A0%E4%BD%95%E7%AE%97%E6%B3%95)
   - [数据库与实体层](#%E6%95%B0%E6%8D%AE%E5%BA%93%E4%B8%8E%E5%AE%9E%E4%BD%93%E5%B1%82)
   - [Undo/Redo设计](#undoredo%E8%AE%BE%E8%AE%A1)
-  - [图形引擎](#%E5%9B%BE%E5%BD%A2%E5%BC%95%E6%93%8E)
-    - [图形缓存](#%E5%9B%BE%E5%BD%A2%E7%BC%93%E5%AD%98)
+  - [图形引擎与图形数据缓存](#%E5%9B%BE%E5%BD%A2%E5%BC%95%E6%93%8E%E4%B8%8E%E5%9B%BE%E5%BD%A2%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98)
+    - [图形数据缓存](#%E5%9B%BE%E5%BD%A2%E6%95%B0%E6%8D%AE%E7%BC%93%E5%AD%98)
     - [初期设计决策](#%E5%88%9D%E6%9C%9F%E8%AE%BE%E8%AE%A1%E5%86%B3%E7%AD%96)
+    - [具体设计细节](#%E5%85%B7%E4%BD%93%E8%AE%BE%E8%AE%A1%E7%BB%86%E8%8A%82)
+    - [完整的生成与绘制流程设计](#%E5%AE%8C%E6%95%B4%E7%9A%84%E7%94%9F%E6%88%90%E4%B8%8E%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B%E8%AE%BE%E8%AE%A1)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -36,22 +38,25 @@
 
 ## 模块划分
 
-- TODO: 这个图可能需要修改。
 ```mermaid
 graph BT
     GEO[几何层<br/>Geometry::Point/Line/Circle]
-    ENT[数据库对象<br/>实体对象<br/>DbObject/DbEntity]
-    DB[数据库<br/>Database]
-    DOC[文档管理<br/>Document/DocManager<br/>持有文档的视图相机等信息<br/>持有文档的图形数据缓存]
+    INTERFACE[接口层<br/>IGraphicsEngine<br/>IGraphicsDataCache]
+    DB[数据库与数据库实体<br/>Database<br/>DbObject/DbEntity/...]
+    DOC[文档管理<br/>Document/DocManager<br/>文档持有视图相机等信息<br/>文档持有图形数据缓存]
     GE[图形引擎<br/>GraphicsEngine]
-    GECACHE[图形数据缓存<br/>GraphicsCache]
+    GECACHE[图形数据缓存<br/>GraphicsDataCache]
     RENDER[实体渲染器<br/>EntityRenderer]
-    CORE[核心层<br/>UI/命令框架/交互框架<br/>画布渲染器CanvasRenderer<br/>主渲染器Renderer]
+    CORE[核心层<br/>命令框架<br/>交互框架<br/>UI<br/>画布渲染器CanvasRenderer<br/>主渲染器Renderer]
     APP[应用层<br/>主循环]
 
-    ENT --> GEO
-    DB --> ENT
+    
+    DB -- 依赖倒置 --> INTERFACE
+    DB --> GEO
+    GE -- 实现 --> INTERFACE
+    GECACHE -- 实现 --> INTERFACE
     DOC --> DB
+    GECACHE --> DB
     GE --> DB
     GECACHE --> GE
     DOC --> GECACHE
@@ -68,6 +73,11 @@ graph BT
 - 数据库：Database
 - 图形引擎：GraphicsEngine
 
+实践说明：
+- 为了实现方便，图形引擎、图形引擎缓存、文档管理以及下方所有模块都实现在同一个模块中，但依赖关系确实是这样，完全可以拆分多模块，只是没有必要。
+- 图形引擎和图形数据缓存不依赖任何底层图形API，图形引擎只负责生成顶点、属性数据，图形数据缓存负责维护保存这些数据。
+- 各个渲染器负责与图形后端API对接，重新实现这些渲染器即可移植到其他图形后端。
+
 ## 系统变量
 
 目前实现涉及到的需要实现的：
@@ -76,6 +86,7 @@ graph BT
 - LWDEFAULT: 默认线宽
 - LTSCALE: 线型比例
 - CLAYER: 当前图层
+- LWDISPLAY: 是否显示线宽
 
 ## 几何层
 
@@ -443,15 +454,15 @@ public:
 - 最终一组`beginUndoGroup/endUndoGroup`的所有操作被记录为一个Undo栈中的一个`UndoRecord`，`undo/redo`命令通过管理这个栈执行变更来实现撤销重做操作。如果整个`beginUndoGroup/endUndoGroup`期间没有任何记录，则不会生成`UndoRecord`。
 - 而属性修改对应的undo记录则比较简单，只需要一个Id列表、属性原值与修改后的值即可，后续属性栏实现时再来补充。
 
-## 图形引擎
+## 图形引擎与图形数据缓存
 
 图形引擎负责将所有实体光栅化为具体的保存坐标、颜色等数据的顶点数组，提供给渲染器绘制。
 
-**两个渲染器**：
+**底层的两个渲染器**：
 
 **EntityRenderer（世界坐标系）**：
 
-负责世界坐标下实体的显示，分为两类：
+负责世界坐标下实体的显示，分为两类：从图形数据缓存中获取显示数据。
 
 | 类型 | 说明 | 更新频率 |
 |------|------|----------|
@@ -584,7 +595,7 @@ struct Vertex {
 
 ---
 
-### 图形缓存 
+### 图形数据缓存
 
 由图形引擎生成：
 - 世界坐标下的所有图元都在图形缓存中，由`EntityRenderer`负责绘制，分为主缓存和预览缓存。
@@ -614,3 +625,66 @@ struct Vertex {
 - 每个实体独立绘制对调试更友好
 - 状态编码在顶点中，未来合并 draw call 时无需重构架构
 - 顶点属性方案符合数据流设计，降低渲染器与实体类型的耦合
+
+
+### 具体设计细节
+
+生成流程中涉及到的接口和类：
+|类|细节|
+|:-|:-
+|`IGraphicsDataCache`| 图形数据缓存接口类，数据库和实体依赖它。
+|`IGraphicsEngine`| 图形引擎接口类，依赖图形数据缓存接口，定义生成相关接口，操作图形数据缓存。
+|`Document`| 文档，持有数据库、图形数据缓存与视图信息，文档创建时初始化数据库、图形缓存和视图信息。
+|`Database`| 数据库，保存一个对应的`IGraphicsDataCache`指针，不为空则表明当前数据库位于实体生成上下文中（数据库也可以只用于读写数据，此时这个指针可以为空，即数据库没有位于生成上下文中）。数据库中所有修改都会通过这个图形数据缓存接口通知到缓存去调用图形引擎重生成相关脏实体。数据库中每个对象（比如图层）和实体（比如具体的Line实体）也会保存这个指针，数据库实体和对象的属性修改时同样通知缓存。在数据库添加对象或实体时会将该指针设置到对象或实体中。
+|`GraphicsDataCache`| 实现`IGraphicsDataCache`接口，实现图形数据缓存，唯一对应于一个数据库，数据库存在时图形数据缓存才会存在，数据库中所有可显示的实体都会生成图元数据存储在图形缓存中。数据库中的修改会通知缓存数据变脏需要重新生成，所有脏实体收集后会在每一帧的渲染之前去检测脏缓存数据并重新生成。
+|`GraphicsEngine`| 实现`IGrahicsEngine`，实现图形引擎。一个无状态的工具类，全局单例，所有状态数据都保存在图形缓存中，图形引擎则只负责读取数据库、读取各种状态、可能还需要读取视图信息（以支持LOD，暂时可以不用实现）来生成顶点数据。依赖数据库，因为需要读取各种实体生成对应的图元缓存数据。其中会进行光栅化、处理线型等操作。
+
+### 完整的生成与绘制流程设计
+
+1. 初始化
+    - 创建全局图形引擎 `GraphicsEngine`（实现 `IGraphicsEngine`）。
+    - 创建文档 `Document`，其中创建并初始化数据库 `Database`。
+    - 创建图形缓存 `GraphicsDataCache`（实现 `IGraphicsDataCache`），并设置数据库指针：`pGraphicsDataCache->setDatabase(pDb)`。同时将缓存指针设置到数据库中：`pDb->setGraphicsDataCache(pGraphicsDataCache)`。
+
+2. 用户添加实体
+    - 用户调用命令或相关接口创建实体，添加实体到数据库：  
+      `pDb->addEntity(pEnt)`  
+      实体添加后会保存数据库指针：  
+      `pEnt->setDatabase(this)`
+    - 数据库调用缓存的 `onEntityAdded(id)`，标记该实体为脏。
+
+3. 首次生成顶点数据
+    - 每一帧渲染之前，图形引擎检测到缓存中有脏实体，调用：  
+      `pEngine->generate(pGraphicsDataCache)`
+    - 引擎内部执行：
+      - 调用 `pGraphicsDataCache->getDirtyEntities()` 获取脏实体ID列表。
+      - 对每个脏实体ID：
+        - 通过 `pGraphicsDataCache->getDatabase()->getEntity(id)` 获取实体指针。
+        - 调用 `generateVertices(entity)` 生成顶点数组（算法由引擎实现）。
+        - 调用 `pGraphicsDataCache->setEntityVertices(id, std::move(vertices))` 存储顶点数据。
+        - 调用 `pGraphicsDataCache->clearDirty(id)` 清除脏标记。
+4. 修改实体
+    - 用户修改实体属性，例如移动一个顶点。
+    - 实体内部调用 `m_pDb->onEntityModified(id)`（或直接调用 `notifyEntityModified`）。
+    - 数据库接收到通知后调用 `pGraphicsDataCache->onEntityModified(id)`，标记该实体为脏。
+    - 在**同一帧的渲染前**（因为命令循环在实体渲染流程前执行），引擎再次调用 `generate`，重复步骤3，用新的顶点数据覆盖旧数据。
+5. 删除实体
+    - 调用 `pDb->removeEntity(id)`。
+    - 数据库调用 `pGraphicsDataCache->onEntityRemoved(id)`。
+    - 缓存内部清除该实体的顶点数据（`removeEntityVertices`）。
+6. 全量重生成（REGEN）
+    - 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->generateAll()`，标记所有实体为脏。
+    - 随后渲染前自动调用引擎的 `generate` 重新生成所有实体的顶点数据（覆盖原有数据）。
+7. 渲染
+    - 无论每一帧是否有全量或增量重生成，实体渲染器 `EntityRenderer` 都会从缓存中获取顶点数据    进行绘制：
+      - 调用 `pGraphicsDataCache->iterateAllCacheData(callback)` 遍历所有实体。
+      - 回调参数为 `(ObjectId id, const std::vector<Vertex>& vertices)`。
+      - 对于每个实体，渲染器根据顶点数据创建或更新其 VAO/VBO，并执行 `glDrawArrays`（初期每个实体独立绘制，一个实体一次 draw call）。
+
+设计特点总结：
+- 数据库不依赖文档/图形数据缓存，数据库可以单独存在，仅在需要图形反馈时关联缓存。
+- 图形引擎无状态：易于测试和复用。
+- 缓存独立于图形API：只管理CPU数据，可轻松更换渲染后端。
+- 增量更新高效：只有脏实体重新生成顶点。
+
+TODO: 目前尚未定义预览缓存相关接口，尚未确定方案，后续有可能抛弃预览缓存这个概念，通过在Db层添加预览类实体来实现可能会更简单，也能够复用实体渲染流程。

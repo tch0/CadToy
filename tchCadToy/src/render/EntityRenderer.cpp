@@ -9,6 +9,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 // 项目头文件
+#include "IGraphicsDataCache.h"
 #include "Logger.h"
 #include "DocManager.h"
 #include "GLFuncs.h"
@@ -439,24 +440,24 @@ bool EntityRenderer::initialize() {
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     // 预分配足够大的缓冲区（100000个顶点）
-    glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(DataCacheVertex), nullptr, GL_DYNAMIC_DRAW);
     
     // 设置顶点属性（根据新的Vertex结构体，使用glm::vec3）
     // location 0: position (vec3)
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(DataCacheVertex), (void*)offsetof(DataCacheVertex, position));
     
     // location 1: color (vec3)
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(DataCacheVertex), (void*)offsetof(DataCacheVertex, color));
     
     // location 2: flags (uint32)
     glEnableVertexAttribArray(2);
-    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, flags));
+    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(DataCacheVertex), (void*)offsetof(DataCacheVertex, flags));
     
     // location 3: lineWeight (float)
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, lineWidth));
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(DataCacheVertex), (void*)offsetof(DataCacheVertex, lineWidth));
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -640,8 +641,8 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     // 创建测试数据 - 8条线段，间隔100，长度50
     // 无线宽版本：Y = 50 ~ 100（上方）
     // 有线宽版本：Y = -100 ~ -50（下方）
-    std::vector<Vertex> noLWVertices;
-    std::vector<Vertex> withLWVertices;
+    std::vector<DataCacheVertex> noLWVertices;
+    std::vector<DataCacheVertex> withLWVertices;
     
     // 8条线段的数据定义
     struct LineData {
@@ -667,11 +668,11 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     for (const auto& line : lines) {
         // 无线宽版本（上方 Y=50~100）
         noLWVertices.push_back({glm::vec3(line.x, 50.0f, 0.0f), line.color, line.flags, line.lineWeight});
-        noLWVertices.push_back({glm::vec3(line.x, 150.0f, 0.0f), line.color, line.flags, line.lineWeight});
+        noLWVertices.push_back({glm::vec3(line.x + 100.0f, 150.0f, 0.0f), line.color, line.flags, line.lineWeight});
         
         // 有线宽版本（下方 Y=-100~-50）
         withLWVertices.push_back({glm::vec3(line.x, -50.0f, 0.0f), line.color, line.flags, line.lineWeight});
-        withLWVertices.push_back({glm::vec3(line.x, -150.0f, 0.0f), line.color, line.flags, line.lineWeight});
+        withLWVertices.push_back({glm::vec3(line.x + 100.0f, -150.0f, 0.0f), line.color, line.flags, line.lineWeight});
     }
     
     // 绑定VAO和VBO（顶点属性已在initialize中设置）
@@ -684,7 +685,7 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     glUniform2f(m_noLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
     
     // 上传无线宽顶点数据
-    glBufferSubData(GL_ARRAY_BUFFER, 0, noLWVertices.size() * sizeof(Vertex), noLWVertices.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, noLWVertices.size() * sizeof(DataCacheVertex), noLWVertices.data());
     
     // 绘制无线宽线段
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(noLWVertices.size()));
@@ -695,7 +696,7 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     glUniform2f(m_withLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
     
     // 上传有线宽顶点数据
-    glBufferSubData(GL_ARRAY_BUFFER, 0, withLWVertices.size() * sizeof(Vertex), withLWVertices.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, withLWVertices.size() * sizeof(DataCacheVertex), withLWVertices.data());
     
     // 绘制有线宽线段
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(withLWVertices.size()));

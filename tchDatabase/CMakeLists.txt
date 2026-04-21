@@ -15,6 +15,7 @@ target_link_directories(tchDatabase
 target_link_libraries(tchDatabase
     PUBLIC
         tchGeometry
+        tchInterface
         general_cxx_compiler_flags
 )
 

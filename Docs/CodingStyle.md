@@ -9,6 +9,7 @@
 命名：
 - 类名大驼峰，方法变量小驼峰，成员变量加`m_`，静态变量加`s_`前缀。
 - 枚举值以`k`开头，类似`kInputTypeString`，整体小驼峰。
+- 指针以`p`开头，比如`pDatabase m_pGraphicsDataCache`。
 
 缩进换行大括号：
 - 只使用4空格缩进。

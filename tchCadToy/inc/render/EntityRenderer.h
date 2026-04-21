@@ -11,14 +11,6 @@
 
 namespace tch {
 
-// 顶点数据结构，后续应该移动到图形引擎相关头文件中。
-// 用于实体渲染的顶点格式，包含位置、颜色、状态标志和线宽
-struct Vertex {
-    glm::vec3 position;     // 位置（世界坐标）
-    glm::vec3 color;        // 基础颜色 (RGB)
-    uint32_t flags;         // 状态标志位：bit0=预选高亮(加宽2个像素), bit1=选中高亮(绘制为虚线), bit2=暗显(颜色变浅)
-    float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
-};
 
 // 实体渲染器类
 // 负责使用现代OpenGL shader渲染3D世界空间中的实体（线段、多边形等）

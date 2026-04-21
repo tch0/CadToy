@@ -268,7 +268,7 @@ SysVarValue Database::getSysVar(SysVar var) const {
         return it->second;
     }
 
-    // 返回默认值并设置到表中
+    // 如果没有找到返回默认值
     SysVarValue defaultValue;
     if (var == SysVar::kLwDefault) {
         defaultValue = SysVarValue::fromInt(static_cast<int>(DbLineWeight::k000));
