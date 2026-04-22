@@ -106,6 +106,9 @@ public:
     // 根据名称获取图层
     DbLayer* getLayerByName(const std::string& name) const;
 
+    // 检查图层名称是否存在
+    bool layerExists(const std::string& name) const;
+
     // 删除图层，返回是否成功
     bool removeLayer(ObjectId id);
 

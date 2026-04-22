@@ -44,7 +44,9 @@ ObjectId Database::addObject(std::unique_ptr<DbObject> pObj) {
 }
 
 ObjectId Database::addEntity(std::unique_ptr<DbObject> pObj) {
-    if (!pObj || !pObj->isType(DbObject::kEntity)) {
+    // 转换为实体指针，失败则返回0
+    DbEntity* pEntity = pObj->as<DbEntity>();
+    if (!pEntity) {
         return 0;
     }
 
@@ -52,15 +54,13 @@ ObjectId Database::addEntity(std::unique_ptr<DbObject> pObj) {
     pObj->setId(id);
 
     // 维护图层索引
-    if (DbEntity* pEntity = pObj->as<DbEntity>()) {
-        ObjectId layerId = pEntity->layerId();
-        // 如果图层无效或不存在，设置为当前图层
-        if (layerId == 0 || !getLayer(layerId)) {
-            layerId = currentLayerId();
-            pEntity->setLayerId(layerId);  // 此时m_pDb为nullptr，不会触发moveEntityToLayer
-        }
-        addEntityToIndex(id, layerId);
+    ObjectId layerId = pEntity->layerId();
+    // 如果图层无效或不存在，设置为当前图层
+    if (layerId == 0 || !getLayer(layerId)) {
+        layerId = currentLayerId();
+        pEntity->setLayerId(layerId);  // 此时m_pDb为nullptr，不会触发moveEntityToLayer
     }
+    addEntityToIndex(id, layerId);
 
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
@@ -282,17 +282,22 @@ DbObject* Database::getBackup(ObjectId id) const {
 // ======================================================================================================
 
 ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
-    if (!pObj || !pObj->isType(DbObject::kLayer)) {
+    // 转换为图层指针，失败则返回0
+    DbLayer* pLayer = pObj->as<DbLayer>();
+    if (!pLayer) {
         return 0;
+    }
+
+    // 检查图层名称是否已存在
+    if (layerExists(pLayer->name())) {
+        return 0;  // 名称已存在，添加失败
     }
 
     ObjectId id = allocateId(pObj->type());
     pObj->setId(id);
 
     // 维护图层列表和名称映射
-    if (DbLayer* pLayer = pObj->as<DbLayer>()) {
-        addLayerToTables(id, pLayer->name());
-    }
+    addLayerToTables(id, pLayer->name());
 
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
@@ -300,10 +305,10 @@ ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
 }
 
 ObjectId Database::addLayer(const std::string& name) {
-    // 检查是否已存在
+    // 检查是否已存在，存在返回0，无效id
     auto it = m_layerNameMap.find(name);
     if (it != m_layerNameMap.end()) {
-        return it->second;
+        return 0;
     }
 
     // 创建新图层
@@ -330,6 +335,10 @@ DbLayer* Database::getLayerByName(const std::string& name) const {
         return getLayer(it->second);
     }
     return nullptr;
+}
+
+bool Database::layerExists(const std::string& name) const {
+    return m_layerNameMap.find(name) != m_layerNameMap.end();
 }
 
 bool Database::removeLayer(ObjectId id) {
