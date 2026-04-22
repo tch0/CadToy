@@ -23,7 +23,10 @@ class DbObject {
 public:
     // DbObject的对象类型
     enum Type : uint16_t {
+        // 虚基类，不会有实体的值是这个，但需要用于判断
         kUnknown = 0,
+        kObject,
+        kEntity,
         // 实体
         kLine,
         kCircle,
@@ -47,20 +50,22 @@ public:
     Database* database() const { return m_pDb; }
     
     // 类型信息与RTTI
-    virtual Type type() const = 0;
+    static constexpr Type staticType() { return Type::kObject; }
+    virtual Type type() const = 0; // 获取具体类型，使用type() == xxx只能比较具体类型
     virtual const char* typeName() const = 0;
-    
-    bool isType(Type t) const { return type() == t; }
-    
+
+    // 判断是否为指定类型（支持基类判断）
+    virtual bool isType(Type t) const { return type() == t; }
+
     template<typename T>
     T* as() {
-        if (type() == T::staticType()) { return static_cast<T*>(this); }
+        if (isType(T::staticType())) { return dynamic_cast<T*>(this); }
         return nullptr;
     }
-    
+
     template<typename T>
     const T* as() const {
-        if (type() == T::staticType()) { return static_cast<const T*>(this); }
+        if (isType(T::staticType())) { return dynamic_cast<const T*>(this); }
         return nullptr;
     }
     

@@ -15,9 +15,14 @@ namespace tch {
 
 class DbLine : public DbEntity {
 public:
-    static Type staticType() { return Type::kLine; }
+    static constexpr Type staticType() { return Type::kLine; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Line"; }
+    const char* typeName() const override { return "DbLine"; }
+    
+    bool isType(Type t) const override {
+        if (t == kLine) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbLine() = default;
     DbLine(const Geometry::Point& start, const Geometry::Point& end);

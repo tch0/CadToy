@@ -15,9 +15,14 @@ namespace tch {
 
 class DbArc : public DbEntity {
 public:
-    static Type staticType() { return Type::kArc; }
+    static constexpr Type staticType() { return Type::kArc; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Arc"; }
+    const char* typeName() const override { return "DbArc"; }
+    
+    bool isType(Type t) const override {
+        if (t == kArc) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbArc() = default;
     DbArc(const Geometry::Point& center, double radius,

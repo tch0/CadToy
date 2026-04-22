@@ -15,9 +15,14 @@ namespace tch {
 
 class DbLayer : public DbObject {
 public:
-    static Type staticType() { return Type::kLayer; }
+    static constexpr Type staticType() { return Type::kLayer; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Layer"; }
+    const char* typeName() const override { return "DbLayer"; }
+    
+    bool isType(Type t) const override {
+        if (t == kLayer) { return true; }
+        return DbObject::isType(t);
+    }
     
     DbLayer() = default;
     explicit DbLayer(const std::string& name) : m_name(name) {}

@@ -15,9 +15,14 @@ namespace tch {
 
 class DbRay : public DbEntity {
 public:
-    static Type staticType() { return Type::kRay; }
+    static constexpr Type staticType() { return Type::kRay; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Ray"; }
+    const char* typeName() const override { return "DbRay"; }
+    
+    bool isType(Type t) const override {
+        if (t == kRay) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbRay() = default;
     DbRay(const Geometry::Point& origin, const Geometry::Vector& direction);

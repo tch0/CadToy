@@ -15,9 +15,14 @@ namespace tch {
 
 class DbCircle : public DbEntity {
 public:
-    static Type staticType() { return Type::kCircle; }
+    static constexpr Type staticType() { return Type::kCircle; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Circle"; }
+    const char* typeName() const override { return "DbCircle"; }
+    
+    bool isType(Type t) const override {
+        if (t == kCircle) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbCircle() = default;
     DbCircle(const Geometry::Point& center, double radius);

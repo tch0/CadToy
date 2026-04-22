@@ -15,9 +15,14 @@ namespace tch {
 
 class DbXLine : public DbEntity {
 public:
-    static Type staticType() { return Type::kXLine; }
+    static constexpr Type staticType() { return Type::kXLine; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "XLine"; }
+    const char* typeName() const override { return "DbXLine"; }
+    
+    bool isType(Type t) const override {
+        if (t == kXLine) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbXLine() = default;
     DbXLine(const Geometry::Point& origin, const Geometry::Vector& direction);

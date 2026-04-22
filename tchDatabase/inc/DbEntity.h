@@ -16,9 +16,15 @@ namespace tch {
 
 class DbEntity : public DbObject {
 public:
-    static Type staticType() { return Type::kUnknown; }
-    Type type() const override { return staticType(); }
-    const char* typeName() const override { return "DbEntity"; }
+    static constexpr Type staticType() { return Type::kEntity; }
+    Type type() const override = 0;
+    const char* typeName() const override = 0;
+    
+    // 类型判断（支持基类）
+    bool isType(Type t) const override {
+        if (t == kEntity) { return true; }
+        return DbObject::isType(t);
+    }
     
     // 图层
     ObjectId layerId() const { return m_layerId; }

@@ -15,9 +15,14 @@ namespace tch {
 
 class DbEllipse : public DbEntity {
 public:
-    static Type staticType() { return Type::kEllipse; }
+    static constexpr Type staticType() { return Type::kEllipse; }
     Type type() const override { return staticType(); }
-    const char* typeName() const override { return "Ellipse"; }
+    const char* typeName() const override { return "DbEllipse"; }
+    
+    bool isType(Type t) const override {
+        if (t == kEllipse) { return true; }
+        return DbEntity::isType(t);
+    }
     
     DbEllipse() = default;
     DbEllipse(const Geometry::Point& center, double radiusX, double radiusY, double rotation);
