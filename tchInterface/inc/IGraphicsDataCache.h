@@ -20,8 +20,13 @@ namespace tch {
 struct DataCacheVertex {
     glm::vec3 position;     // 位置（世界坐标）
     glm::vec3 color;        // 基础颜色 (RGB)
-    uint32_t flags;         // 状态标志位：bit0=预选高亮, bit1=选中高亮, bit2=暗显
+    uint32_t flags;         // 状态标志位
     float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
+
+    // 标志位定义
+    static constexpr uint32_t kFlagPreselected = 1 << 0;    // bit0: 预选高亮
+    static constexpr uint32_t kFlagSelected = 1 << 1;       // bit1: 选中高亮
+    static constexpr uint32_t kFlagDimmed = 1 << 2;         // bit2: 暗显，如锁定图层
 };
 
 

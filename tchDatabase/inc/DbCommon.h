@@ -59,6 +59,15 @@ public:
     bool isByLayer() const { return m_type == kByLayer; }
     bool isByBlock() const { return m_type == kByBlock; }
     
+    // 将RGB颜色转换为glm::vec3（范围0.0-1.0）
+    glm::vec3 toVec3Color() const {
+        return glm::vec3(
+            ((m_rgb >> 16) & 0xFF) / 255.0f,
+            ((m_rgb >> 8) & 0xFF) / 255.0f,
+            (m_rgb & 0xFF) / 255.0f
+        );
+    }
+    
 private:
     DbColor(Type t) : m_type(t) {}
     
