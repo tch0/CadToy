@@ -44,12 +44,9 @@ void GraphicsDataCache::clearDirty(ObjectId id) {
     m_dirtyEntities.erase(id);
 }
 
-void GraphicsDataCache::markAllDirty() {
-    // 将所有有缓存数据的实体标记为脏
+void GraphicsDataCache::clearAllCacheData() {
+    m_cacheData.clear();
     m_dirtyEntities.clear();
-    for (const auto& [id, _] : m_cacheData) {
-        m_dirtyEntities.insert(id);
-    }
 }
 
 // ============================================================================

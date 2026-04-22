@@ -50,8 +50,17 @@ public:
     // 清除指定实体的脏标记，图形引擎完成该实体缓存生成后调用
     void clearDirty(ObjectId id) override;
     
-    // 标记所有实体为脏，用于REGEN命令或影响全局显示的系统变量修改
-    void markAllDirty() override;
+    // 全量重生成标记，提供给命令层regen、初始化时以及某些可能影响全局显示的系统变量修改等场景使用
+    void markAllDirty() override { m_regenAll = true; }
+    
+    // 检查是否需要全量重新生成
+    bool needsRegenAll() const override { return m_regenAll; }
+    
+    // 清除全量重新生成标记
+    void clearAllDirty() override { m_regenAll = false; }
+    
+    // 清除所有缓存数据（全量重新生成前调用）
+    void clearAllCacheData() override;
 
     // ========================================================================
     // 通知接口（由数据库调用，响应实体变化）
@@ -83,6 +92,7 @@ private:
     Database* m_pDatabase = nullptr;                                    // 关联的数据库指针
     std::unordered_map<ObjectId, EntityGraphicsCacheData> m_cacheData;  // 实体ID到缓存数据的映射
     std::unordered_set<ObjectId> m_dirtyEntities;                       // 脏实体ID集合，需要重生成的实体
+    bool m_regenAll = false;                                            // 全量重新生成标记
 };
 
 } // namespace tch

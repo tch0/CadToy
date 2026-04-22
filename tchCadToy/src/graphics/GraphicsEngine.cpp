@@ -25,6 +25,15 @@
 namespace tch {
 
 // ============================================================================
+// 单例实现
+// ============================================================================
+
+GraphicsEngine& GraphicsEngine::getInstance() {
+    static GraphicsEngine instance;
+    return instance;
+}
+
+// ============================================================================
 // 主生成方法
 // ============================================================================
 
@@ -33,15 +42,37 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
         return;
     }
     
-    // 获取脏实体列表
-    std::vector<ObjectId> dirtyEntities = pDataCache->getDirtyEntities();
-    if (dirtyEntities.empty()) {
-        return;
-    }
-    
     // 获取数据库
     Database* pDb = pDataCache->getDatabase();
     if (!pDb) {
+        return;
+    }
+    
+    // 检查是否需要全量重新生成
+    if (pDataCache->needsRegenAll()) {
+        // 清除所有旧缓存数据
+        pDataCache->clearAllCacheData();
+        
+        // 遍历数据库所有实体生成缓存
+        pDb->iterateEntities([&](DbEntity* pEntity) {
+            if (!pEntity) {
+                return;
+            }
+            
+            ObjectId id = pEntity->id();
+            EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb);
+            pDataCache->setEntityCacheData(id, std::move(cacheData));
+        });
+        
+        // 清除全量重新生成标记
+        pDataCache->clearAllDirty();
+        return;
+    }
+    
+    // 部分重生成
+    // 获取脏实体列表
+    std::vector<ObjectId> dirtyEntities = pDataCache->getDirtyEntities();
+    if (dirtyEntities.empty()) {
         return;
     }
     

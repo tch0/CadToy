@@ -14,6 +14,7 @@
 #include "DocManager.h"
 #include "GLFuncs.h"
 #include "Database.h"
+#include "GraphicsEngine.h"
 
 
 namespace tch {
@@ -642,6 +643,9 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
         LOG_WARNING("EntityRenderer::renderGeometry() - No graphics data cache available");
         return;
     }
+    
+    // 生成图形数据（为脏实体生成缓存）
+    GraphicsEngine::getInstance().generate(pDataCache);
     
     // 获取数据库的LWDISPLAY设置
     auto* pDatabase = doc.getDatabase();

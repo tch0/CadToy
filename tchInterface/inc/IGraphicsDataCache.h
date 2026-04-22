@@ -74,8 +74,14 @@ public:
     virtual void removeEntityCacheData(ObjectId id) = 0;
     // 清除指定实体的脏标记（引擎处理完该实体后调用）
     virtual void clearDirty(ObjectId id) = 0;
-    // 标记所有实体为脏，以便全量重生成，提供给命令层regen、初始化时以及某些会影响显示的系统变量修改等需要全量重生成的场景使用
+    // 全量重生成标记，提供给命令层regen、初始化时以及某些可能影响全局显示的系统变量修改等场景使用
     virtual void markAllDirty() = 0;
+    // 检查是否需要全量重新生成
+    virtual bool needsRegenAll() const = 0;
+    // 清除全量重新生成标记
+    virtual void clearAllDirty() = 0;
+    // 清除所有缓存数据（全量重新生成前调用）
+    virtual void clearAllCacheData() = 0;
     
     // ============================================================================
     // 通知接口：提供给数据库通知实体变化情况，其中会标记实体为脏，以实现部分重生成机制

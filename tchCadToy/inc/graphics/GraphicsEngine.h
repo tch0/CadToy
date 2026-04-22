@@ -30,12 +30,8 @@ struct DataCacheVertex;
 // =========================================================================================================================
 class GraphicsEngine : public IGraphicsEngine {
 public:
-    GraphicsEngine() = default;
-    ~GraphicsEngine() override = default;
-
-    // 禁止拷贝
-    GraphicsEngine(const GraphicsEngine&) = delete;
-    GraphicsEngine& operator=(const GraphicsEngine&) = delete;
+    // 获取单例实例
+    static GraphicsEngine& getInstance();
 
     // ========================================================================
     // IGraphicsEngine 接口实现
@@ -45,6 +41,13 @@ public:
     void generate(IGraphicsDataCache* pDataCache) const override;
 
 private:
+    // 私有构造函数
+    GraphicsEngine() = default;
+    ~GraphicsEngine() override = default;
+    // 禁止拷贝
+    GraphicsEngine(const GraphicsEngine&) = delete;
+    GraphicsEngine& operator=(const GraphicsEngine&) = delete;
+    
     // ========================================================================
     // 实体生成辅助方法
     // ========================================================================

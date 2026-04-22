@@ -92,6 +92,19 @@ DbEntity* Database::getEntity(ObjectId id) const {
     return pObj ? pObj->as<DbEntity>() : nullptr;
 }
 
+// 遍历所有实体
+void Database::iterateEntities(const std::function<void(DbEntity*)>& func) const {
+    if (!func) {
+        return;
+    }
+    
+    for (const auto& [_, pObj] : m_objects) {
+        if (pObj && pObj->isType(DbObject::kEntity)) {
+            func(pObj->as<DbEntity>());
+        }
+    }
+}
+
 bool Database::hasObject(ObjectId id) const {
     if (id == 0) {
         return false;
@@ -755,6 +768,10 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
 
     // 加载完成后设置为未修改状态
     clearDirty();
+    // 加载完成后需要标记全量重生成
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->markAllDirty();
+    }
 
     return true;
 }

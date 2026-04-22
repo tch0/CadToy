@@ -62,6 +62,9 @@ public:
     // 获取实体
     DbEntity* getEntity(ObjectId id) const;
 
+    // 遍历所有实体（回调函数方式）
+    void iterateEntities(const std::function<void(DbEntity*)>& func) const;
+
     // 检查对象是否存在（不包括备份区的）
     bool hasObject(ObjectId id) const;
 
