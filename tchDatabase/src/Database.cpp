@@ -32,11 +32,28 @@ ObjectId Database::addObject(std::unique_ptr<DbObject> pObj) {
     if (!pObj) {
         return 0;
     }
-    
+
+    // 根据类型分发
+    if (pObj->isType(DbObject::kEntity)) {
+        return addEntity(std::move(pObj));
+    }
+    else if (pObj->isType(DbObject::kLayer)) {
+        return addLayer(std::move(pObj));
+    }
+
+    // 暂时不支持的类型，返回无效ID
+    return 0;
+}
+
+ObjectId Database::addEntity(std::unique_ptr<DbObject> pObj) {
+    if (!pObj || !pObj->isType(DbObject::kEntity)) {
+        return 0;
+    }
+
     ObjectId id = allocateId(pObj->type());
     pObj->setId(id);
-    
-    // 如果是实体，需要维护图层索引
+
+    // 维护图层索引
     if (DbEntity* pEntity = pObj->as<DbEntity>()) {
         ObjectId layerId = pEntity->layerId();
         // 如果图层无效或不存在，设置为当前图层
@@ -44,16 +61,17 @@ ObjectId Database::addObject(std::unique_ptr<DbObject> pObj) {
             layerId = currentLayerId();
             pEntity->setLayerId(layerId);  // 此时m_pDb为nullptr，不会触发moveEntityToLayer
         }
-        m_layerEntityIndex[layerId].insert(id);
+        addEntityToIndex(id, layerId);
     }
-    
+
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
     return id;
 }
 
+// 对象查询
 DbObject* Database::getObject(ObjectId id) const {
-    if (id == 0 || isBackupId(id)) {
+    if (id == 0) {
         return nullptr;
     }
     auto it = m_objects.find(id);
@@ -63,8 +81,14 @@ DbObject* Database::getObject(ObjectId id) const {
     return nullptr;
 }
 
+// 实体查询
+DbEntity* Database::getEntity(ObjectId id) const {
+    DbObject* pObj = getObject(id);
+    return pObj ? pObj->as<DbEntity>() : nullptr;
+}
+
 bool Database::hasObject(ObjectId id) const {
-    if (id == 0 || isBackupId(id)) {
+    if (id == 0) {
         return false;
     }
     auto it = m_objects.find(id);
@@ -74,36 +98,55 @@ bool Database::hasObject(ObjectId id) const {
     return false;
 }
 
-void Database::removeObject(ObjectId id) {
-    if (id == 0 || isBackupId(id)) {
-        return;
+bool Database::removeObject(ObjectId id) {
+    if (id == 0) {
+        return false;
+    }
+
+    DbObject* pObj = getObject(id);
+    if (!pObj) {
+        return false;
+    }
+
+    // 根据类型分发
+    if (pObj->isType(DbObject::kEntity)) {
+        return removeEntity(id);
+    }
+    else if (pObj->isType(DbObject::kLayer)) {
+        return removeLayer(id);
+    }
+
+    return false;
+}
+
+bool Database::removeEntity(ObjectId id) {
+    if (id == 0) {
+        return false;
     }
 
     auto it = m_objects.find(id);
     if (it == m_objects.end()) {
-        return;
+        return false;
     }
 
-    // 如果是实体，从图层索引中移除
+    // 必须是实体类型
+    if (!it->second->isType(DbObject::kEntity)) {
+        return false;
+    }
+
+    // 从图层索引中移除
     if (DbEntity* pEntity = it->second->as<DbEntity>()) {
-        ObjectId layerId = pEntity->layerId();
-        auto layerIt = m_layerEntityIndex.find(layerId);
-        if (layerIt != m_layerEntityIndex.end()) {
-            layerIt->second.erase(id);
-            if (layerIt->second.empty()) {
-                m_layerEntityIndex.erase(layerIt);
-            }
-        }
+        removeEntityFromIndex(id, pEntity->layerId());
     }
 
-    // 修改 ID 为备份区 ID
-    ObjectId backupId = getBackupId(id);
-    it->second->setId(backupId);
+    // 清除数据库指针
     it->second->setDatabase(nullptr);
 
-    // 移动到备份区
-    m_backupObjects[backupId] = std::move(it->second);
+    // 移动到备份区（保持原始ID）
+    m_backupObjects[id] = std::move(it->second);
     m_objects.erase(it);
+
+    return true;
 }
 
 void Database::eraseObject(ObjectId id) {
@@ -111,13 +154,26 @@ void Database::eraseObject(ObjectId id) {
         return;
     }
 
-    // 可以从正常区或备份区删除
-    if (isBackupId(id)) {
-        // 从备份区删除
-        m_backupObjects.erase(id);
-    } else {
-        // 从正常区删除
-        m_objects.erase(id);
+    // 先尝试从正常区删除
+    auto it = m_objects.find(id);
+    if (it != m_objects.end()) {
+        // 根据类型维护表格
+        // 实体
+        if (DbEntity* pEntity = it->second->as<DbEntity>()) {
+            removeEntityFromIndex(id, pEntity->layerId());
+        }
+        // 图层
+        else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
+            removeLayerFromTables(id, pLayer->name());
+        }
+        m_objects.erase(it);
+        return;
+    }
+
+    // 再尝试从备份区删除（备份区不需要维护表格）
+    auto backupIt = m_backupObjects.find(id);
+    if (backupIt != m_backupObjects.end()) {
+        m_backupObjects.erase(backupIt);
     }
 }
 
@@ -126,7 +182,7 @@ void Database::eraseObject(ObjectId id) {
 // ============================================================================
 
 void Database::backupForModify(ObjectId id) {
-    if (id == 0 || isBackupId(id)) {
+    if (id == 0) {
         return;
     }
 
@@ -135,36 +191,44 @@ void Database::backupForModify(ObjectId id) {
         return;
     }
 
-    // 克隆对象到备份区，使用偏移ID
-    ObjectId backupId = getBackupId(id);
+    // 克隆对象到备份区（保持原始ID）
     std::unique_ptr<DbObject> backup = it->second->clone();
     if (backup) {
-        backup->setId(backupId);
-        m_backupObjects[backupId] = std::move(backup);
+        backup->setId(id);
+        m_backupObjects[id] = std::move(backup);
     }
 }
 
 void Database::restoreFromBackup(ObjectId id) {
-    if (id == 0 || isBackupId(id)) {
+    if (id == 0) {
         return;
     }
 
-    ObjectId backupId = getBackupId(id);
-    auto it = m_backupObjects.find(backupId);
+    auto it = m_backupObjects.find(id);
     if (it == m_backupObjects.end() || !it->second) {
         return;
     }
 
-    // 还原 ID
-    it->second->setId(id);
+    // 设置数据库指针
+    it->second->setDatabase(this);
 
-    // 移回正常区
+    // 根据类型维护表格
+    // 实体
+    if (DbEntity* pEntity = it->second->as<DbEntity>()) {
+        addEntityToIndex(id, pEntity->layerId());
+    }
+    // 图层
+    else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
+        addLayerToTables(id, pLayer->name());
+    }
+
+    // 移回正常区（保持原始ID）
     m_objects[id] = std::move(it->second);
     m_backupObjects.erase(it);
 }
 
 void Database::swapWithBackup(ObjectId id) {
-    if (id == 0 || isBackupId(id)) {
+    if (id == 0) {
         return;
     }
 
@@ -174,22 +238,41 @@ void Database::swapWithBackup(ObjectId id) {
         return;
     }
 
-    ObjectId backupId = getBackupId(id);
-    auto backupIt = m_backupObjects.find(backupId);
+    auto backupIt = m_backupObjects.find(id);
     if (backupIt == m_backupObjects.end() || !backupIt->second) {
         return;
     }
 
-    // 交换 ID
-    objIt->second->setId(backupId);
-    backupIt->second->setId(id);
+    // 交换前：从表格中移除当前对象的信息
+    // 实体
+    if (DbEntity* pEntity = objIt->second->as<DbEntity>()) {
+        removeEntityFromIndex(id, pEntity->layerId());
+    }
+    // 图层
+    else if (DbLayer* pLayer = objIt->second->as<DbLayer>()) {
+        removeLayerFromTables(id, pLayer->name());
+    }
 
-    // 交换指针
+    // 交换指针（ID保持不变）
     std::swap(objIt->second, backupIt->second);
+
+    // 更新数据库指针
+    objIt->second->setDatabase(this);       // 正常区对象设置指针
+    backupIt->second->setDatabase(nullptr); // 备份区对象清除指针
+
+    // 交换后：添加新对象的信息到表格
+    // 实体
+    if (DbEntity* pEntity = objIt->second->as<DbEntity>()) {
+        addEntityToIndex(id, pEntity->layerId());
+    }
+    // 图层
+    else if (DbLayer* pLayer = objIt->second->as<DbLayer>()) {
+        addLayerToTables(id, pLayer->name());
+    }
 }
 
-DbObject* Database::getBackup(ObjectId backupId) const {
-    auto it = m_backupObjects.find(backupId);
+DbObject* Database::getBackup(ObjectId id) const {
+    auto it = m_backupObjects.find(id);
     if (it != m_backupObjects.end() && it->second) {
         return it->second.get();
     }
@@ -200,35 +283,47 @@ DbObject* Database::getBackup(ObjectId backupId) const {
 // 图层管理
 // ============================================================================
 
-ObjectId Database::addLayer(const std::string& name) {
-    if (name.empty()) {
+ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
+    if (!pObj || !pObj->isType(DbObject::kLayer)) {
         return 0;
     }
 
+    ObjectId id = allocateId(pObj->type());
+    pObj->setId(id);
+
+    // 维护图层列表和名称映射
+    if (DbLayer* pLayer = pObj->as<DbLayer>()) {
+        addLayerToTables(id, pLayer->name());
+    }
+
+    pObj->setDatabase(this);
+    m_objects[id] = std::move(pObj);
+    return id;
+}
+
+ObjectId Database::addLayer(const std::string& name) {
     // 检查是否已存在
-    if (m_layerNameMap.count(name)) {
-        return m_layerNameMap[name];
+    auto it = m_layerNameMap.find(name);
+    if (it != m_layerNameMap.end()) {
+        return it->second;
     }
 
     // 创建新图层
-    auto layer = std::make_unique<DbLayer>();
-    layer->setName(name);
+    std::unique_ptr<DbLayer> newLayer = std::make_unique<DbLayer>();
+    newLayer->setName(name);
 
-    ObjectId id = addObject(std::move(layer));
-    if (id != 0) {
-        m_layerIds.push_back(id);
-        m_layerNameMap[name] = id;
-    }
+    ObjectId id = allocateId(DbObject::kLayer);
+    newLayer->setId(id);
+    newLayer->setDatabase(this);
+    m_objects[id] = std::move(newLayer);
+    addLayerToTables(id, name);
 
     return id;
 }
 
 DbLayer* Database::getLayer(ObjectId id) const {
     DbObject* pObj = getObject(id);
-    if (pObj && pObj->isType(DbObject::kLayer)) {
-        return pObj->as<DbLayer>();
-    }
-    return nullptr;
+    return pObj ? pObj->as<DbLayer>() : nullptr;
 }
 
 DbLayer* Database::getLayerByName(const std::string& name) const {
@@ -240,8 +335,13 @@ DbLayer* Database::getLayerByName(const std::string& name) const {
 }
 
 bool Database::removeLayer(ObjectId id) {
-    DbLayer* pLayer = getLayer(id);
-    if (!pLayer) {
+    auto it = m_objects.find(id);
+    if (it == m_objects.end()) {
+        return false;
+    }
+
+    // 必须是图层类型
+    if (!it->second->isType(DbObject::kLayer)) {
         return false;
     }
 
@@ -250,19 +350,22 @@ bool Database::removeLayer(ObjectId id) {
         return false;
     }
 
-    // TODO: 检查图层上是否有实体，有则返回失败
-
-    // 从名称映射中移除
-    m_layerNameMap.erase(pLayer->name());
-
-    // 从图层列表中移除
-    auto it = std::find(m_layerIds.begin(), m_layerIds.end(), id);
-    if (it != m_layerIds.end()) {
-        m_layerIds.erase(it);
+    // 检查图层上是否有实体，有则返回失败
+    auto indexIt = m_layerEntityIndex.find(id);
+    if (indexIt != m_layerEntityIndex.end() && !indexIt->second.empty()) {
+        return false;
     }
 
-    // 移动到备份区
-    removeObject(id);
+    // 从图层表格中移除
+    if (DbLayer* pLayer = it->second->as<DbLayer>()) {
+        removeLayerFromTables(id, pLayer->name());
+    }
+
+    // 清除数据库指针并移动到备份区
+    it->second->setDatabase(nullptr);
+    m_backupObjects[id] = std::move(it->second);
+    m_objects.erase(it);
+
     return true;
 }
 
@@ -305,19 +408,8 @@ ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) 
         return currentLayerId;
     }
 
-    // 从旧图层索引中移除
-    if (currentLayerId != 0) {
-        auto oldLayerIt = m_layerEntityIndex.find(currentLayerId);
-        if (oldLayerIt != m_layerEntityIndex.end()) {
-            oldLayerIt->second.erase(entityId);
-            if (oldLayerIt->second.empty()) {
-                m_layerEntityIndex.erase(oldLayerIt);
-            }
-        }
-    }
-
-    // 添加到新图层索引
-    m_layerEntityIndex[targetLayerId].insert(entityId);
+    // 维护图层索引
+    moveEntityInIndex(entityId, currentLayerId, targetLayerId);
 
     return targetLayerId;
 }
@@ -381,7 +473,7 @@ void Database::forEachObject(const std::function<void(DbObject*)>& callback) con
 
 void Database::forEachInBackup(const std::function<void(DbObject*)>& callback) const {
     for (const auto& [id, pObj] : m_backupObjects) {
-        if (pObj && isBackupId(id)) {
+        if (pObj) {
             callback(pObj.get());
         }
     }
@@ -396,17 +488,24 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
 
     // 版本号
     writer.Key("version");
-    writer.String("1.0");
+    writer.Uint(1);
 
     // 系统变量
-    writer.Key("variables");
+    writer.Key("sysvars");
     writer.StartObject();
+    
+    // 保存 LWDEFAULT
     writer.Key("LWDEFAULT");
-    writer.Int(getSysVar(SysVar::kLwDefault).asInt());
+    writer.Int(static_cast<int>(defaultLineWeight()));
+    
+    // 保存 LTSCALE
     writer.Key("LTSCALE");
-    writer.Double(getSysVar(SysVar::kLtScale).asDouble());
+    writer.Double(linetypeScale());
+    
+    // 保存 CLAYER
     writer.Key("CLAYER");
     writer.Uint64(currentLayerId());
+    
     writer.EndObject();
 
     // 图层列表
@@ -424,7 +523,7 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     writer.Key("entities");
     writer.StartArray();
     for (const auto& [id, pObj] : m_objects) {
-        if (pObj && !isBackupId(id) && pObj->isType(DbObject::kEntity)) {
+        if (pObj && pObj->isType(DbObject::kEntity)) {
             pObj->saveToJson(writer);
         }
     }
@@ -611,11 +710,70 @@ ObjectId Database::ensureLayerZero() {
 
     ObjectId id = allocateId(DbObject::kLayer);
     newLayer->setId(id);
+    newLayer->setDatabase(this);
     m_objects[id] = std::move(newLayer);
-    m_layerIds.push_back(id);
-    m_layerNameMap["0"] = id;
+    addLayerToTables(id, "0");
 
     return id;
+}
+
+// ============================================================================
+// 表格维护辅助函数
+// ============================================================================
+
+void Database::addEntityToIndex(ObjectId entityId, ObjectId layerId) {
+    if (entityId == 0 || layerId == 0) {
+        return;
+    }
+    m_layerEntityIndex[layerId].insert(entityId);
+}
+
+void Database::removeEntityFromIndex(ObjectId entityId, ObjectId layerId) {
+    if (entityId == 0 || layerId == 0) {
+        return;
+    }
+    auto it = m_layerEntityIndex.find(layerId);
+    if (it != m_layerEntityIndex.end()) {
+        it->second.erase(entityId);
+        if (it->second.empty()) {
+            m_layerEntityIndex.erase(it);
+        }
+    }
+}
+
+void Database::moveEntityInIndex(ObjectId entityId, ObjectId oldLayerId, ObjectId newLayerId) {
+    if (entityId == 0 || oldLayerId == newLayerId) {
+        return;
+    }
+    removeEntityFromIndex(entityId, oldLayerId);
+    addEntityToIndex(entityId, newLayerId);
+}
+
+void Database::addLayerToTables(ObjectId layerId, const std::string& name) {
+    if (layerId == 0) {
+        return;
+    }
+    m_layerIds.push_back(layerId);
+    if (!name.empty()) {
+        m_layerNameMap[name] = layerId;
+    }
+}
+
+void Database::removeLayerFromTables(ObjectId layerId, const std::string& name) {
+    if (layerId == 0) {
+        return;
+    }
+    // 从名称映射中移除
+    if (!name.empty()) {
+        m_layerNameMap.erase(name);
+    }
+    // 从图层列表中移除
+    auto it = std::find(m_layerIds.begin(), m_layerIds.end(), layerId);
+    if (it != m_layerIds.end()) {
+        m_layerIds.erase(it);
+    }
+    // 从实体索引中移除（该图层上的实体）
+    m_layerEntityIndex.erase(layerId);
 }
 
 } // namespace tch

@@ -22,6 +22,7 @@ namespace tch {
 
 // 前向声明
 class DbObject;
+class DbEntity;
 class DbLayer;
 class IGraphicsDataCache;
 
@@ -37,7 +38,6 @@ public:
     static constexpr ObjectId kSymbolStart = 1000;
     static constexpr ObjectId kSymbolEnd = 9999;
     static constexpr ObjectId kEntityStart = 10000;
-    static constexpr ObjectId kBackupOffset = 0x8000000000000000ULL;
 
     Database();
     ~Database();
@@ -47,36 +47,32 @@ public:
     Database& operator=(const Database&) = delete;
 
     // ========================================================================
-    // 对象管理（命令层使用）
+    // 对象、实体管理（命令层使用）
     // ========================================================================
 
-    // 添加对象，自动分配 ID
-    ObjectId addObject(std::unique_ptr<DbObject> obj);
+    // 添加对象，自动分配 ID（根据类型分发到 addEntity/addLayer）
+    ObjectId addObject(std::unique_ptr<DbObject> pObj);
+
+    // 添加实体，自动分配 ID 并维护图层索引
+    ObjectId addEntity(std::unique_ptr<DbObject> pObj);
 
     // 获取对象（不包括备份区的）
     DbObject* getObject(ObjectId id) const;
 
+    // 获取实体
+    DbEntity* getEntity(ObjectId id) const;
+
     // 检查对象是否存在（不包括备份区的）
     bool hasObject(ObjectId id) const;
 
-    // 移除对象（移动到备份区而不实际删除）
-    void removeObject(ObjectId id);
+    // 移除对象（移动到备份区而不实际删除，自动分发到 removeEntity/removeLayer）
+    bool removeObject(ObjectId id);
+
+    // 移除实体（移动到备份区，维护图层索引）
+    bool removeEntity(ObjectId id);
 
     // 永久删除对象
     void eraseObject(ObjectId id);
-
-    // ========================================================================
-    // ID 管理
-    // ========================================================================
-
-    // 检查 ID 是否在备份区
-    static bool isBackupId(ObjectId id) { return id >= kBackupOffset; }
-
-    // 获取原始 ID（从备份区 ID 还原）
-    static ObjectId getOriginalId(ObjectId backupId) { return backupId - kBackupOffset; }
-
-    // 获取备份区 ID
-    static ObjectId getBackupId(ObjectId originalId) { return originalId + kBackupOffset; }
 
     // ========================================================================
     // Undo/Redo 支持（UndoManager 使用）
@@ -98,6 +94,9 @@ public:
     // 图层管理
     // ========================================================================
 
+    // 添加图层对象，自动分配 ID 并维护图层列表
+    ObjectId addLayer(std::unique_ptr<DbObject> pObj);
+
     // 添加图层，返回图层 ID
     ObjectId addLayer(const std::string& name);
 
@@ -108,7 +107,6 @@ public:
     DbLayer* getLayerByName(const std::string& name) const;
 
     // 删除图层，返回是否成功
-    // TODO: 需要检查图层上是否有实体，有则返回失败并提供相关信息
     bool removeLayer(ObjectId id);
 
     // 获取所有图层 ID
@@ -228,6 +226,19 @@ private:
 
     // 确保有"0"图层，返回其ID
     ObjectId ensureLayerZero();
+
+    // ========================================================================
+    // 表格维护辅助函数（集中管理索引表一致性）
+    // ========================================================================
+
+    // 实体索引维护
+    void addEntityToIndex(ObjectId entityId, ObjectId layerId);
+    void removeEntityFromIndex(ObjectId entityId, ObjectId layerId);
+    void moveEntityInIndex(ObjectId entityId, ObjectId oldLayerId, ObjectId newLayerId);
+
+    // 图层表格维护
+    void addLayerToTables(ObjectId layerId, const std::string& name);
+    void removeLayerFromTables(ObjectId layerId, const std::string& name);
 };
 
 } // namespace tch
