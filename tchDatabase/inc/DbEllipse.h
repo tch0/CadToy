@@ -15,6 +15,7 @@ namespace tch {
 
 class DbEllipse : public DbEntity {
 public:
+    // RTTI
     static constexpr Type staticType() { return Type::kEllipse; }
     Type type() const override { return staticType(); }
     const char* typeName() const override { return "DbEllipse"; }

@@ -41,6 +41,13 @@ public:
     };
     
     DbObject() = default;
+    
+    // 拷贝构造函数 - 拷贝时不复制id和数据库指针（用于clone）
+    DbObject(const DbObject&) : m_id(0), m_pDb(nullptr) { }
+    
+    // 禁用拷贝赋值（语义模糊，对象不是纯数据类）
+    DbObject& operator=(const DbObject& other) = delete;
+    
     virtual ~DbObject() = default;
     
     // ID 管理

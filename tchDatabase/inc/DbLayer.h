@@ -15,6 +15,7 @@ namespace tch {
 
 class DbLayer : public DbObject {
 public:
+    // RTTI
     static constexpr Type staticType() { return Type::kLayer; }
     Type type() const override { return staticType(); }
     const char* typeName() const override { return "DbLayer"; }

@@ -15,6 +15,7 @@ namespace tch {
 
 class DbArc : public DbEntity {
 public:
+    // RTTI
     static constexpr Type staticType() { return Type::kArc; }
     Type type() const override { return staticType(); }
     const char* typeName() const override { return "DbArc"; }

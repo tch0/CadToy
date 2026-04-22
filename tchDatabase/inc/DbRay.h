@@ -15,6 +15,7 @@ namespace tch {
 
 class DbRay : public DbEntity {
 public:
+    // RTTI
     static constexpr Type staticType() { return Type::kRay; }
     Type type() const override { return staticType(); }
     const char* typeName() const override { return "DbRay"; }

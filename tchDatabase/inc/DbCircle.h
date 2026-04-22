@@ -15,6 +15,7 @@ namespace tch {
 
 class DbCircle : public DbEntity {
 public:
+    // RTTI
     static constexpr Type staticType() { return Type::kCircle; }
     Type type() const override { return staticType(); }
     const char* typeName() const override { return "DbCircle"; }
