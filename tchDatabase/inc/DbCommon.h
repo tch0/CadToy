@@ -68,10 +68,11 @@ public:
         );
     }
     
+    DbColor() = default; // 默认构造为ByLayer
 private:
     DbColor(Type t) : m_type(t) {}
     
-    Type m_type;
+    Type m_type = kByLayer;
     uint32_t m_rgb = 0;
 };
 
