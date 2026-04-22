@@ -55,26 +55,17 @@ graph BT
     DB --> GEO
     GE -- 实现 --> INTERFACE
     GECACHE -- 实现 --> INTERFACE
-    DOC --> DB
-    GECACHE --> DB
     GE --> DB
     GECACHE --> GE
     DOC --> GECACHE
-    CORE --> DOC
-    RENDER --> GECACHE
     RENDER --> DOC
     CORE --> RENDER
     APP --> CORE
 ```
 
-模块划分：
-- 几何层: Geometry
-- 实体层：Entity
-- 数据库：Database
-- 图形引擎：GraphicsEngine
-
-实践说明：
-- 为了实现方便，图形引擎、图形引擎缓存、文档管理以及下方所有模块都实现在同一个模块中，但依赖关系确实是这样，完全可以拆分多模块，只是没有必要。
+说明：
+- 依赖关系是传递的，底层模块依赖链条上的所有模块都会直接引用，并不代表只依赖直接指向那一层。
+- 为了实现方便，图形引擎、图形数据缓存、文档管理以及下方所有模块都实现在同一个模块中，但依赖关系确实是这样，完全可以拆分多模块，只是没有必要。
 - 图形引擎和图形数据缓存不依赖任何底层图形API，图形引擎只负责生成顶点、属性数据，图形数据缓存负责维护保存这些数据。
 - 各个渲染器负责与图形后端API对接，重新实现这些渲染器即可移植到其他图形后端。
 
@@ -642,49 +633,62 @@ struct Vertex {
 ### 完整的生成与绘制流程设计
 
 1. 初始化
-    - 创建全局图形引擎 `GraphicsEngine`（实现 `IGraphicsEngine`）。
-    - 创建文档 `Document`，其中创建并初始化数据库 `Database`。
-    - 创建图形缓存 `GraphicsDataCache`（实现 `IGraphicsDataCache`），并设置数据库指针：`pGraphicsDataCache->setDatabase(pDb)`。同时将缓存指针设置到数据库中：`pDb->setGraphicsDataCache(pGraphicsDataCache)`。
+- 创建全局图形引擎 `GraphicsEngine`（实现 `IGraphicsEngine`）。
+- 创建文档 `Document`，其中创建并初始化数据库 `Database`。
+- 创建图形缓存 `GraphicsDataCache`（实现 `IGraphicsDataCache`），并设置数据库指针：  
+  `pGraphicsDataCache->setDatabase(pDb)`。  
+  同时将缓存指针设置到数据库中：  
+  `pDb->setGraphicsDataCache(pGraphicsDataCache)`。
 
 2. 用户添加实体
-    - 用户调用命令或相关接口创建实体，添加实体到数据库：  
-      `pDb->addEntity(pEnt)`  
-      实体添加后会保存数据库指针：  
-      `pEnt->setDatabase(this)`
-    - 数据库调用缓存的 `onEntityAdded(id)`，标记该实体为脏。
+- 用户调用命令或相关接口创建实体，添加实体到数据库：  
+  `pDb->addEntity(pEnt)`  
+  实体添加后会保存数据库指针：  
+  `pEnt->setDatabase(this)`
+- 数据库调用缓存的 `onEntityAdded(id)`，标记该实体为脏。
 
 3. 首次生成顶点数据
-    - 每一帧渲染之前，图形引擎检测到缓存中有脏实体，调用：  
-      `pEngine->generate(pGraphicsDataCache)`
-    - 引擎内部执行：
-      - 调用 `pGraphicsDataCache->getDirtyEntities()` 获取脏实体ID列表。
-      - 对每个脏实体ID：
-        - 通过 `pGraphicsDataCache->getDatabase()->getEntity(id)` 获取实体指针。
-        - 调用 `generateVertices(entity)` 生成顶点数组（算法由引擎实现）。
-        - 调用 `pGraphicsDataCache->setEntityVertices(id, std::move(vertices))` 存储顶点数据。
-        - 调用 `pGraphicsDataCache->clearDirty(id)` 清除脏标记。
-4. 修改实体
-    - 用户修改实体属性，例如移动一个顶点。
-    - 实体内部调用 `m_pDb->onEntityModified(id)`（或直接调用 `notifyEntityModified`）。
-    - 数据库接收到通知后调用 `pGraphicsDataCache->onEntityModified(id)`，标记该实体为脏。
-    - 在**同一帧的渲染前**（因为命令循环在实体渲染流程前执行），引擎再次调用 `generate`，重复步骤3，用新的顶点数据覆盖旧数据。
-5. 删除实体
-    - 调用 `pDb->removeEntity(id)`。
-    - 数据库调用 `pGraphicsDataCache->onEntityRemoved(id)`。
-    - 缓存内部清除该实体的顶点数据（`removeEntityVertices`）。
-6. 全量重生成（REGEN）
-    - 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->generateAll()`，标记所有实体为脏。
-    - 随后渲染前自动调用引擎的 `generate` 重新生成所有实体的顶点数据（覆盖原有数据）。
-7. 渲染
-    - 无论每一帧是否有全量或增量重生成，实体渲染器 `EntityRenderer` 都会从缓存中获取顶点数据    进行绘制：
-      - 调用 `pGraphicsDataCache->iterateAllCacheData(callback)` 遍历所有实体。
-      - 回调参数为 `(ObjectId id, const std::vector<Vertex>& vertices)`。
-      - 对于每个实体，渲染器根据顶点数据创建或更新其 VAO/VBO，并执行 `glDrawArrays`（初期每个实体独立绘制，一个实体一次 draw call）。
+- 每一帧渲染之前，图形引擎检测到缓存中有脏实体，调用：  
+  `pEngine->generate(pGraphicsDataCache)`
+- 引擎内部执行：
+  - 调用 `pGraphicsDataCache->getDirtyEntities()` 获取脏实体ID列表。
+  - 对每个脏实体ID：
+    - 通过 `pGraphicsDataCache->getDatabase()->getEntity(id)` 获取实体指针。
+    - 根据实体类型和属性生成顶点数组和缓存类型（`EntityGraphicsCacheData`），包括：
+      - `type`：决定渲染器使用何种着色器程序（`kAlwaysNoLineWidth`、`kLineWidthDependsOnLwDisplay`、`kAlwaysShowLineWidth` 或 `kInvisibleEntity`）。
+      - `vertices`：存储 `DataCacheVertex` 数组（位置、颜色、状态标志、线宽）。
+    - 调用 `pGraphicsDataCache->setEntityCacheData(id, std::move(cacheData))` 存储缓存数据。
+    - 调用 `pGraphicsDataCache->clearDirty(id)` 清除脏标记。
 
-设计特点总结：
+4. 修改实体
+- 用户修改实体属性，例如移动一个顶点。
+- 实体内部调用 `m_pDb->onEntityModified(id)`（或直接调用 `notifyEntityModified`）。
+- 数据库接收到通知后调用 `pGraphicsDataCache->onEntityModified(id)`，标记该实体为脏。
+- 在**同一帧的渲染前**（因为命令循环在实体渲染流程前执行），引擎再次调用 `generate`，重复步骤3，用新的缓存数据覆盖旧数据。
+
+5. 删除实体
+- 调用 `pDb->removeEntity(id)`。
+- 数据库调用 `pGraphicsDataCache->onEntityRemoved(id)`。
+- 缓存内部清除该实体的缓存数据（`removeEntityCacheData`）。
+
+6. 全量重生成（REGEN）
+- 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->generateAll()`，标记所有实体为脏。
+- 随后渲染前自动调用引擎的 `generate` 重新生成所有实体的缓存数据（覆盖原有数据）。
+
+7. 渲染
+- 无论每一帧是否有全量或增量重生成，实体渲染器 `EntityRenderer` 都会从缓存中获取缓存数据进行绘制：
+  - 调用 `pGraphicsDataCache->iterateAllCacheData(callback)` 遍历所有实体。
+  - 回调参数为 `(ObjectId id, const EntityGraphicsCacheData& cacheData)`。
+  - 对于每个实体：
+    - 若 `cacheData.type == kInvisibleEntity`，跳过该实体。
+    - 否则，根据 `cacheData.type` 选择对应的着色器程序（无线宽/有线宽/条件线宽）。
+    - 使用 `cacheData.vertices` 创建或更新 VAO/VBO，并执行 `glDrawArrays`（初期每个实体独立绘制，一个实体一次 draw call）。
+
+**设计特点总结**:
 - 数据库不依赖文档/图形数据缓存，数据库可以单独存在，仅在需要图形反馈时关联缓存。
 - 图形引擎无状态：易于测试和复用。
 - 缓存独立于图形API：只管理CPU数据，可轻松更换渲染后端。
-- 增量更新高效：只有脏实体重新生成顶点。
+- 增量更新高效：只有脏实体重新生成缓存。
+- 实体缓存数据包含类型标记（`EntityGraphicsCacheData::Type`），渲染器无需检查顶点即可快速决策。
 
-TODO: 目前尚未定义预览缓存相关接口，尚未确定方案，后续有可能抛弃预览缓存这个概念，通过在Db层添加预览类实体来实现可能会更简单，也能够复用实体渲染流程。
+TODO: 目前尚未定义预览缓存相关接口，尚未确定方案。后续有可能抛弃预览缓存概念，通过在数据库层添加临时预览类实体来实现，复用实体渲染流程。

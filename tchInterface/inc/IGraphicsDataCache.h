@@ -25,15 +25,33 @@ struct DataCacheVertex {
 };
 
 
+// ================================================================================================
+// 实体的图形缓存数据
+// 包括数据类型（是否有线宽，据此来选择渲染器），以及顶点数组，后续可以在这里添加其他需要的数据
+// ================================================================================================
+struct EntityGraphicsCacheData {
+    enum Type {
+        kInvalidEmtpyData,              // 无效空数据，获取无效ID则会返回这个
+        kAlwaysNoLineWidth,             // 没有线宽，无论LwDisplay是否打开，线宽总是显示为1像素的情况，总是调用无线宽版本
+        kLineWidthDependsOnLwDisplay,   // 实体原始线宽大于1像素的情况，但是否显示出来取决于Lwdisplay系统变量，开启时使用线宽版本渲染器，关闭时使用无线宽版本
+        kAlwaysShowLineWidth,           // 总是显示为有线宽的图元，比如预选高亮就一定有宽度，总是调用有线宽版本渲染器
+        kInvisibleEntity,               // 不可见实体，渲染时将直接跳过
+        kPreviewCacheData,              // 暂未使用，预览数据类型，
+    };
+    Type type = kInvalidEmtpyData;
+    std::vector<DataCacheVertex> vertices;
+};
+
+
+
 // 前置声明
 class Database;
-
 // 实体ID类型（可根据实际定义调整）
 using ObjectId = uint64_t;
 
 // ================================================================================================
 // 图形缓存接口
-// 职责：关联到唯一的数据库实例，管理数据库中每个实体的CPU端顶点数据，维护脏实体集合，接收来自数据库的通知。
+// 职责：关联到唯一的数据库实例，管理数据库中每个实体的CPU端缓存顶点数据，维护脏实体集合，接收来自数据库的通知。
 // ================================================================================================
 class IGraphicsDataCache {
 public:
@@ -45,10 +63,10 @@ public:
     virtual Database* getDatabase() const = 0;
     // 获取当前所有脏实体ID列表
     virtual std::vector<ObjectId> getDirtyEntities() const = 0;
-    // 设置指定实体的顶点数据（移动语义）
-    virtual void setEntityVertices(ObjectId id, std::vector<DataCacheVertex>&& vertices) = 0;
-    // 移除实体顶点数据
-    virtual void removeEntityVertices(ObjectId id) = 0;
+    // 设置指定实体的缓存数据（移动语义）
+    virtual void setEntityCacheData(ObjectId id, EntityGraphicsCacheData&& cacheData) = 0;
+    // 移除实体缓存数据
+    virtual void removeEntityCacheData(ObjectId id) = 0;
     // 清除指定实体的脏标记（引擎处理完该实体后调用）
     virtual void clearDirty(ObjectId id) = 0;
     // 标记所有实体为脏，以便全量重生成，提供给命令层以及初始化时使用
@@ -56,21 +74,21 @@ public:
     
     // ============================================================================
     // 通知接口：提供给数据库通知实体变化情况，其中会标记实体为脏
-    // 实体已添加，需要为实体添加并生成顶点数据
+    // 实体已添加，需要为实体添加并生成缓存数据
     virtual void onEntityAdded(ObjectId id) = 0;
-    // 实体已修改，几何或属性变化，需重新生成顶点数据
+    // 实体已修改，几何或属性变化，需重新生成缓存数据
     virtual void onEntityModified(ObjectId id) = 0;
-    // 实体已删除，清理该实体的顶点数据
+    // 实体已删除，清理该实体的缓存数据
     virtual void onEntityRemoved(ObjectId id) = 0;
     
     // ============================================================================
-    // 顶点数据查询接口：提供给渲染器渲染
+    // 缓存数据查询接口：提供给渲染器渲染
     // 获取所有实体ID
     virtual std::vector<ObjectId> getAllEntityIds() const = 0;
-    // 通过ID查询读取顶点数据
-    virtual const std::vector<DataCacheVertex>& getEntityVertices(ObjectId id) const = 0;
-    // 提供更通用的遍历接口，方便渲染器渲染，相比查询ID再根据ID去依次查询性能会更好，回调参数为实体id和数组引用
-    virtual void iterateAllCacheData(const std::function<void(ObjectId id, const std::vector<DataCacheVertex>& vertices)>& func) = 0;
+    // 通过ID查询读取缓存数据
+    virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) const = 0;
+    // 提供更通用的遍历接口，方便渲染器渲染，相比查询ID再根据ID去依次查询性能会更好，回调参数为实体id和实体缓存数据
+    virtual void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) = 0;
 };
 
 } // namespace tch
