@@ -137,54 +137,6 @@ private:
 };
 
 // ============================================================================
-// 系统变量
-// ============================================================================
-
-enum class SysVar : uint16_t {
-    // 文档级系统变量
-    kLwDefault,   // 默认线宽 (LWDEFAULT), int/DbLineWeight
-    kLtScale,     // 线型比例 (LTSCALE), double
-    kCLayer,      // 当前图层 (CLAYER), uint64/ObjectId
-    kCount
-};
-
-// 系统变量值类型
-class SysVarValue {
-public:
-    enum Type { kInt, kDouble };
-    
-    static SysVarValue fromInt(int value) {
-        SysVarValue v;
-        v.m_type = kInt;
-        v.m_int = value;
-        return v;
-    }
-    
-    static SysVarValue fromDouble(double value) {
-        SysVarValue v;
-        v.m_type = kDouble;
-        v.m_double = value;
-        return v;
-    }
-    
-    Type type() const { return m_type; }
-    
-    int asInt() const { return m_type == kInt ? m_int : static_cast<int>(m_double); }
-    double asDouble() const { return m_type == kDouble ? m_double : static_cast<double>(m_int); }
-    
-    // 默认构造函数
-    SysVarValue() = default;
-    
-private:
-    
-    Type m_type = kInt;
-    union {
-        int m_int = 0;
-        double m_double;
-    };
-};
-
-// ============================================================================
 // JSON 序列化工具函数
 // ============================================================================
 

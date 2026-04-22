@@ -75,7 +75,8 @@ graph BT
 
 文档级，保存在文档中：
 - LWDEFAULT: 默认线宽
-- LTSCALE: 线型比例
+- LTSCALE: 全局线型比例缩放因子，影响所有实体显示
+- CELTSCALE: 当前实体默认线型比例，影响新建实体的默认线型比例
 - CLAYER: 当前图层
 - LWDISPLAY: 是否显示线宽
 

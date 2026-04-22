@@ -112,34 +112,39 @@ public:
     // 获取所有图层 ID
     const std::vector<ObjectId>& layerIds() const { return m_layerIds; }
 
-    // 获取/设置当前图层 ID
-    ObjectId currentLayerId() const;
-    void setCurrentLayerId(ObjectId id);
-
     // 获取当前图层
     DbLayer* currentLayer() const;
     
     // 移动实体到指定图层，返回实际设置的图层ID（如果目标图层不存在则移动到当前图层并返回当前图层ID）
+    // 提供给实体setLayerId调用，以正确维护索引表，不再其他任何地方调用
     ObjectId moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId);
 
     // 获取指定图层上的所有实体ID（如果不存在返回空集合）
     const std::unordered_set<ObjectId>& getEntitiesOnLayer(ObjectId layerId) const;
 
     // ========================================================================
-    // 系统变量
+    // 文档属性
     // ========================================================================
 
-    // 设置系统变量
-    void setSysVar(SysVar var, const SysVarValue& value);
+    // 默认线宽 (LWDEFAULT)
+    DbLineWeight defaultLineWeight() const { return m_defaultLineWeight; }
+    void setDefaultLineWeight(DbLineWeight lw) { m_defaultLineWeight = lw; }
 
-    // 获取系统变量
-    SysVarValue getSysVar(SysVar var) const;
+    // 线型比例 (LTSCALE)，全局线型比例缩放因子，影响所有实体显示
+    double linetypeScale() const { return m_linetypeScale; }
+    void setLinetypeScale(double scale) { m_linetypeScale = scale; }
 
-    // 获取默认线宽
-    DbLineWeight defaultLineWeight() const;
+    // 当前实体线型比例 (CELTSCALE)，新建实体的默认线型比例
+    double currentEntityLinetypeScale() const { return m_currentEntityLinetypeScale; }
+    void setCurrentEntityLinetypeScale(double scale) { m_currentEntityLinetypeScale = scale; }
 
-    // 获取线型比例
-    double linetypeScale() const;
+    // 当前图层 (CLAYER)
+    ObjectId currentLayerId() const { return m_currentLayerId; }
+    void setCurrentLayerId(ObjectId id);
+
+    // 线宽显示 (LWDISPLAY)，是否显示线宽，0=不显示，1=显示
+    bool lineWeightDisplay() const { return m_lineWeightDisplay; }
+    void setLineWeightDisplay(bool display) { m_lineWeightDisplay = display; }
 
     // ========================================================================
     // 遍历和查询
@@ -207,8 +212,12 @@ private:
     // 备份对象存储（用于 undo/redo）
     std::unordered_map<ObjectId, std::unique_ptr<DbObject>> m_backupObjects;
 
-    // 系统变量表
-    std::unordered_map<SysVar, SysVarValue> m_sysVars;
+    // 文档属性 (即文档级别的系统变量)
+    DbLineWeight m_defaultLineWeight = DbLineWeight::k000;  // 默认线宽 (LWDEFAULT)
+    double m_linetypeScale = 1.0;                           // 线型比例 (LTSCALE)，全局缩放因子
+    double m_currentEntityLinetypeScale = 1.0;              // 当前实体线型比例 (CELTSCALE)，新建实体默认值
+    ObjectId m_currentLayerId = 0;                          // 当前图层 (CLAYER)
+    bool m_lineWeightDisplay = false;                       // 线宽显示 (LWDISPLAY)，是否显示线宽
 
     // 下一个可用 ID
     ObjectId m_nextSystemId = kSystemStart;
@@ -220,9 +229,6 @@ private:
 
     // 分配 ID
     ObjectId allocateId(DbObject::Type type);
-
-    // 初始化默认系统变量
-    void initDefaultSysVars();
 
     // 确保有"0"图层，返回其ID
     ObjectId ensureLayerZero();

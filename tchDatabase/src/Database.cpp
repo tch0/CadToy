@@ -15,18 +15,16 @@
 namespace tch {
 
 Database::Database() {
-    initDefaultSysVars();
-
     // 创建默认"0"图层，并设为当前图层
     ObjectId layer0Id = ensureLayerZero();
-    setCurrentLayerId(layer0Id);
+    m_currentLayerId = layer0Id;
 }
 
 Database::~Database() = default;
 
-// ============================================================================
+// ======================================================================================================
 // 对象管理
-// ============================================================================
+// ======================================================================================================
 
 ObjectId Database::addObject(std::unique_ptr<DbObject> pObj) {
     if (!pObj) {
@@ -177,9 +175,9 @@ void Database::eraseObject(ObjectId id) {
     }
 }
 
-// ============================================================================
+// ======================================================================================================
 // Undo/Redo 支持
-// ============================================================================
+// ======================================================================================================
 
 void Database::backupForModify(ObjectId id) {
     if (id == 0) {
@@ -279,9 +277,9 @@ DbObject* Database::getBackup(ObjectId id) const {
     return nullptr;
 }
 
-// ============================================================================
+// ======================================================================================================
 // 图层管理
-// ============================================================================
+// ======================================================================================================
 
 ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
     if (!pObj || !pObj->isType(DbObject::kLayer)) {
@@ -369,24 +367,16 @@ bool Database::removeLayer(ObjectId id) {
     return true;
 }
 
-ObjectId Database::currentLayerId() const {
-    auto it = m_sysVars.find(SysVar::kCLayer);
-    if (it != m_sysVars.end()) {
-        return static_cast<ObjectId>(it->second.asInt());
-    }
-    return 0;
-}
-
 void Database::setCurrentLayerId(ObjectId id) {
     // 检查 ID 是否有效且是图层
     if (id != 0 && !getLayer(id)) {
         return;
     }
-    m_sysVars[SysVar::kCLayer] = SysVarValue::fromInt(static_cast<int>(id));
+    m_currentLayerId = id;
 }
 
 DbLayer* Database::currentLayer() const {
-    return getLayer(currentLayerId());
+    return getLayer(m_currentLayerId);
 }
 
 ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) {
@@ -423,45 +413,9 @@ const std::unordered_set<ObjectId>& Database::getEntitiesOnLayer(ObjectId layerI
     return kEmptyEntitySet;
 }
 
-// ============================================================================
-// 系统变量
-// ============================================================================
-
-void Database::setSysVar(SysVar var, const SysVarValue& value) {
-    m_sysVars[var] = value;
-}
-
-SysVarValue Database::getSysVar(SysVar var) const {
-    auto it = m_sysVars.find(var);
-    if (it != m_sysVars.end()) {
-        return it->second;
-    }
-
-    // 如果没有找到返回默认值
-    SysVarValue defaultValue;
-    if (var == SysVar::kLwDefault) {
-        defaultValue = SysVarValue::fromInt(static_cast<int>(DbLineWeight::k000));
-    } else if (var == SysVar::kLtScale) {
-        defaultValue = SysVarValue::fromDouble(1.0);
-    } else {
-        defaultValue = SysVarValue::fromInt(0);
-    }
-
-    const_cast<Database*>(this)->m_sysVars[var] = defaultValue;
-    return defaultValue;
-}
-
-DbLineWeight Database::defaultLineWeight() const {
-    return static_cast<DbLineWeight>(getSysVar(SysVar::kLwDefault).asInt());
-}
-
-double Database::linetypeScale() const {
-    return getSysVar(SysVar::kLtScale).asDouble();
-}
-
-// ============================================================================
+// ======================================================================================================
 // 遍历和查询
-// ============================================================================
+// ======================================================================================================
 
 void Database::forEachObject(const std::function<void(DbObject*)>& callback) const {
     for (const auto& [id, pObj] : m_objects) {
@@ -479,9 +433,9 @@ void Database::forEachInBackup(const std::function<void(DbObject*)>& callback) c
     }
 }
 
-// ============================================================================
+// ======================================================================================================
 // 序列化
-// ============================================================================
+// ======================================================================================================
 
 void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     writer.StartObject();
@@ -490,21 +444,29 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     writer.Key("version");
     writer.Uint(1);
 
-    // 系统变量
+    // 文档属性
     writer.Key("sysvars");
     writer.StartObject();
     
     // 保存 LWDEFAULT
     writer.Key("LWDEFAULT");
-    writer.Int(static_cast<int>(defaultLineWeight()));
+    writer.Int(static_cast<int>(m_defaultLineWeight));
     
     // 保存 LTSCALE
     writer.Key("LTSCALE");
-    writer.Double(linetypeScale());
+    writer.Double(m_linetypeScale);
+    
+    // 保存 CELTSCALE
+    writer.Key("CELTSCALE");
+    writer.Double(m_currentEntityLinetypeScale);
     
     // 保存 CLAYER
     writer.Key("CLAYER");
-    writer.Uint64(currentLayerId());
+    writer.Uint64(m_currentLayerId);
+    
+    // 保存 LWDISPLAY
+    writer.Key("LWDISPLAY");
+    writer.Bool(m_lineWeightDisplay);
     
     writer.EndObject();
 
@@ -543,26 +505,44 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     m_layerIds.clear();
     m_layerNameMap.clear();
     m_layerEntityIndex.clear();
-    m_sysVars.clear();
-    initDefaultSysVars();
+    // 重置文档属性为默认值
+    m_defaultLineWeight = DbLineWeight::k000;
+    m_linetypeScale = 1.0;
+    m_currentEntityLinetypeScale = 1.0;
+    m_currentLayerId = 0;
+    m_lineWeightDisplay = false;
 
-    // 读取系统变量
-    if (value.HasMember("variables") && value["variables"].IsObject()) {
-        const auto& vars = value["variables"];
+    // 读取文档属性
+    if (value.HasMember("sysvars") && value["sysvars"].IsObject()) {
+        const auto& vars = value["sysvars"];
 
         // LWDEFAULT - 必须是整数
         if (vars.HasMember("LWDEFAULT") && vars["LWDEFAULT"].IsInt()) {
-            setSysVar(SysVar::kLwDefault, SysVarValue::fromInt(vars["LWDEFAULT"].GetInt()));
+            m_defaultLineWeight = static_cast<DbLineWeight>(vars["LWDEFAULT"].GetInt());
         }
 
         // LTSCALE - 可以是数值
         if (vars.HasMember("LTSCALE") && vars["LTSCALE"].IsNumber()) {
-            setSysVar(SysVar::kLtScale, SysVarValue::fromDouble(vars["LTSCALE"].GetDouble()));
+            m_linetypeScale = vars["LTSCALE"].GetDouble();
+        }
+
+        // CELTSCALE - 可以是数值
+        if (vars.HasMember("CELTSCALE") && vars["CELTSCALE"].IsNumber()) {
+            m_currentEntityLinetypeScale = vars["CELTSCALE"].GetDouble();
         }
 
         // CLAYER - 必须是 uint64
         if (vars.HasMember("CLAYER") && vars["CLAYER"].IsUint64()) {
-            setCurrentLayerId(vars["CLAYER"].GetUint64());
+            m_currentLayerId = vars["CLAYER"].GetUint64();
+        }
+
+        // LWDISPLAY - 可以是布尔值或整数
+        if (vars.HasMember("LWDISPLAY")) {
+            if (vars["LWDISPLAY"].IsBool()) {
+                m_lineWeightDisplay = vars["LWDISPLAY"].GetBool();
+            } else if (vars["LWDISPLAY"].IsInt()) {
+                m_lineWeightDisplay = vars["LWDISPLAY"].GetInt() != 0;
+            }
         }
     }
 
@@ -628,18 +608,18 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     return true;
 }
 
-// ============================================================================
+// ======================================================================================================
 // Purge 支持
-// ============================================================================
+// ======================================================================================================
 
 void Database::purge() {
     // 清理所有备份实体
     m_backupObjects.clear();
 }
 
-// ============================================================================
+// ======================================================================================================
 // 通知接口实现
-// ============================================================================
+// ======================================================================================================
 
 void Database::onEntityModified(ObjectId id) {
     if (m_pGraphicsCache) {
@@ -657,9 +637,9 @@ void Database::onLayerModified(ObjectId id) {
     }
 }
 
-// ============================================================================
+// ======================================================================================================
 // 私有方法
-// ============================================================================
+// ======================================================================================================
 
 ObjectId Database::allocateId(DbObject::Type type) {
     // 根据类型分配 ID
@@ -688,12 +668,6 @@ ObjectId Database::allocateId(DbObject::Type type) {
     return m_nextEntityId++;
 }
 
-void Database::initDefaultSysVars() {
-    m_sysVars[SysVar::kLwDefault] = SysVarValue::fromInt(static_cast<int>(DbLineWeight::k000));
-    m_sysVars[SysVar::kLtScale] = SysVarValue::fromDouble(1.0);
-    m_sysVars[SysVar::kCLayer] = SysVarValue::fromInt(0);  // 0 表示无效ID
-}
-
 ObjectId Database::ensureLayerZero() {
     // 检查是否已存在"0"图层
     DbLayer* pLayer0 = getLayerByName("0");
@@ -717,9 +691,9 @@ ObjectId Database::ensureLayerZero() {
     return id;
 }
 
-// ============================================================================
+// ======================================================================================================
 // 表格维护辅助函数
-// ============================================================================
+// ======================================================================================================
 
 void Database::addEntityToIndex(ObjectId entityId, ObjectId layerId) {
     if (entityId == 0 || layerId == 0) {
