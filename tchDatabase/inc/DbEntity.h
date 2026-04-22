@@ -35,23 +35,23 @@ public:
     
     // 颜色
     const DbColor& color() const { return m_color; }
-    void setColor(const DbColor& color) { m_color = color; }
+    void setColor(const DbColor& color);
     
     // 线型
     const DbLinetypeRef& linetype() const { return m_linetype; }
-    void setLinetype(const DbLinetypeRef& lt) { m_linetype = lt; }
+    void setLinetype(const DbLinetypeRef& lt);
     
     // 线型比例
     double linetypeScale() const { return m_linetypeScale; }
-    void setLinetypeScale(double scale) { m_linetypeScale = scale; }
+    void setLinetypeScale(double scale);
     
     // 线宽
     DbLineWeight lineWeight() const { return m_lineWeight; }
-    void setLineWeight(DbLineWeight lw) { m_lineWeight = lw; }
+    void setLineWeight(DbLineWeight lw);
     
     // 可见性
     bool isVisible() const { return m_visible; }
-    void setVisible(bool visible) { m_visible = visible; }
+    void setVisible(bool visible);
     
     // 几何接口
     virtual Geometry::AABB boundingBox() const = 0;

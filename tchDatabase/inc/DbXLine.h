@@ -29,10 +29,10 @@ public:
     DbXLine(const Geometry::Point& origin, const Geometry::Vector& direction);
     
     const Geometry::Point& origin() const { return m_line.origin; }
-    void setOrigin(const Geometry::Point& o) { m_line.origin = o; }
+    void setOrigin(const Geometry::Point& o);
     
     const Geometry::Vector& direction() const { return m_line.direction; }
-    void setDirection(const Geometry::Vector& d) { m_line.direction = glm::normalize(d); }
+    void setDirection(const Geometry::Vector& d);
     
     const Geometry::Line& line() const { return m_line; }
     

@@ -33,6 +33,31 @@ void DbEntity::notifyModified() {
     }
 }
 
+void DbEntity::setColor(const DbColor& color) {
+    m_color = color;
+    notifyModified();
+}
+
+void DbEntity::setLinetype(const DbLinetypeRef& lt) {
+    m_linetype = lt;
+    notifyModified();
+}
+
+void DbEntity::setLinetypeScale(double scale) {
+    m_linetypeScale = scale;
+    notifyModified();
+}
+
+void DbEntity::setLineWeight(DbLineWeight lw) {
+    m_lineWeight = lw;
+    notifyModified();
+}
+
+void DbEntity::setVisible(bool visible) {
+    m_visible = visible;
+    notifyModified();
+}
+
 void DbEntity::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     DbObject::writeFields(writer);
     

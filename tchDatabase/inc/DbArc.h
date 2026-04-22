@@ -30,16 +30,16 @@ public:
           double startAngle, double endAngle);
     
     const Geometry::Point& center() const { return m_arc.center; }
-    void setCenter(const Geometry::Point& c) { m_arc.center = c; }
+    void setCenter(const Geometry::Point& c);
     
     double radius() const { return m_arc.radius; }
-    void setRadius(double r) { m_arc.radius = r; }
+    void setRadius(double r);
     
     double startAngle() const { return m_arc.startAngle; }
-    void setStartAngle(double angle) { m_arc.startAngle = angle; }
+    void setStartAngle(double angle);
     
     double endAngle() const { return m_arc.endAngle; }
-    void setEndAngle(double angle) { m_arc.endAngle = angle; }
+    void setEndAngle(double angle);
     
     const Geometry::Arc& arc() const { return m_arc; }
     

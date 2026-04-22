@@ -23,7 +23,7 @@ Database::Database() {
 Database::~Database() = default;
 
 // ======================================================================================================
-// 对象管理
+// 对象、实体管理
 // ======================================================================================================
 
 ObjectId Database::addObject(std::unique_ptr<DbObject> pObj) {
@@ -64,6 +64,13 @@ ObjectId Database::addEntity(std::unique_ptr<DbObject> pObj) {
 
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
+    
+    // 标记为脏并通知添加了实体
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->onEntityAdded(id);
+    }
+    
     return id;
 }
 
@@ -143,6 +150,12 @@ bool Database::removeEntity(ObjectId id) {
     // 移动到备份区（保持原始ID）
     m_backupObjects[id] = std::move(it->second);
     m_objects.erase(it);
+    
+    // 标记脏并通知删除了实体
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->onEntityRemoved(id);
+    }
 
     return true;
 }
@@ -155,16 +168,24 @@ void Database::eraseObject(ObjectId id) {
     // 先尝试从正常区删除
     auto it = m_objects.find(id);
     if (it != m_objects.end()) {
-        // 根据类型维护表格
+        // 根据类型维护表格并通知缓存
         // 实体
         if (DbEntity* pEntity = it->second->as<DbEntity>()) {
             removeEntityFromIndex(id, pEntity->layerId());
+            m_objects.erase(it);
+            // 通知删除了实体
+            if (m_pGraphicsCache) {
+                m_pGraphicsCache->onEntityRemoved(id);
+            }
         }
         // 图层
         else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
             removeLayerFromTables(id, pLayer->name());
+            m_objects.erase(it);
         }
-        m_objects.erase(it);
+        
+        // 标记为脏
+        m_dirty = true;
         return;
     }
 
@@ -210,10 +231,14 @@ void Database::restoreFromBackup(ObjectId id) {
     // 设置数据库指针
     it->second->setDatabase(this);
 
-    // 根据类型维护表格
+    // 根据类型维护表格并通知缓存
     // 实体
     if (DbEntity* pEntity = it->second->as<DbEntity>()) {
         addEntityToIndex(id, pEntity->layerId());
+        // 通知添加了实体（只有实体需要通知）
+        if (m_pGraphicsCache) {
+            m_pGraphicsCache->onEntityAdded(id);
+        }
     }
     // 图层
     else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
@@ -223,6 +248,9 @@ void Database::restoreFromBackup(ObjectId id) {
     // 移回正常区（保持原始ID）
     m_objects[id] = std::move(it->second);
     m_backupObjects.erase(it);
+    
+    // 标记为脏
+    m_dirty = true;
 }
 
 void Database::swapWithBackup(ObjectId id) {
@@ -258,15 +286,22 @@ void Database::swapWithBackup(ObjectId id) {
     objIt->second->setDatabase(this);       // 正常区对象设置指针
     backupIt->second->setDatabase(nullptr); // 备份区对象清除指针
 
-    // 交换后：添加新对象的信息到表格
+    // 交换后：添加新对象的信息到表格并通知缓存
     // 实体
     if (DbEntity* pEntity = objIt->second->as<DbEntity>()) {
         addEntityToIndex(id, pEntity->layerId());
+        // 通知修改了实体（只有实体需要通知）
+        if (m_pGraphicsCache) {
+            m_pGraphicsCache->onEntityModified(id);
+        }
     }
     // 图层
     else if (DbLayer* pLayer = objIt->second->as<DbLayer>()) {
         addLayerToTables(id, pLayer->name());
     }
+    
+    // 标记为脏
+    m_dirty = true;
 }
 
 DbObject* Database::getBackup(ObjectId id) const {
@@ -301,6 +336,10 @@ ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
 
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
+    
+    // 标记脏（空图层不影响显示，不需要通知缓存）
+    m_dirty = true;
+    
     return id;
 }
 
@@ -320,6 +359,9 @@ ObjectId Database::addLayer(const std::string& name) {
     newLayer->setDatabase(this);
     m_objects[id] = std::move(newLayer);
     addLayerToTables(id, name);
+    
+    // 标记脏（空图层不影响显示，不需要通知缓存）
+    m_dirty = true;
 
     return id;
 }
@@ -372,6 +414,9 @@ bool Database::removeLayer(ObjectId id) {
     it->second->setDatabase(nullptr);
     m_backupObjects[id] = std::move(it->second);
     m_objects.erase(it);
+    
+    // 标记为脏（图层上无实体，删除不影响显示，不需要通知缓存）
+    m_dirty = true;
 
     return true;
 }
@@ -382,12 +427,53 @@ void Database::setCurrentLayerId(ObjectId id) {
         return;
     }
     m_currentLayerId = id;
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        // 修改当前图层也不需要重生成
+        // m_pGraphicsCache->markAllDirty();
+    }
 }
 
 DbLayer* Database::currentLayer() const {
     return getLayer(m_currentLayerId);
 }
 
+void Database::setDefaultLineWeight(DbLineWeight lw) {
+    m_defaultLineWeight = lw;
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->markAllDirty();
+    }
+}
+
+void Database::setLinetypeScale(double scale) {
+    m_linetypeScale = scale;
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->markAllDirty();
+    }
+}
+
+void Database::setCurrentEntityLinetypeScale(double scale) {
+    m_currentEntityLinetypeScale = scale;
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        // 只影响接下来创建实体的线型比例，对已存在实体无影响，无需重生成
+        // m_pGraphicsCache->markAllDirty();
+    }
+}
+
+void Database::setLineWeightDisplay(bool display) {
+    m_lineWeightDisplay = display;
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        // 线宽始终生成在顶点中数据中，渲染器根据这个值选择渲染器，修改不需要重生成
+        // m_pGraphicsCache->markAllDirty();
+    }
+}
+
+// 移动实体到指定图层，返回实际设置的图层ID（如果目标图层不存在则移动到当前图层并返回当前图层ID）
+// 提供给实体setLayerId调用，以正确维护索引表，不再其他任何地方调用
 ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) {
     DbObject* pObj = getObject(entityId);
     if (!pObj) {
@@ -409,6 +495,12 @@ ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) 
 
     // 维护图层索引
     moveEntityInIndex(entityId, currentLayerId, targetLayerId);
+    
+    // 标记脏并通知实体修改
+    m_dirty = true;
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->onEntityModified(entityId);
+    }
 
     return targetLayerId;
 }
@@ -446,7 +538,7 @@ void Database::forEachInBackup(const std::function<void(DbObject*)>& callback) c
 // 序列化
 // ======================================================================================================
 
-void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
+void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) {
     writer.StartObject();
 
     // 版本号
@@ -501,6 +593,9 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     writer.EndArray();
 
     writer.EndObject();
+
+    // 保存成功后清除脏标记
+    clearDirty();
 }
 
 bool Database::loadFromJson(const rapidjson::Value& value) {
@@ -614,6 +709,9 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
         setCurrentLayerId(layer0Id);
     }
 
+    // 加载完成后设置为未修改状态
+    clearDirty();
+
     return true;
 }
 
@@ -631,12 +729,14 @@ void Database::purge() {
 // ======================================================================================================
 
 void Database::onEntityModified(ObjectId id) {
+    m_dirty = true;
     if (m_pGraphicsCache) {
         m_pGraphicsCache->onEntityModified(id);
     }
 }
 
 void Database::onLayerModified(ObjectId id) {
+    m_dirty = true;
     // 获取该图层上的所有实体，逐个通知
     const auto& entities = getEntitiesOnLayer(id);
     if (m_pGraphicsCache) {

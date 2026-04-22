@@ -29,10 +29,10 @@ public:
     DbRay(const Geometry::Point& origin, const Geometry::Vector& direction);
     
     const Geometry::Point& origin() const { return m_ray.origin; }
-    void setOrigin(const Geometry::Point& o) { m_ray.origin = o; }
+    void setOrigin(const Geometry::Point& o);
     
     const Geometry::Vector& direction() const { return m_ray.direction; }
-    void setDirection(const Geometry::Vector& d) { m_ray.direction = glm::normalize(d); }
+    void setDirection(const Geometry::Vector& d);
     
     const Geometry::Ray& ray() const { return m_ray; }
     

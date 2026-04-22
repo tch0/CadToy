@@ -673,7 +673,7 @@ struct Vertex {
 - 缓存内部清除该实体的缓存数据（`removeEntityCacheData`）。
 
 6. 全量重生成（REGEN）
-- 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->generateAll()`，标记所有实体为脏。
+- 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->markAllDirty()`，标记所有实体为脏。
 - 随后渲染前自动调用引擎的 `generate` 重新生成所有实体的缓存数据（覆盖原有数据）。
 
 7. 渲染

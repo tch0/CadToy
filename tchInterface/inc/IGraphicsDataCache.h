@@ -69,11 +69,11 @@ public:
     virtual void removeEntityCacheData(ObjectId id) = 0;
     // 清除指定实体的脏标记（引擎处理完该实体后调用）
     virtual void clearDirty(ObjectId id) = 0;
-    // 标记所有实体为脏，以便全量重生成，提供给命令层以及初始化时使用
-    virtual void generateAll() = 0;
+    // 标记所有实体为脏，以便全量重生成，提供给命令层regen、初始化时以及某些会影响显示的系统变量修改等需要全量重生成的场景使用
+    virtual void markAllDirty() = 0;
     
     // ============================================================================
-    // 通知接口：提供给数据库通知实体变化情况，其中会标记实体为脏
+    // 通知接口：提供给数据库通知实体变化情况，其中会标记实体为脏，以实现部分重生成机制
     // 实体已添加，需要为实体添加并生成缓存数据
     virtual void onEntityAdded(ObjectId id) = 0;
     // 实体已修改，几何或属性变化，需重新生成缓存数据

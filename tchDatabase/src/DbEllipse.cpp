@@ -18,6 +18,36 @@ DbEllipse::DbEllipse(const Geometry::Point& center, double radiusX, double radiu
                      double rotation, double startParam, double endParam)
     : m_ellipse(center, Geometry::Vector(0, 0, 1), radiusX, radiusY, rotation, startParam, endParam) {}
 
+void DbEllipse::setCenter(const Geometry::Point& c) {
+    m_ellipse.center = c;
+    notifyModified();
+}
+
+void DbEllipse::setRadiusX(double rx) {
+    m_ellipse.radiusX = rx;
+    notifyModified();
+}
+
+void DbEllipse::setRadiusY(double ry) {
+    m_ellipse.radiusY = ry;
+    notifyModified();
+}
+
+void DbEllipse::setRotation(double rot) {
+    m_ellipse.rotation = rot;
+    notifyModified();
+}
+
+void DbEllipse::setStartParam(double param) {
+    m_ellipse.startParam = param;
+    notifyModified();
+}
+
+void DbEllipse::setEndParam(double param) {
+    m_ellipse.endParam = param;
+    notifyModified();
+}
+
 Geometry::AABB DbEllipse::boundingBox() const {
     double rx = m_ellipse.radiusX;
     double ry = m_ellipse.radiusY;

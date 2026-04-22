@@ -15,6 +15,26 @@ DbArc::DbArc(const Geometry::Point& center, double radius,
              double startAngle, double endAngle)
     : m_arc(center, Geometry::Vector(0, 0, 1), radius, startAngle, endAngle) {}
 
+void DbArc::setCenter(const Geometry::Point& c) {
+    m_arc.center = c;
+    notifyModified();
+}
+
+void DbArc::setRadius(double r) {
+    m_arc.radius = r;
+    notifyModified();
+}
+
+void DbArc::setStartAngle(double angle) {
+    m_arc.startAngle = angle;
+    notifyModified();
+}
+
+void DbArc::setEndAngle(double angle) {
+    m_arc.endAngle = angle;
+    notifyModified();
+}
+
 Geometry::AABB DbArc::boundingBox() const {
     double sx = m_arc.center.x + m_arc.radius * std::cos(m_arc.startAngle);
     double sy = m_arc.center.y + m_arc.radius * std::sin(m_arc.startAngle);

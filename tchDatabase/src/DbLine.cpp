@@ -13,6 +13,16 @@ namespace tch {
 DbLine::DbLine(const Geometry::Point& start, const Geometry::Point& end)
     : m_segment(start, end) {}
 
+void DbLine::setStart(const Geometry::Point& p) {
+    m_segment.start = p;
+    notifyModified();
+}
+
+void DbLine::setEnd(const Geometry::Point& p) {
+    m_segment.end = p;
+    notifyModified();
+}
+
 Geometry::AABB DbLine::boundingBox() const {
     return Geometry::AABB(m_segment.start, m_segment.end);
 }

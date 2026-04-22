@@ -29,10 +29,10 @@ public:
     DbCircle(const Geometry::Point& center, double radius);
     
     const Geometry::Point& center() const { return m_circle.center; }
-    void setCenter(const Geometry::Point& c) { m_circle.center = c; }
+    void setCenter(const Geometry::Point& c);
     
     double radius() const { return m_circle.radius; }
-    void setRadius(double r) { m_circle.radius = r; }
+    void setRadius(double r);
     
     const Geometry::Circle& circle() const { return m_circle; }
     

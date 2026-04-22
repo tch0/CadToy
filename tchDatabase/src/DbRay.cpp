@@ -14,6 +14,16 @@ namespace tch {
 DbRay::DbRay(const Geometry::Point& origin, const Geometry::Vector& direction)
     : m_ray(origin, direction) {}
 
+void DbRay::setOrigin(const Geometry::Point& o) {
+    m_ray.origin = o;
+    notifyModified();
+}
+
+void DbRay::setDirection(const Geometry::Vector& d) {
+    m_ray.direction = glm::normalize(d);
+    notifyModified();
+}
+
 Geometry::AABB DbRay::boundingBox() const {
     const Geometry::Point& o = m_ray.origin;
     constexpr double inf = std::numeric_limits<double>::infinity();

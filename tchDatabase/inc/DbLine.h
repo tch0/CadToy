@@ -29,10 +29,10 @@ public:
     DbLine(const Geometry::Point& start, const Geometry::Point& end);
     
     const Geometry::Point& start() const { return m_segment.start; }
-    void setStart(const Geometry::Point& p) { m_segment.start = p; }
+    void setStart(const Geometry::Point& p);
     
     const Geometry::Point& end() const { return m_segment.end; }
-    void setEnd(const Geometry::Point& p) { m_segment.end = p; }
+    void setEnd(const Geometry::Point& p);
     
     const Geometry::Segment& segment() const { return m_segment; }
     

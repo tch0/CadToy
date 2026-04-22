@@ -13,6 +13,16 @@ namespace tch {
 DbCircle::DbCircle(const Geometry::Point& center, double radius)
     : m_circle(Geometry::Circle::xyPlane(center, radius)) {}
 
+void DbCircle::setCenter(const Geometry::Point& c) {
+    m_circle.center = c;
+    notifyModified();
+}
+
+void DbCircle::setRadius(double r) {
+    m_circle.radius = r;
+    notifyModified();
+}
+
 Geometry::AABB DbCircle::boundingBox() const {
     return Geometry::AABB(
         Geometry::Point(m_circle.center.x - m_circle.radius, m_circle.center.y - m_circle.radius, m_circle.center.z),

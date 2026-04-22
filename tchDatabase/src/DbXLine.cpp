@@ -14,6 +14,16 @@ namespace tch {
 DbXLine::DbXLine(const Geometry::Point& origin, const Geometry::Vector& direction)
     : m_line(origin, direction) {}
 
+void DbXLine::setOrigin(const Geometry::Point& o) {
+    m_line.origin = o;
+    notifyModified();
+}
+
+void DbXLine::setDirection(const Geometry::Vector& d) {
+    m_line.direction = glm::normalize(d);
+    notifyModified();
+}
+
 Geometry::AABB DbXLine::boundingBox() const {
     const Geometry::Point& o = m_line.origin;
     constexpr double inf = std::numeric_limits<double>::infinity();
