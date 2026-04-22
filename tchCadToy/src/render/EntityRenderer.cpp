@@ -13,6 +13,7 @@
 #include "Logger.h"
 #include "DocManager.h"
 #include "GLFuncs.h"
+#include "Database.h"
 
 
 namespace tch {
@@ -642,6 +643,10 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
         return;
     }
     
+    // 获取数据库的LWDISPLAY设置
+    auto* pDatabase = doc.getDatabase();
+    bool lineWeightDisplay = pDatabase ? pDatabase->lineWeightDisplay() : false;
+    
     // 清空顶点缓冲区（保留已分配内存）
     m_noLWVertices.clear();
     m_withLWVertices.clear();
@@ -658,17 +663,31 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
         // 根据缓存类型分发到不同批次
         switch (cacheData.type) {
             case EntityGraphicsCacheData::kAlwaysNoLineWidth:
-                // 无线宽批次
+                // 无线宽批次（始终不显示线宽）
                 for (const auto& vertex : cacheData.vertices) {
                     m_noLWVertices.push_back(vertex);
                 }
                 break;
                 
-            case EntityGraphicsCacheData::kLineWidthDependsOnLwDisplay:
             case EntityGraphicsCacheData::kAlwaysShowLineWidth:
-                // 有线宽批次（暂时不区分LwDisplay设置，统一使用有线宽渲染）
+                // 有线宽批次（始终显示线宽）
                 for (const auto& vertex : cacheData.vertices) {
                     m_withLWVertices.push_back(vertex);
+                }
+                break;
+                
+            case EntityGraphicsCacheData::kLineWidthDependsOnLwDisplay:
+                // 有线宽但显示取决于LWDISPLAY设置决定使用哪个批次
+                if (lineWeightDisplay) {
+                    // LWDISPLAY=1，显示线宽，使用有线宽渲染
+                    for (const auto& vertex : cacheData.vertices) {
+                        m_withLWVertices.push_back(vertex);
+                    }
+                } else {
+                    // LWDISPLAY=0，不显示线宽，使用无线宽渲染
+                    for (const auto& vertex : cacheData.vertices) {
+                        m_noLWVertices.push_back(vertex);
+                    }
                 }
                 break;
                 
