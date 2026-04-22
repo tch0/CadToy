@@ -442,6 +442,7 @@ void Database::setDefaultLineWeight(DbLineWeight lw) {
     m_defaultLineWeight = lw;
     m_dirty = true;
     if (m_pGraphicsCache) {
+        // 默认线宽修改可能影响所有线宽值为默认的实体，需要通知重生成
         m_pGraphicsCache->markAllDirty();
     }
 }
@@ -450,6 +451,7 @@ void Database::setLinetypeScale(double scale) {
     m_linetypeScale = scale;
     m_dirty = true;
     if (m_pGraphicsCache) {
+        // 全局线性比例因子，影响显示，需要通知重生成
         m_pGraphicsCache->markAllDirty();
     }
 }
@@ -457,19 +459,31 @@ void Database::setLinetypeScale(double scale) {
 void Database::setCurrentEntityLinetypeScale(double scale) {
     m_currentEntityLinetypeScale = scale;
     m_dirty = true;
-    if (m_pGraphicsCache) {
-        // 只影响接下来创建实体的线型比例，对已存在实体无影响，无需重生成
-        // m_pGraphicsCache->markAllDirty();
-    }
+    // 只影响接下来创建实体的线型比例，对已存在实体无影响，无需重生成
 }
 
 void Database::setLineWeightDisplay(bool display) {
     m_lineWeightDisplay = display;
     m_dirty = true;
-    if (m_pGraphicsCache) {
-        // 线宽始终生成在顶点中数据中，渲染器根据这个值选择渲染器，修改不需要重生成
-        // m_pGraphicsCache->markAllDirty();
-    }
+    // 线宽值始终生成在顶点中数据中，渲染器根据LWDISPLAY选择渲染器，修改不需要重生成
+}
+
+void Database::setCurrentEntityColor(const DbColor& color) {
+    m_currentEntityColor = color;
+    m_dirty = true;
+    // 只影响后续创建的实体，不通知缓存重生成
+}
+
+void Database::setCurrentEntityLinetype(const DbLinetypeRef& lt) {
+    m_currentEntityLinetype = lt;
+    m_dirty = true;
+    // 只影响后续创建的实体，不通知缓存重生成
+}
+
+void Database::setCurrentEntityLineWeight(DbLineWeight lw) {
+    m_currentEntityLineWeight = lw;
+    m_dirty = true;
+    // 只影响后续创建的实体，不通知缓存重生成
 }
 
 // 移动实体到指定图层，返回实际设置的图层ID（如果目标图层不存在则移动到当前图层并返回当前图层ID）
@@ -569,6 +583,18 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     writer.Key("LWDISPLAY");
     writer.Bool(m_lineWeightDisplay);
     
+    // 保存 CECOLOR
+    writer.Key("CECOLOR");
+    DbJsonUtils::writeColor(writer, m_currentEntityColor);
+
+    // 保存 CELTYPE
+    writer.Key("CELTYPE");
+    DbJsonUtils::writeLinetype(writer, m_currentEntityLinetype);
+
+    // 保存 CELWEIGHT
+    writer.Key("CELWEIGHT");
+    writer.Int(static_cast<int>(m_currentEntityLineWeight));
+    
     writer.EndObject();
 
     // 图层列表
@@ -615,6 +641,9 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     m_currentEntityLinetypeScale = 1.0;
     m_currentLayerId = 0;
     m_lineWeightDisplay = false;
+    m_currentEntityColor = DbColor::byLayer();
+    m_currentEntityLinetype = DbLinetypeRef::byLayer();
+    m_currentEntityLineWeight = DbLineWeight::kByLayer;
 
     // 读取文档属性
     if (value.HasMember("sysvars") && value["sysvars"].IsObject()) {
@@ -647,6 +676,21 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
             } else if (vars["LWDISPLAY"].IsInt()) {
                 m_lineWeightDisplay = vars["LWDISPLAY"].GetInt() != 0;
             }
+        }
+        
+        // CECOLOR - 颜色
+        if (vars.HasMember("CECOLOR")) {
+            DbJsonUtils::readColor(vars["CECOLOR"], m_currentEntityColor);
+        }
+        
+        // CELTYPE - 线型引用
+        if (vars.HasMember("CELTYPE")) {
+            DbJsonUtils::readLinetype(vars["CELTYPE"], m_currentEntityLinetype);
+        }
+
+        // CELWEIGHT - 整数
+        if (vars.HasMember("CELWEIGHT") && vars["CELWEIGHT"].IsInt()) {
+            m_currentEntityLineWeight = static_cast<DbLineWeight>(vars["CELWEIGHT"].GetInt());
         }
     }
 

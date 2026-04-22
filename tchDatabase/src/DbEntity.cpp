@@ -58,6 +58,27 @@ void DbEntity::setVisible(bool visible) {
     notifyModified();
 }
 
+void DbEntity::setPropertiesFromDb() {
+    if (!m_pDb) {
+        return;
+    }
+
+    // 设置图层为当前图层
+    m_layerId = m_pDb->currentLayerId();
+
+    // 设置颜色为数据库当前实体颜色
+    m_color = m_pDb->currentEntityColor();
+
+    // 设置线型比例
+    m_linetypeScale = m_pDb->currentEntityLinetypeScale();
+
+    // 设置线宽
+    m_lineWeight = m_pDb->currentEntityLineWeight();
+
+    // 设置线型
+    m_linetype = m_pDb->currentEntityLinetype();
+}
+
 void DbEntity::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     DbObject::writeFields(writer);
     

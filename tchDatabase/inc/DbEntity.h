@@ -61,6 +61,10 @@ public:
     // 通知数据库实体被修改
     void notifyModified() override;
     
+    // 从数据库系统变量设置实体默认属性（图层、颜色、线型、线型比例、线宽）
+    // 命令层创建实体后调用，快速应用数据库当前设置
+    void setPropertiesFromDb();
+    
 protected:
     void writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const override;
     bool readFields(const rapidjson::Value& value) override;

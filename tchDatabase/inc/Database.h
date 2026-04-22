@@ -149,6 +149,18 @@ public:
     bool lineWeightDisplay() const { return m_lineWeightDisplay; }
     void setLineWeightDisplay(bool display);
 
+    // 当前实体颜色 (CECOLOR)，新建实体的默认颜色，默认ByLayer
+    DbColor currentEntityColor() const { return m_currentEntityColor; }
+    void setCurrentEntityColor(const DbColor& color);
+
+    // 当前实体线型 (CELTYPE)，新建实体的默认线型，默认ByLayer
+    DbLinetypeRef currentEntityLinetype() const { return m_currentEntityLinetype; }
+    void setCurrentEntityLinetype(const DbLinetypeRef& lt);
+
+    // 当前实体线宽 (CELWEIGHT)，新建实体的默认线宽，默认ByLayer
+    DbLineWeight currentEntityLineWeight() const { return m_currentEntityLineWeight; }
+    void setCurrentEntityLineWeight(DbLineWeight lw);
+
     // =======================================================================================
     // 遍历和查询
     // =======================================================================================
@@ -231,6 +243,9 @@ private:
     double m_currentEntityLinetypeScale = 1.0;              // 当前实体线型比例 (CELTSCALE)，新建实体默认值
     ObjectId m_currentLayerId = 0;                          // 当前图层 (CLAYER)
     bool m_lineWeightDisplay = false;                       // 线宽显示 (LWDISPLAY)，是否显示线宽
+    DbColor m_currentEntityColor;                           // 当前实体颜色 (CECOLOR)，新建实体默认颜色，默认ByLayer
+    DbLinetypeRef m_currentEntityLinetype = DbLinetypeRef::byLayer();  // 当前实体线型 (CELTYPE)，新建实体默认线型，默认ByLayer
+    DbLineWeight m_currentEntityLineWeight = DbLineWeight::kByLayer;  // 当前实体线宽 (CELWEIGHT)，新建实体默认线宽，默认ByLayer
 
     // 脏标记
     bool m_dirty = false;                                   // 文档是否被修改
