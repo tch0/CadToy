@@ -36,7 +36,11 @@ Document::Document(const std::string& fileName) :
     m_saved(false),
     m_showGrid(true),
     m_showAxes(true),
-    m_database(std::make_unique<Database>()) {
+    m_database(std::make_unique<Database>()),
+    m_graphicsDataCache(std::make_unique<GraphicsDataCache>()) {
+    // 关联图形数据缓存到数据库（双向关联）
+    m_graphicsDataCache->setDatabase(m_database.get());
+    m_database->setGraphicsDataCache(m_graphicsDataCache.get());
 }
 
 // 从路径解析文件名和后缀

@@ -11,6 +11,7 @@
 // 项目头文件
 #include "TransformManager.h"
 #include "Database.h"
+#include "GraphicsDataCache.h"
 
 
 namespace tch {
@@ -31,6 +32,9 @@ private:
     
     // 数据库（每个文档拥有自己的 CAD 数据库）
     std::unique_ptr<Database> m_database;
+    
+    // 图形数据缓存（关联到数据库，管理实体渲染数据）
+    std::unique_ptr<GraphicsDataCache> m_graphicsDataCache;
 
 public:
     // 默认构造函数：创建空文档，不构造 Database
@@ -97,6 +101,9 @@ public:
     
     // 获取数据库
     Database* getDatabase() const { return m_database.get(); }
+    
+    // 获取图形数据缓存
+    GraphicsDataCache* getGraphicsDataCache() const { return m_graphicsDataCache.get(); }
     
     // 从文件加载（使用 Database 反序列化）
     bool loadFromFile(const std::filesystem::path& filePath);

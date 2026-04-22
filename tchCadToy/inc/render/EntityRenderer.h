@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 // 项目头文件
+#include "IGraphicsDataCache.h"
 
 
 namespace tch {
@@ -45,6 +46,10 @@ private:
     GLuint m_quadVBO;        // 四边形顶点缓冲对象
     GLuint m_quadProgram;    // 四边形着色器程序
     GLint m_quadTextureLoc;  // uTexture uniform位置
+    
+    // 顶点数据缓冲区（预分配，避免每帧内存分配）
+    std::vector<DataCacheVertex> m_noLWVertices;   // 无线宽顶点缓冲区
+    std::vector<DataCacheVertex> m_withLWVertices; // 有线宽顶点缓冲区
     
 public:
     EntityRenderer();

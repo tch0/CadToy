@@ -364,6 +364,9 @@ EntityRenderer::EntityRenderer() :
     m_quadProgram(0),
     m_quadTextureLoc(-1)
 {
+    // 预分配顶点缓冲区内存（避免首次渲染时的内存分配和后续扩容）
+    m_noLWVertices.reserve(10000);
+    m_withLWVertices.reserve(10000);
 }
 
 // 析构函数：清理所有资源
@@ -629,77 +632,81 @@ void EntityRenderer::setupQuadVAO() {
 // ============================================================================
 
 // 渲染几何体
-// 从图形引擎获取顶点数组并绘制
+// 从图形数据缓存获取顶点数组并绘制
 void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
-    
-    // 测试数据
-    // 测试用标志位定义
-    constexpr uint32_t FLAG_PRESELECT = 1 << 0;  // 预选高亮
-    constexpr uint32_t FLAG_SELECTED  = 1 << 1;  // 选中
-    constexpr uint32_t FLAG_DIMMED    = 1 << 2;  // 暗显
-    
-    // 创建测试数据 - 8条线段，间隔100，长度50
-    // 无线宽版本：Y = 50 ~ 100（上方）
-    // 有线宽版本：Y = -100 ~ -50（下方）
-    std::vector<DataCacheVertex> noLWVertices;
-    std::vector<DataCacheVertex> withLWVertices;
-    
-    // 8条线段的数据定义
-    struct LineData {
-        float x;
-        uint32_t flags;
-        glm::vec3 color;
-        float lineWeight;
-    };
-    
-    LineData lines[] = {
-        {0.0f,   0,              glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 正常，白色，线宽1
-        {100.0f, FLAG_PRESELECT, glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 预选，白色，线宽1
-        {200.0f, FLAG_SELECTED,  glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 选中，白色，线宽1
-        {300.0f, FLAG_DIMMED,    glm::vec3(1.0f, 1.0f, 1.0f), 1.0f},  // 暗显，白色，线宽1
-        {400.0f, 0,              glm::vec3(1.0f, 0.0f, 0.0f), 3.0f},  // 正常，红色，线宽3
-        {500.0f, FLAG_PRESELECT, glm::vec3(1.0f, 0.0f, 0.0f), 3.0f},  // 预选，红色，线宽3
-        {600.0f, FLAG_SELECTED,  glm::vec3(1.0f, 0.0f, 0.0f), 5.0f},  // 选中，红色，线宽10
-        {700.0f, FLAG_DIMMED,    glm::vec3(0.0f, 0.0f, 1.0f), 5.0f},  // 暗显，蓝色，线宽10
-        {800.0f, FLAG_DIMMED | FLAG_SELECTED,    glm::vec3(1.0f, 0.0f, 0.0f), 5.0f}, // 暗显同时选中，红色，线宽5，三者组合只有这种情况是会实际发生的。
-    };
-    
-    // 生成顶点数据
-    for (const auto& line : lines) {
-        // 无线宽版本（上方 Y=50~100）
-        noLWVertices.push_back({glm::vec3(line.x, 50.0f, 0.0f), line.color, line.flags, line.lineWeight});
-        noLWVertices.push_back({glm::vec3(line.x + 100.0f, 150.0f, 0.0f), line.color, line.flags, line.lineWeight});
-        
-        // 有线宽版本（下方 Y=-100~-50）
-        withLWVertices.push_back({glm::vec3(line.x, -50.0f, 0.0f), line.color, line.flags, line.lineWeight});
-        withLWVertices.push_back({glm::vec3(line.x + 100.0f, -150.0f, 0.0f), line.color, line.flags, line.lineWeight});
+    // 获取当前文档和图形数据缓存
+    auto& doc = DocManager::getCurrentDocument();
+    auto* pDataCache = doc.getGraphicsDataCache();
+    if (!pDataCache) {
+        LOG_WARNING("EntityRenderer::renderGeometry() - No graphics data cache available");
+        return;
     }
+    
+    // 清空顶点缓冲区（保留已分配内存）
+    m_noLWVertices.clear();
+    m_withLWVertices.clear();
+    
+    // 遍历所有缓存数据，根据类型分发到不同批次
+    pDataCache->iterateAllCacheData([&](ObjectId id, const EntityGraphicsCacheData& cacheData) {
+        (void)id;  // 暂时未使用实体ID
+        
+        // 跳过不可见实体
+        if (cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
+            return;
+        }
+        
+        // 根据缓存类型分发到不同批次
+        switch (cacheData.type) {
+            case EntityGraphicsCacheData::kAlwaysNoLineWidth:
+                // 无线宽批次
+                for (const auto& vertex : cacheData.vertices) {
+                    m_noLWVertices.push_back(vertex);
+                }
+                break;
+                
+            case EntityGraphicsCacheData::kLineWidthDependsOnLwDisplay:
+            case EntityGraphicsCacheData::kAlwaysShowLineWidth:
+                // 有线宽批次（暂时不区分LwDisplay设置，统一使用有线宽渲染）
+                for (const auto& vertex : cacheData.vertices) {
+                    m_withLWVertices.push_back(vertex);
+                }
+                break;
+                
+            default:
+                // 其他类型（如kInvalidEmtpyData）跳过
+                break;
+        }
+    });
     
     // 绑定VAO和VBO（顶点属性已在initialize中设置）
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     
     // 渲染无线宽批次
-    glUseProgram(m_noLWProgram);
-    glUniformMatrix4fv(m_noLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
-    glUniform2f(m_noLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
-    
-    // 上传无线宽顶点数据
-    glBufferSubData(GL_ARRAY_BUFFER, 0, noLWVertices.size() * sizeof(DataCacheVertex), noLWVertices.data());
-    
-    // 绘制无线宽线段
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(noLWVertices.size()));
+    if (!m_noLWVertices.empty()) {
+        glUseProgram(m_noLWProgram);
+        glUniformMatrix4fv(m_noLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniform2f(m_noLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
+        
+        // 上传无线宽顶点数据
+        glBufferSubData(GL_ARRAY_BUFFER, 0, m_noLWVertices.size() * sizeof(DataCacheVertex), m_noLWVertices.data());
+        
+        // 绘制无线宽线段
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(m_noLWVertices.size()));
+    }
     
     // 渲染有线宽批次
-    glUseProgram(m_withLWProgram);
-    glUniformMatrix4fv(m_withLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
-    glUniform2f(m_withLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
-    
-    // 上传有线宽顶点数据
-    glBufferSubData(GL_ARRAY_BUFFER, 0, withLWVertices.size() * sizeof(DataCacheVertex), withLWVertices.data());
-    
-    // 绘制有线宽线段
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(withLWVertices.size()));
+    if (!m_withLWVertices.empty()) {
+        glUseProgram(m_withLWProgram);
+        glUniformMatrix4fv(m_withLWMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniform2f(m_withLWViewportSizeLoc, (float)m_windowWidth, (float)m_windowHeight);
+        
+        // 上传有线宽顶点数据
+        glBufferSubData(GL_ARRAY_BUFFER, 0, m_withLWVertices.size() * sizeof(DataCacheVertex), m_withLWVertices.data());
+        
+        // 绘制有线宽线段
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(m_withLWVertices.size()));
+    }
     
     // 清理
     glBindVertexArray(0);
