@@ -28,7 +28,7 @@ public:
     
     // 图层
     ObjectId layerId() const { return m_layerId; }
-    void setLayerId(ObjectId id) { m_layerId = id; }
+    void setLayerId(ObjectId id);
     
     // 颜色
     const DbColor& color() const { return m_color; }

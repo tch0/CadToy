@@ -3,6 +3,7 @@
 // C++ 标准库
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <functional>
 #include <vector>
 #include <string>
@@ -119,6 +120,12 @@ public:
 
     // 获取当前图层
     DbLayer* currentLayer() const;
+    
+    // 移动实体到指定图层，返回实际设置的图层ID（如果目标图层不存在则移动到当前图层并返回当前图层ID）
+    ObjectId moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId);
+
+    // 获取指定图层上的所有实体ID（如果不存在返回空集合）
+    const std::unordered_set<ObjectId>& getEntitiesOnLayer(ObjectId layerId) const;
 
     // ========================================================================
     // 系统变量
@@ -141,10 +148,10 @@ public:
     // ========================================================================
 
     // 遍历所有对象（不包括备份区的）
-    void forEachObject(std::function<void(DbObject*)> callback) const;
+    void forEachObject(const std::function<void(DbObject*)>& callback) const;
 
     // 遍历所有备份区的对象
-    void forEachInBackup(std::function<void(DbObject*)> callback) const;
+    void forEachInBackup(const std::function<void(DbObject*)>& callback) const;
 
     // 获取对象数量
     size_t objectCount() const { return m_objects.size(); }
@@ -190,14 +197,17 @@ private:
     // 对象存储
     std::unordered_map<ObjectId, std::unique_ptr<DbObject>> m_objects;
 
-    // 备份对象存储（用于 undo/redo）
-    std::unordered_map<ObjectId, std::unique_ptr<DbObject>> m_backupObjects;
-
     // 图层列表（按添加顺序）
     std::vector<ObjectId> m_layerIds;
-
+    
+    // 图层ID到图层中实体ID集合的索引表
+    std::unordered_map<ObjectId, std::unordered_set<ObjectId>> m_layerEntityIndex;
+    
     // 图层名称到 ID 的映射
     std::unordered_map<std::string, ObjectId> m_layerNameMap;
+    
+    // 备份对象存储（用于 undo/redo）
+    std::unordered_map<ObjectId, std::unique_ptr<DbObject>> m_backupObjects;
 
     // 系统变量表
     std::unordered_map<SysVar, SysVarValue> m_sysVars;

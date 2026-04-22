@@ -11,6 +11,22 @@
 
 namespace tch {
 
+void DbEntity::setLayerId(ObjectId id) {
+    if (m_layerId == id) {
+        return;
+    }
+
+    // 只有在数据库中且已分配ID时才触发moveEntityToLayer
+    if (m_pDb && m_id != 0) {
+        ObjectId actualLayerId = m_pDb->moveEntityToLayer(m_id, id);
+        m_layerId = actualLayerId;
+        notifyModified();
+    } else {
+        // 不在数据库中，直接设置
+        m_layerId = id;
+    }
+}
+
 void DbEntity::notifyModified() {
     if (m_pDb && m_id != 0) {
         m_pDb->onEntityModified(m_id);
