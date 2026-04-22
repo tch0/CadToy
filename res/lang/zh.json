@@ -129,6 +129,8 @@
   "command.line.nextPointWithClose": "指定下一点或 [闭合(C)/放弃(U)]:",
   "command.line.abandonedAll": "已放弃所有线段。",
 
+  "command.regen.completed": "已重生成所有实体。",
+
   "command.save.saved": "已保存到: {}",
   "command.save.failed": "保存失败: {}",
   "command.save.canceled": "保存已取消。",

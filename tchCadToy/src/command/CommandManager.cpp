@@ -14,6 +14,7 @@
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
 #include "CommandLine.h"
+#include "CommandRegen.h"
 #include "CommandOptions.h"
 #include "CommandProperties.h"
 #include "CommandUndo.h"
@@ -43,6 +44,9 @@ CommandManager::CommandManager() :
     // 实体创建类命令
     registerCommand<CommandLine>("LINE", {"L"});
     // 实体编辑类命令
+    
+    // 重生成类命令
+    registerCommand<CommandRegen>("REGEN", {"RE"});
     
     // 标注类命令
     

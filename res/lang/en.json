@@ -129,6 +129,8 @@
   "command.line.nextPointWithClose": "Specify next point or [Close(C)/Undo(U)]:",
   "command.line.abandonedAll": "Abandoned all line segments.",
 
+  "command.regen.completed": "All entities have been regenerated.",
+
   "command.save.saved": "Saved to: {}",
   "command.save.failed": "Failed to save: {}",
   "command.save.canceled": "Save canceled.",
