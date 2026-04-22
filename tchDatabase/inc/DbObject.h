@@ -16,6 +16,9 @@ namespace tch {
 
 using ObjectId = uint64_t;
 
+// 前向声明
+class Database;
+
 class DbObject {
 public:
     // DbObject的对象类型
@@ -39,6 +42,9 @@ public:
     
     // ID 管理
     ObjectId id() const { return m_id; }
+    
+    // 数据库访问
+    Database* database() const { return m_pDb; }
     
     // 类型信息与RTTI
     virtual Type type() const = 0;
@@ -65,14 +71,20 @@ public:
     virtual void saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
     virtual bool loadFromJson(const rapidjson::Value& value);
     
+    // 通知数据库对象被修改（子类实现，在属性修改时调用）
+    virtual void notifyModified() = 0;
+    
 protected:
     virtual void writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const;
     virtual bool readFields(const rapidjson::Value& value);
     
-private:
+protected:
     friend class Database;
-    void setId(ObjectId id) { m_id = id; } // 仅提供给Database使用
+    void setId(ObjectId id) { m_id = id; }
+    void setDatabase(Database* pDb) { m_pDb = pDb; }
+    
     ObjectId m_id = 0;
+    Database* m_pDb = nullptr;
 };
 
 } // namespace tch

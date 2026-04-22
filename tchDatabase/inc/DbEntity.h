@@ -49,6 +49,9 @@ public:
     
     std::unique_ptr<DbObject> clone() const override = 0;
     
+    // 通知数据库实体被修改
+    void notifyModified() override;
+    
 protected:
     void writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const override;
     bool readFields(const rapidjson::Value& value) override;

@@ -6,9 +6,16 @@
 // 第三方库
 
 // 项目头文件
+#include "Database.h"
 
 
 namespace tch {
+
+void DbEntity::notifyModified() {
+    if (m_pDb && m_id != 0) {
+        m_pDb->onEntityModified(m_id);
+    }
+}
 
 void DbEntity::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     DbObject::writeFields(writer);

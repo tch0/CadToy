@@ -4,6 +4,7 @@
 // 项目头文件
 #include "DbLayer.h"
 #include "DbObjectFactory.h"
+#include "IGraphicsDataCache.h"
 
 
 namespace tch {
@@ -29,6 +30,7 @@ ObjectId Database::addObject(std::unique_ptr<DbObject> obj) {
 
     ObjectId id = allocateId(obj->type());
     obj->setId(id);
+    obj->setDatabase(this);
     m_objects[id] = std::move(obj);
     return id;
 }
@@ -399,6 +401,7 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
                     id = allocateId(DbObject::kLayer);
                     obj->setId(id);
                 }
+                obj->setDatabase(this);
                 m_objects[id] = std::move(obj);
                 m_layerIds.push_back(id);
 
@@ -421,6 +424,7 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
                     id = allocateId(obj->type());
                     obj->setId(id);
                 }
+                obj->setDatabase(this);
                 m_objects[id] = std::move(obj);
             }
         }
@@ -444,6 +448,22 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
 void Database::purge() {
     // 清理所有备份实体
     m_backupObjects.clear();
+}
+
+// ============================================================================
+// 通知接口实现
+// ============================================================================
+
+void Database::onEntityModified(ObjectId id) {
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->onEntityModified(id);
+    }
+}
+
+void Database::onLayerModified(ObjectId id) {
+    if (m_pGraphicsCache) {
+        m_pGraphicsCache->onEntityModified(id);
+    }
 }
 
 // ============================================================================

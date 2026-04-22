@@ -6,12 +6,19 @@
 // 第三方库
 
 // 项目头文件
+#include "Database.h"
 
 
 namespace tch {
 
 std::unique_ptr<DbObject> DbLayer::clone() const {
     return std::make_unique<DbLayer>(*this);
+}
+
+void DbLayer::notifyModified() {
+    if (m_pDb && m_id != 0) {
+        m_pDb->onLayerModified(m_id);
+    }
 }
 
 void DbLayer::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {

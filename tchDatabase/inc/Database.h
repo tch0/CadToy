@@ -22,6 +22,7 @@ namespace tch {
 // 前向声明
 class DbObject;
 class DbLayer;
+class IGraphicsDataCache;
 
 // ============================================================================
 // Database - 数据库核心类
@@ -165,6 +166,26 @@ public:
     // 清理冗余备份实体
     void purge();
 
+    // ========================================================================
+    // 图形数据缓存关联
+    // ========================================================================
+
+    // 设置图形数据缓存指针（文档构造时调用）
+    void setGraphicsDataCache(IGraphicsDataCache* pCache) { m_pGraphicsCache = pCache; }
+
+    // 获取图形数据缓存指针
+    IGraphicsDataCache* getGraphicsDataCache() const { return m_pGraphicsCache; }
+
+    // ========================================================================
+    // 通知接口（供 DbObject 调用）
+    // ========================================================================
+
+    // 实体被修改
+    void onEntityModified(ObjectId id);
+
+    // 图层被修改
+    void onLayerModified(ObjectId id);
+
 private:
     // 对象存储
     std::unordered_map<ObjectId, std::unique_ptr<DbObject>> m_objects;
@@ -185,6 +206,9 @@ private:
     ObjectId m_nextSystemId = kSystemStart;
     ObjectId m_nextSymbolId = kSymbolStart;
     ObjectId m_nextEntityId = kEntityStart;
+
+    // 图形数据缓存指针（不参与序列化）
+    IGraphicsDataCache* m_pGraphicsCache = nullptr;
 
     // 分配 ID
     ObjectId allocateId(DbObject::Type type);
