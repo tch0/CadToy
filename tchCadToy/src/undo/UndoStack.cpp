@@ -91,7 +91,8 @@ void UndoStack::clearOrphanBackups() {
 }
 
 void UndoStack::push(UndoRecord&& record) {
-    // 清空当前索引之后的记录，并删除这些记录引用的备份实体
+    // 清空当前索引之后的记录（redo 栈），并删除这些记录引用的备份实体
+    // m_currentIndex 后面有记录需要清理（包括 m_currentIndex = -1 的情况）
     if (m_currentIndex < (int)m_records.size() - 1) {
         // 原位遍历清理备份（从后向前避免索引问题）
         for (int i = (int)m_records.size() - 1; i > m_currentIndex; --i) {
@@ -135,7 +136,12 @@ void UndoStack::endGroup() {
     // 如果记录为空，移除它
     if (m_records[m_activeIndex].entries.empty()) {
         m_records.pop_back();
-        m_currentIndex--;
+        // 确保 m_currentIndex 不会小于 -1 
+        // 因为可能连续两次调用endGroup，比如U/UNDO命令不参与undo记录，但命令框架中机制上已经调用，所以需要提前调用结束记录
+        // 虽然原则现在重复两次调用，第二次m_activeIndex已经为-1，不可能进入这里，但是为了容错还是加上这个逻辑
+        if (m_currentIndex >= 0) {
+            m_currentIndex--;
+        }
     }
 
     // 清理孤儿备份
@@ -200,7 +206,8 @@ void UndoStack::addEntry(UndoOpType type, ObjectId objId, ObjectId backupId) {
 }
 
 void UndoStack::recordAdd(ObjectId objId) {
-    if (!m_pDb) {
+    // 检查数据库和是否有活动的 undo 组
+    if (!m_pDb || m_activeIndex < 0 || objId == 0) {
         return;
     }
 
@@ -210,7 +217,8 @@ void UndoStack::recordAdd(ObjectId objId) {
 }
 
 void UndoStack::recordRemove(ObjectId objId) {
-    if (!m_pDb) {
+    // 检查数据库和是否有活动的 undo 组
+    if (!m_pDb || m_activeIndex < 0 || objId == 0) {
         return;
     }
 
@@ -220,7 +228,8 @@ void UndoStack::recordRemove(ObjectId objId) {
 }
 
 void UndoStack::recordModify(ObjectId objId) {
-    if (!m_pDb) {
+    // 检查数据库和是否有活动的 undo 组
+    if (!m_pDb || m_activeIndex < 0 || objId == 0) {
         return;
     }
 
@@ -236,6 +245,11 @@ void UndoStack::undo() {
         return;
     }
 
+    // 如果正在记录中，先结束当前组
+    if (m_activeIndex >= 0) {
+        endGroup();
+    }
+
     const UndoRecord* pRecord = getCurrentRecord();
     if (pRecord) {
         pRecord->executeUndo(m_pDb);
@@ -247,6 +261,11 @@ void UndoStack::undo() {
 void UndoStack::redo() {
     if (!canRedo() || !m_pDb) {
         return;
+    }
+
+    // 如果正在记录中，先结束当前组
+    if (m_activeIndex >= 0) {
+        endGroup();
     }
 
     m_currentIndex++;

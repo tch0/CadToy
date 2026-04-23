@@ -19,6 +19,7 @@
 #include "CommandProperties.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
+#include "CommandRedo.h"
 #include "Logger.h"
 #include "DocManager.h"
 #include "InputContext.h"
@@ -26,6 +27,7 @@
 #include "GlobalUtils.h"
 #include "StringUtils.h"
 #include "LocalizationManager.h"
+#include "UndoManager.h"
 
 namespace tch {
 
@@ -57,6 +59,7 @@ CommandManager::CommandManager() :
     // undo类命令
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
+    registerCommand<CommandRedo>("REDO", {});
     
     // 未实现命令
     // registerCommand<CommandCircle>("CIRCLE", {"C"});
@@ -165,6 +168,9 @@ void CommandManager::executeCommand(const std::string& command) {
         m_currentCommandName = cmdFullName;
         
         DocManager::getCurrentDocument().addToCommandExecutionHistory(cmdFullName);
+        
+        // 开始 undo 组，使用命令名作为组名
+        UndoManager::getInstance().beginGroup(cmdFullName);
     } else {
         Utils::cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
     }
@@ -252,6 +258,9 @@ void CommandManager::cancelCurrentCommand()
         // 重置输入上下文为无命令执行状态
         inputContext.setInCommandExecution(false);
         
+        // 结束 undo 组（取消命令时结束组，undo 记录会被保留用于撤销已执行的操作）
+        UndoManager::getInstance().endGroup();
+        
         // 最后再输出一个空行
         inputContext.handleEnterSpace("");
     }
@@ -283,6 +292,9 @@ void CommandManager::runCommandLoop() {
             
             // 重置输入上下文
             InputContext::getInstance().setInCommandExecution(false);
+            
+            // 结束 undo 组（命令正常完成）
+            UndoManager::getInstance().endGroup();
         }
     }
 }

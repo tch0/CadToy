@@ -143,5 +143,11 @@
   "command.open.canceled": "文件打开已取消。",
   "command.open.switched": "切换到已打开的文档: {}",
 
-  "command.close.canceled": "关闭已取消。"
+  "command.close.canceled": "关闭已取消。",
+
+  "command.u.undoSuccess": "已撤销操作：{}",
+  "command.u.noUndo": "没有操作可撤销。",
+
+  "command.redo.redoSuccess": "已重做操作：{}",
+  "command.redo.noRedo": "没有操作可重做。"
 }

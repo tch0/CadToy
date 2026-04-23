@@ -143,5 +143,11 @@
   "command.open.canceled": "File open canceled.",
   "command.open.switched": "Switched to already opened document: {}",
 
-  "command.close.canceled": "Close canceled."
+  "command.close.canceled": "Close canceled.",
+
+  "command.u.undoSuccess": "Undone operation: {}",
+  "command.u.noUndo": "No operations to undo.",
+
+  "command.redo.redoSuccess": "Redone operation: {}",
+  "command.redo.noRedo": "No operations to redo."
 }

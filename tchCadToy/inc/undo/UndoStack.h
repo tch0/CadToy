@@ -90,8 +90,8 @@ private:
 
 private:
     Database* m_pDb;                        // 关联的数据库
-    std::vector<UndoRecord> m_records;      // 记录列表
-    int m_currentIndex;                     // 当前索引（-1 表示没有记录）
+    std::vector<UndoRecord> m_records;      // 记录列表，undo/redo共用的栈，[0,m_currentIndex]是undo栈 (m_currentIndex, m_records.size()-1]是redo栈
+    int m_currentIndex;                     // undo栈栈顶记录索引，-1表示undo栈为空
     int m_activeIndex;                      // 当前活动记录的索引（正在构建的组，-1 表示没有）
     std::vector<ObjectId> m_orphanBackups;  // 孤儿备份 ID 列表（合并时产生，endGroup 时清理）
 };
