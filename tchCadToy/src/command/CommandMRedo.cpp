@@ -1,5 +1,5 @@
 // 对应头文件
-#include "CommandUndo.h"
+#include "CommandMRedo.h"
 
 // C++ 标准库
 #include <climits>
@@ -16,11 +16,11 @@
 
 namespace tch {
 
-CommandUndo::CommandUndo()
-    : m_state(CommandUndoState::kUndoNumberEntry) {
+CommandMRedo::CommandMRedo()
+    : m_state(CommandMRedoState::kRedoNumberEntry) {
 }
 
-void CommandUndo::onUpdate() {
+void CommandMRedo::onUpdate() {
     if (isCompleted()) {
         return;
     }
@@ -29,14 +29,14 @@ void CommandUndo::onUpdate() {
     auto& loc = LocalizationManager::getInstance();
     
     switch (m_state) {
-        case CommandUndoState::kUndoNumberEntry:
-            // UNDO数量入口
-            m_state = CommandUndoState::kUndoNumberQuery;
-            // 输入要撤销的操作数目或 [全部(A)] <1>:
-            ctx.waitForInteger(loc.get("command.undo.prompt"), 1, INT_MAX, {"A"});
+        case CommandMRedoState::kRedoNumberEntry:
+            // REDO数量入口
+            m_state = CommandMRedoState::kRedoNumberQuery;
+            // 输入要重做的操作数目或 [全部(A)] <1>:
+            ctx.waitForInteger(loc.get("command.mredo.prompt"), 1, INT_MAX, {"A"});
             break;
             
-        case CommandUndoState::kUndoNumberQuery: {
+        case CommandMRedoState::kRedoNumberQuery: {
             InputStatus status = ctx.getCurrentStatus();
             
             // 无输入，继续等待
@@ -45,56 +45,56 @@ void CommandUndo::onUpdate() {
             }
             // Esc 取消
             else if (status == InputStatus::kCanceled) {
-                m_state = CommandUndoState::kCompleted;
+                m_state = CommandMRedoState::kCompleted;
             }
             // Enter/Space，使用默认值 1
             else if (status == InputStatus::kEnterInput) {
-                executeUndo(1, false);
-                m_state = CommandUndoState::kCompleted;
+                executeRedo(1, false);
+                m_state = CommandMRedoState::kCompleted;
             }
-            // 关键字 "A"，全部撤销
+            // 关键字 "A"，全部重做
             else if (status == InputStatus::kKeywordInput) {
                 std::string keyword;
                 ctx.getKeyword(keyword);
                 if (keyword == "A") {
-                    executeUndo(0, true);
+                    executeRedo(0, true);
                 }
-                m_state = CommandUndoState::kCompleted;
+                m_state = CommandMRedoState::kCompleted;
             }
             // 整数输入
             else if (status == InputStatus::kIntegerInput) {
                 int count;
                 ctx.getInteger(count);
-                executeUndo(count, false);
-                m_state = CommandUndoState::kCompleted;
+                executeRedo(count, false);
+                m_state = CommandMRedoState::kCompleted;
             }
             break;
         }
             
-        case CommandUndoState::kCompleted:
+        case CommandMRedoState::kCompleted:
             finish();
             break;
     }
 }
 
-void CommandUndo::executeUndo(int count, bool allMode) {
+void CommandMRedo::executeRedo(int count, bool allMode) {
     auto& undoManager = UndoManager::getInstance();
     auto& loc = LocalizationManager::getInstance();
     
-    int undoneCount = 0;
-    while ((allMode || undoneCount < count) && undoManager.canUndo()) {
-        std::string name = undoManager.getUndoName();
-        undoManager.undo();
+    int redoneCount = 0;
+    while ((allMode || redoneCount < count) && undoManager.canRedo()) {
+        std::string name = undoManager.getRedoName();
+        undoManager.redo();
         Utils::cmdLinePrint(StringUtils::format(
-            loc.get("command.u.undoSuccess"), name)); // 已撤销操作：{}
-        undoneCount++;
+            loc.get("command.redo.redoSuccess"), name)); // 已重做操作：{}
+        redoneCount++;
     }
     
     // 输出最终结果
-    if (undoneCount > 0 && !undoManager.canUndo()) {
-        Utils::cmdLinePrint(loc.get("command.undo.allCompleted")); // 所有操作都已撤销。
-    } else if (undoneCount == 0) {
-        Utils::cmdLinePrint(loc.get("command.u.noUndo")); // 没有操作可撤销。
+    if (redoneCount > 0 && !undoManager.canRedo()) {
+        Utils::cmdLinePrint(loc.get("command.mredo.allCompleted")); // 所有操作都已重做。
+    } else if (redoneCount == 0) {
+        Utils::cmdLinePrint(loc.get("command.redo.noRedo")); //没有操作可重做。
     }
 }
 

@@ -149,5 +149,11 @@
   "command.u.noUndo": "No operations to undo.",
 
   "command.redo.redoSuccess": "Redone operation: {}",
-  "command.redo.noRedo": "No operations to redo."
+  "command.redo.noRedo": "No operations to redo.",
+
+  "command.undo.prompt": "Enter number of operations to undo or [All(A)] <1>:",
+  "command.undo.allCompleted": "All operations have been undone.",
+
+  "command.mredo.prompt": "Enter number of operations to redo or [All(A)] <1>:",
+  "command.mredo.allCompleted": "All operations have been redone."
 }

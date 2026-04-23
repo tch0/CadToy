@@ -109,7 +109,7 @@
   "inputContext.generalErrorPrompt.invalidPoint": "*无效点*",
   "inputContext.generalErrorPrompt.invalidSelection": "*无效选择*",
   "inputContext.generalErrorPrompt.invalidKeyword": "*无效关键字*",
-  "inputContext.generalErrorPrompt.invalidInteger": "需要输入{0}到{1}的整数。",
+  "inputContext.generalErrorPrompt.invalidInteger": "需要输入 {0} 到 {1} 的整数。",
   "inputContext.generalErrorPrompt.invalidNumber": "需要输入数值。",
 
   "selection.prompt.single": "选择对象:",
@@ -149,5 +149,11 @@
   "command.u.noUndo": "没有操作可撤销。",
 
   "command.redo.redoSuccess": "已重做操作：{}",
-  "command.redo.noRedo": "没有操作可重做。"
+  "command.redo.noRedo": "没有操作可重做。",
+
+  "command.undo.prompt": "输入要撤销的操作数目或 [全部(A)] <1>:",
+  "command.undo.allCompleted": "所有操作都已撤销。",
+
+  "command.mredo.prompt": "输入要重做的操作数目或 [全部(A)] <1>:",
+  "command.mredo.allCompleted": "所有操作都已重做。"
 }

@@ -20,6 +20,7 @@
 #include "CommandUndo.h"
 #include "CommandU.h"
 #include "CommandRedo.h"
+#include "CommandMRedo.h"
 #include "Logger.h"
 #include "DocManager.h"
 #include "InputContext.h"
@@ -56,10 +57,11 @@ CommandManager::CommandManager() :
     registerCommand<CommandOptions>("OPTIONS", {"OP"});
     registerCommand<CommandPropertiesShow>("PROPERTIES", {"PR"});
     registerCommand<CommandPropertiesClose>("PROPERTIESCLOSE", {"PRCLOSE"});
-    // undo类命令
+    // undo/redo类命令
     registerCommand<CommandUndo>("UNDO", {});
     registerCommand<CommandU>("U", {});
     registerCommand<CommandRedo>("REDO", {});
+    registerCommand<CommandMRedo>("MREDO", {});
     
     // 未实现命令
     // registerCommand<CommandCircle>("CIRCLE", {"C"});

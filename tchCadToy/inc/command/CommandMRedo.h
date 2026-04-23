@@ -10,10 +10,10 @@
 
 namespace tch {
 
-// 撤销命令（支持批量撤销）
-class CommandUndo : public Command {
+// 重做命令（支持批量重做）
+class CommandMRedo : public Command {
 public:
-    CommandUndo();
+    CommandMRedo();
     
     void onUpdate() override;
     
@@ -21,16 +21,16 @@ public:
     bool skipUndoRecording() const override { return true; }
     
 private:
-    enum class CommandUndoState {
-        kUndoNumberEntry,       // UNDO数量入口
-        kUndoNumberQuery,       // UNDO数量输入查询
+    enum class CommandMRedoState {
+        kRedoNumberEntry,       // REDO数量入口
+        kRedoNumberQuery,       // REDO数量输入查询
         kCompleted              // 结束状态
     };
     
-    CommandUndoState m_state;
+    CommandMRedoState m_state;
     
-    // 执行撤销
-    void executeUndo(int count, bool allMode);
+    // 执行重做
+    void executeRedo(int count, bool allMode);
 };
 
 } // namespace tch
