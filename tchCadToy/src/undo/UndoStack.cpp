@@ -39,35 +39,38 @@ const UndoRecord* UndoStack::getNextRecord() const {
     return nullptr;
 }
 
-void UndoStack::clearEntryBackup(const UndoEntry& entry) {
+void UndoStack::clearEntryBackup(const UndoEntry& entry, bool isUndoRecord) {
     if (!m_pDb || entry.backupId == 0) {
         return;
     }
 
-    // 只有 Modify 和 Remove 操作会在备份区创建实际数据
-    // Add 操作的 backupId 只是预分配，没有实际数据
     switch (entry.type) {
-        case UndoOpType::kModify:
-            // Modify 操作在 backupForModify 时创建了实际备份
-            m_pDb->removeBackup(entry.backupId);
-            break;
-
-        case UndoOpType::kRemove:
-            // Remove 操作在 moveToBackup 时创建了实际备份
-            // 删除备份 ID 对应的备份实体
-            m_pDb->removeBackup(entry.backupId);
-            break;
-
         case UndoOpType::kAdd:
-            // Add 操作的 backupId 只是预分配，没有实际数据，无需清理
+            // Undo记录：实体在工作区，无备份
+            // Redo记录：实体在备份区（undo后moveToBackup），需要清理
+            if (!isUndoRecord) {
+                m_pDb->removeBackup(entry.backupId);
+            }
+            break;
+            
+        case UndoOpType::kRemove:
+            // Undo记录：实体在备份区，需要清理
+            // Redo记录：实体在工作区（undo后restoreFromBackup），备份已空
+            if (isUndoRecord) {
+                m_pDb->removeBackup(entry.backupId);
+            }
+            break;
+        case UndoOpType::kModify:
+            // Modify 无论Undo记录还是Redo记录，始终有备份需要清理
+            m_pDb->removeBackup(entry.backupId);
             break;
     }
 }
 
 void UndoStack::clearAllRecordsBackups() {
-    for (const auto& record : m_records) {
-        for (const auto& entry : record.entries) {
-            clearEntryBackup(entry);
+    for (int i = 0; i < (int)m_records.size(); ++i) {
+        for (const auto& entry : m_records[i].entries) {
+            clearEntryBackup(entry, i <= m_currentIndex);
         }
     }
 }
@@ -97,10 +100,11 @@ void UndoStack::push(UndoRecord&& record) {
         // 原位遍历清理备份（从后向前避免索引问题）
         for (int i = (int)m_records.size() - 1; i > m_currentIndex; --i) {
             for (const auto& entry : m_records[i].entries) {
-                clearEntryBackup(entry);
+                clearEntryBackup(entry, false); // 清理redo记录
             }
         }
-        m_records.erase(m_records.begin() + m_currentIndex + 1, m_records.end());
+        // 这里m_currentIndex可能为-1，不能放前面，不然会跑到迭代器前面去了调试版本会断言错误，非常隐蔽的问题
+        m_records.erase(m_records.begin() + (1 + m_currentIndex), m_records.end());
     }
 
     // 添加新记录
@@ -183,8 +187,8 @@ void UndoStack::addEntry(UndoOpType type, ObjectId objId, ObjectId backupId) {
                 case UndoOpType::kModify:
                     if (type == UndoOpType::kModify) {
                         // 修改 + 修改 = 修改（保持第一次备份）
-                        // 清理后一个 Modify 创建的备份
-                        clearEntryBackup({type, objId, backupId});
+                        // 清理后一个 Modify 创建的备份（当前正在构建的是undo记录）
+                        clearEntryBackup({type, objId, backupId}, true);
                         return;
                     }
                     if (type == UndoOpType::kRemove) {

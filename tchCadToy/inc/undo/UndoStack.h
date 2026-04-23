@@ -79,8 +79,8 @@ private:
     // 清除所有记录中引用的备份实体（用于 clear）
     void clearAllRecordsBackups();
 
-    // 清除单个条目的备份实体
-    void clearEntryBackup(const UndoEntry& entry);
+    // 清除单个条目的备份实体，isUndoRecord=true表示这一条是undo记录，false表示这一条是redo记录
+    void clearEntryBackup(const UndoEntry& entry, bool isUndoRecord);
 
     // 添加孤儿备份 ID（在 endGroup 时清理）
     void addOrphanBackup(ObjectId backupId);

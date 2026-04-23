@@ -17,6 +17,7 @@
 #include "DocManager.h"
 #include "Database.h"
 #include "DbLine.h"
+#include "UndoManager.h"
 
 
 namespace tch {
@@ -36,6 +37,9 @@ void CommandLine::createNewLine(const glm::dvec3& start, const glm::dvec3& end) 
     
     ObjectId id = m_pDb->addObject(std::move(line));
     m_lineIds.push_back(id);
+    
+    // 记录添加操作到undo栈
+    UndoManager::getInstance().recordAdd(id);
 }
 
 // 更新最后一条线段的终点
@@ -63,6 +67,8 @@ void CommandLine::removeLastLine() {
     }
     
     ObjectId lastId = m_lineIds.back();
+    // 记录删除操作到undo栈
+    UndoManager::getInstance().recordRemove(lastId);
     m_pDb->removeObject(lastId);
     m_lineIds.pop_back();
     
@@ -89,6 +95,8 @@ void CommandLine::finalizeLastLine() {
     
     // 最后一条始终是预览线段，直接删除
     ObjectId lastId = m_lineIds.back();
+    // 记录删除操作到undo栈
+    UndoManager::getInstance().recordRemove(lastId);
     m_pDb->removeObject(lastId);
     m_lineIds.pop_back();
 }
