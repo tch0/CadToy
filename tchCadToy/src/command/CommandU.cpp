@@ -24,9 +24,6 @@ void CommandU::onUpdate() {
     auto& loc = LocalizationManager::getInstance();
     auto& undoManager = UndoManager::getInstance();
     
-    // 先结束自己的 undo 组，避免撤销自己
-    undoManager.endGroup();
-    
     if (undoManager.canUndo()) {
         // 获取上一个操作名称
         std::string undoName = undoManager.getUndoName();

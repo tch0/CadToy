@@ -24,9 +24,6 @@ void CommandRedo::onUpdate() {
     auto& loc = LocalizationManager::getInstance();
     auto& undoManager = UndoManager::getInstance();
     
-    // 先结束自己的 undo 组，避免重做自己的空组
-    undoManager.endGroup();
-    
     if (undoManager.canRedo()) {
         // 获取下一个操作名称
         std::string redoName = undoManager.getRedoName();

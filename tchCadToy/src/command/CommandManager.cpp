@@ -169,8 +169,10 @@ void CommandManager::executeCommand(const std::string& command) {
         
         DocManager::getCurrentDocument().addToCommandExecutionHistory(cmdFullName);
         
-        // 开始 undo 组，使用命令名作为组名
-        UndoManager::getInstance().beginGroup(cmdFullName);
+        // 只有不跳过 undo 记录的命令才创建 undo 组
+        if (!m_activeCommand->skipUndoRecording()) {
+            UndoManager::getInstance().beginGroup(cmdFullName);
+        }
     } else {
         Utils::cmdLinePrint(StringUtils::format(loc.get("commandLine.prompt.unknownCommand"), command)); // 未知命令: "{}"，按F1查看帮助。
     }
@@ -252,14 +254,16 @@ void CommandManager::cancelCurrentCommand()
                     "Please check if the command logic is stuck in an infinite loop. The command will now be forcibly terminated.");
             }
         }
+        // 置空当前命令前，先结束 undo 组（如果需要）
+        if (!m_activeCommand->skipUndoRecording()) {
+            UndoManager::getInstance().endGroup();
+        }
+        
         // 置空当前命令
         m_activeCommand = nullptr;
         
         // 重置输入上下文为无命令执行状态
         inputContext.setInCommandExecution(false);
-        
-        // 结束 undo 组（取消命令时结束组，undo 记录会被保留用于撤销已执行的操作）
-        UndoManager::getInstance().endGroup();
         
         // 最后再输出一个空行
         inputContext.handleEnterSpace("");
@@ -287,14 +291,16 @@ void CommandManager::runCommandLoop() {
         
         // 检查命令是否完成
         if (m_activeCommand->isCompleted()) {
+            // 置空当前命令前，先结束 undo 组（如果需要）
+            if (!m_activeCommand->skipUndoRecording()) {
+                UndoManager::getInstance().endGroup();
+            }
+            
             // 完成命令后清空当前命令
             m_activeCommand = nullptr;
             
             // 重置输入上下文
             InputContext::getInstance().setInCommandExecution(false);
-            
-            // 结束 undo 组（命令正常完成）
-            UndoManager::getInstance().endGroup();
         }
     }
 }

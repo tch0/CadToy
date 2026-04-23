@@ -15,6 +15,9 @@ public:
     CommandRedo();
     
     void onUpdate() override;
+    
+    // 跳过 undo 记录
+    bool skipUndoRecording() const override { return true; }
 };
 
 } // namespace tch

@@ -46,6 +46,9 @@ public:
     */
     virtual void onUpdate() = 0;
     
+    // 是否跳过 undo 记录（undo/redo 类命令返回 true）
+    virtual bool skipUndoRecording() const { return false; }
+    
     // 命令是否完成
     bool isCompleted() const;
     
