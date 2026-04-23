@@ -63,8 +63,8 @@ public:
     // 获取文件完整路径
     const std::filesystem::path& getFilePath() const { return m_filePath; }
     
-    // 检查文档是否被修改
-    bool isModified() const { return m_modified; }
+    // 检查文档是否被修改（文档层面或数据库层面任一被修改则返回true）
+    bool isModified() const { return m_modified || (m_database && m_database->isModified()); }
     
     // 检查文档是否已保存
     bool isSaved() const { return m_saved; }
@@ -113,9 +113,6 @@ public:
     bool saveToFile(const std::filesystem::path& filePath);
     bool saveToFile();
     
-    // 标记数据库已修改
-    void markDatabaseModified();
-
 private:
     // 从路径解析文件名和后缀
     void parseFilePath(const std::filesystem::path& path);

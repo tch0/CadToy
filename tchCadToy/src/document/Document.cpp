@@ -189,8 +189,4 @@ bool Document::saveToFile() {
     return saveToFile(m_filePath);
 }
 
-void Document::markDatabaseModified() {
-    markModified(true);
-}
-
 } // namespace tch

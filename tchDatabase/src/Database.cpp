@@ -65,8 +65,8 @@ ObjectId Database::addEntity(std::unique_ptr<DbObject> pObj) {
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
     
-    // 标记为脏并通知添加了实体
-    m_dirty = true;
+    // 标记为已修改并通知添加了实体
+    m_modified = true;
     if (m_pGraphicsCache) {
         m_pGraphicsCache->onEntityAdded(id);
     }
@@ -90,19 +90,6 @@ DbObject* Database::getObject(ObjectId id) const {
 DbEntity* Database::getEntity(ObjectId id) const {
     DbObject* pObj = getObject(id);
     return pObj ? pObj->as<DbEntity>() : nullptr;
-}
-
-// 遍历所有实体
-void Database::iterateEntities(const std::function<void(DbEntity*)>& func) const {
-    if (!func) {
-        return;
-    }
-    
-    for (const auto& [_, pObj] : m_objects) {
-        if (pObj && pObj->isType(DbObject::kEntity)) {
-            func(pObj->as<DbEntity>());
-        }
-    }
 }
 
 bool Database::hasObject(ObjectId id) const {
@@ -164,8 +151,8 @@ bool Database::removeEntity(ObjectId id) {
     m_backupObjects[id] = std::move(it->second);
     m_objects.erase(it);
     
-    // 标记脏并通知删除了实体
-    m_dirty = true;
+    // 标记为已修改并通知删除了实体
+    m_modified = true;
     if (m_pGraphicsCache) {
         m_pGraphicsCache->onEntityRemoved(id);
     }
@@ -197,8 +184,8 @@ void Database::eraseObject(ObjectId id) {
             m_objects.erase(it);
         }
         
-        // 标记为脏
-        m_dirty = true;
+        // 标记为已修改
+        m_modified = true;
         return;
     }
 
@@ -262,8 +249,8 @@ void Database::restoreFromBackup(ObjectId id) {
     m_objects[id] = std::move(it->second);
     m_backupObjects.erase(it);
     
-    // 标记为脏
-    m_dirty = true;
+    // 标记为已修改
+    m_modified = true;
 }
 
 void Database::swapWithBackup(ObjectId id) {
@@ -313,8 +300,8 @@ void Database::swapWithBackup(ObjectId id) {
         addLayerToTables(id, pLayer->name());
     }
     
-    // 标记为脏
-    m_dirty = true;
+    // 标记为已修改
+    m_modified = true;
 }
 
 DbObject* Database::getBackup(ObjectId id) const {
@@ -350,8 +337,8 @@ ObjectId Database::addLayer(std::unique_ptr<DbObject> pObj) {
     pObj->setDatabase(this);
     m_objects[id] = std::move(pObj);
     
-    // 标记脏（空图层不影响显示，不需要通知缓存）
-    m_dirty = true;
+    // 标记为已修改（空图层不影响显示，不需要通知缓存）
+    m_modified = true;
     
     return id;
 }
@@ -373,8 +360,8 @@ ObjectId Database::addLayer(const std::string& name) {
     m_objects[id] = std::move(newLayer);
     addLayerToTables(id, name);
     
-    // 标记脏（空图层不影响显示，不需要通知缓存）
-    m_dirty = true;
+    // 标记为已修改（空图层不影响显示，不需要通知缓存）
+    m_modified = true;
 
     return id;
 }
@@ -428,8 +415,8 @@ bool Database::removeLayer(ObjectId id) {
     m_backupObjects[id] = std::move(it->second);
     m_objects.erase(it);
     
-    // 标记为脏（图层上无实体，删除不影响显示，不需要通知缓存）
-    m_dirty = true;
+    // 标记为已修改（图层上无实体，删除不影响显示，不需要通知缓存）
+    m_modified = true;
 
     return true;
 }
@@ -440,11 +427,9 @@ void Database::setCurrentLayerId(ObjectId id) {
         return;
     }
     m_currentLayerId = id;
-    m_dirty = true;
-    if (m_pGraphicsCache) {
-        // 修改当前图层也不需要重生成
-        // m_pGraphicsCache->markAllDirty();
-    }
+    m_modified = true;
+    // 修改当前图层不影响显示，不需要重生成
+    // m_pGraphicsCache->markAllDirty();
 }
 
 DbLayer* Database::currentLayer() const {
@@ -453,7 +438,7 @@ DbLayer* Database::currentLayer() const {
 
 void Database::setDefaultLineWeight(DbLineWeight lw) {
     m_defaultLineWeight = lw;
-    m_dirty = true;
+    m_modified = true;
     if (m_pGraphicsCache) {
         // 默认线宽修改可能影响所有线宽值为默认的实体，需要通知重生成
         m_pGraphicsCache->markAllDirty();
@@ -462,7 +447,7 @@ void Database::setDefaultLineWeight(DbLineWeight lw) {
 
 void Database::setLinetypeScale(double scale) {
     m_linetypeScale = scale;
-    m_dirty = true;
+    m_modified = true;
     if (m_pGraphicsCache) {
         // 全局线性比例因子，影响显示，需要通知重生成
         m_pGraphicsCache->markAllDirty();
@@ -471,31 +456,31 @@ void Database::setLinetypeScale(double scale) {
 
 void Database::setCurrentEntityLinetypeScale(double scale) {
     m_currentEntityLinetypeScale = scale;
-    m_dirty = true;
+    m_modified = true;
     // 只影响接下来创建实体的线型比例，对已存在实体无影响，无需重生成
 }
 
 void Database::setLineWeightDisplay(bool display) {
     m_lineWeightDisplay = display;
-    m_dirty = true;
+    m_modified = true;
     // 线宽值始终生成在顶点中数据中，渲染器根据LWDISPLAY选择渲染器，修改不需要重生成
 }
 
 void Database::setCurrentEntityColor(const DbColor& color) {
     m_currentEntityColor = color;
-    m_dirty = true;
+    m_modified = true;
     // 只影响后续创建的实体，不通知缓存重生成
 }
 
 void Database::setCurrentEntityLinetype(const DbLinetypeRef& lt) {
     m_currentEntityLinetype = lt;
-    m_dirty = true;
+    m_modified = true;
     // 只影响后续创建的实体，不通知缓存重生成
 }
 
 void Database::setCurrentEntityLineWeight(DbLineWeight lw) {
     m_currentEntityLineWeight = lw;
-    m_dirty = true;
+    m_modified = true;
     // 只影响后续创建的实体，不通知缓存重生成
 }
 
@@ -522,9 +507,9 @@ ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) 
 
     // 维护图层索引
     moveEntityInIndex(entityId, currentLayerId, targetLayerId);
-    
-    // 标记脏并通知实体修改
-    m_dirty = true;
+
+    // 标记为已修改并通知实体修改
+    m_modified = true;
     if (m_pGraphicsCache) {
         m_pGraphicsCache->onEntityModified(entityId);
     }
@@ -545,6 +530,7 @@ const std::unordered_set<ObjectId>& Database::getEntitiesOnLayer(ObjectId layerI
 // 遍历和查询
 // ======================================================================================================
 
+// 遍历所有对象，包括实体、图层等
 void Database::forEachObject(const std::function<void(DbObject*)>& callback) const {
     for (const auto& [id, pObj] : m_objects) {
         if (pObj) {
@@ -553,6 +539,26 @@ void Database::forEachObject(const std::function<void(DbObject*)>& callback) con
     }
 }
 
+// 遍历所有实体
+void Database::forEachEntity(const std::function<void(DbEntity*)>& callback) const {
+    for (const auto& [id, pObj] : m_objects) {
+        if (pObj && pObj->isType(DbObject::kEntity)) {
+            callback(pObj->as<DbEntity>());
+        }
+    }
+}
+
+// 遍历所有图层
+void Database::forEachLayer(const std::function<void(DbLayer*)>& callback) const {
+    for (ObjectId layerId : m_layerIds) {
+        DbLayer* pLayer = getLayer(layerId);
+        if (pLayer) {
+            callback(pLayer);
+        }
+    }
+}
+
+// 遍历所有备份区对象
 void Database::forEachInBackup(const std::function<void(DbObject*)>& callback) const {
     for (const auto& [id, pObj] : m_backupObjects) {
         if (pObj) {
@@ -633,8 +639,8 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
 
     writer.EndObject();
 
-    // 保存成功后清除脏标记
-    clearDirty();
+    // 保存成功后清除修改标记
+    clearModified();
 }
 
 bool Database::loadFromJson(const rapidjson::Value& value) {
@@ -767,7 +773,7 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     }
 
     // 加载完成后设置为未修改状态
-    clearDirty();
+    clearModified();
     // 加载完成后需要标记全量重生成
     if (m_pGraphicsCache) {
         m_pGraphicsCache->markAllDirty();
@@ -790,14 +796,14 @@ void Database::purge() {
 // ======================================================================================================
 
 void Database::onEntityModified(ObjectId id) {
-    m_dirty = true;
+    m_modified = true;
     if (m_pGraphicsCache) {
         m_pGraphicsCache->onEntityModified(id);
     }
 }
 
 void Database::onLayerModified(ObjectId id) {
-    m_dirty = true;
+    m_modified = true;
     // 获取该图层上的所有实体，逐个通知
     const auto& entities = getEntitiesOnLayer(id);
     if (m_pGraphicsCache) {

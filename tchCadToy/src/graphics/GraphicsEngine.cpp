@@ -54,7 +54,7 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
         pDataCache->clearAllCacheData();
         
         // 遍历数据库所有实体生成缓存
-        pDb->iterateEntities([&](DbEntity* pEntity) {
+        pDb->forEachEntity([&](DbEntity* pEntity) {
             if (!pEntity) {
                 return;
             }

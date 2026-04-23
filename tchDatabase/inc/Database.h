@@ -62,9 +62,6 @@ public:
     // 获取实体
     DbEntity* getEntity(ObjectId id) const;
 
-    // 遍历所有实体（回调函数方式）
-    void iterateEntities(const std::function<void(DbEntity*)>& func) const;
-
     // 检查对象是否存在（不包括备份区的）
     bool hasObject(ObjectId id) const;
 
@@ -171,6 +168,12 @@ public:
     // 遍历所有对象（不包括备份区的）
     void forEachObject(const std::function<void(DbObject*)>& callback) const;
 
+    // 遍历所有实体（不包括备份区的）
+    void forEachEntity(const std::function<void(DbEntity*)>& callback) const;
+
+    // 遍历所有图层
+    void forEachLayer(const std::function<void(DbLayer*)>& callback) const;
+
     // 遍历所有备份区的对象
     void forEachInBackup(const std::function<void(DbObject*)>& callback) const;
 
@@ -205,14 +208,14 @@ public:
     IGraphicsDataCache* getGraphicsDataCache() const { return m_pGraphicsCache; }
 
     // =======================================================================================
-    // 脏标记
+    // 修改标记
     // =======================================================================================
 
-    // 文档是否被修改
-    bool isDirty() const { return m_dirty; }
+    // 数据库是否被修改
+    bool isModified() const { return m_modified; }
 
-    // 清除脏标记（saveToJson后自动调用）
-    void clearDirty() { m_dirty = false; }
+    // 清除修改标记（saveToJson后自动调用）
+    void clearModified() { m_modified = false; }
 
     // =======================================================================================
     // 通知接口（供 DbObject 调用）
@@ -251,7 +254,7 @@ private:
     DbLineWeight m_currentEntityLineWeight = DbLineWeight::kByLayer;    // 当前实体线宽 (CELWEIGHT)，新建实体默认线宽，默认ByLayer
 
     // 脏标记
-    bool m_dirty = false;                                   // 文档是否被修改
+    bool m_modified = false;                                // 数据库是否被修改
 
     // 下一个可用 ID
     ObjectId m_nextSystemId = kSystemStart;
