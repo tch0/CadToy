@@ -433,24 +433,39 @@ Database
     - 备份实体只存在于一个会话中，不需要序列化，保存重新打开后丢失。
 - 实体备份事实上足以处理所有情况，但是针对大量实体的属性修改可能会造成大量实体备份同时存在(例如100次连续选择100个实体修改属性会造成10000个实体备份，而增量修改方案则几乎没有什么内存消耗也不需要频繁克隆)。所以对轻量高频的属性修改进行优化以实现内存、性能、可用性的最优化方案。
 
-具体细节：
-- Undo栈保存在Document中对应于该Database，超过100次的记录会被丢弃。
-- undo执行后redo栈新增一条记录，记录与上一条undo栈相反的信息(或者不需要存储反向信息，直接用undo记录推导redo操作就行，undo/redo时记录在undo/redo栈之间移动就行，一个动态数组配合移动的索引即可实现)。新的undo操作开始记录(beginUndoGroup)会让redo栈丢弃现有所有记录。
-- 数据库Database中提供标记删除的功能，而具体的实体克隆则由Undo框架来完成。
+具体实现：
+- **UndoStack**：保存在Document中，关联到Database。使用动态数组存储UndoRecord，配合当前索引实现undo/redo栈。
+- **UndoManager**：全局单例，无状态转发层，所有操作转发到当前文档的UndoStack。
+- **UndoRecord**：一个命令组(beginGroup/endGroup)的所有操作，包含多个UndoEntry（实体ID、备份ID、操作类型）。
+- **备份机制**：
+    - Modify：克隆实体到备份区，undo/redo时交换主区和备份区实体。
+    - Remove：实体移动到备份区（使用删除备份ID格式：原ID | 0x8000...），undo时恢复，redo时再次删除。
+    - Add：预分配备份ID但无实际数据，undo时移动到备份区，redo时恢复。
+- **合并规则**（同group内同一实体）：
+    - Add + Modify = Add
+    - Add + Remove = 取消（无记录）
+    - Modify + Modify = Modify（保持第一次备份）
+    - Modify + Remove = Remove（使用Modify备份）
+- **备份清理**：push清除redo记录时、clear清空栈时、Modify+Remove合并时，清理不再使用的备份实体。
+- **嵌套保护**：beginGroup检测嵌套，自动结束上一个group并记录警告日志。
+
 ```C++
-// 参考
-class UndoManager {
-public:
-    void beginUndoGroup();
-    void endUndoGroup();
-    void recordModify(ObjectId id);
-    void recordDelete(ObjectId id);
-    void recordCreate(ObjectId id);
-};
+// 使用示例
+UndoManager::getInstance().beginGroup("绘制直线");
+UndoManager::getInstance().recordAdd(lineId);
+UndoManager::getInstance().endGroup();
 ```
-- 命令层需要在任何涉及数据库修改的地方调用对应的函数记录修改，方便Undo框架生成与管理备份对象。
-- 最终一组`beginUndoGroup/endUndoGroup`的所有操作被记录为一个Undo栈中的一个`UndoRecord`，`undo/redo`命令通过管理这个栈执行变更来实现撤销重做操作。如果整个`beginUndoGroup/endUndoGroup`期间没有任何记录，则不会生成`UndoRecord`。
-- 而属性修改对应的undo记录则比较简单，只需要一个Id列表、属性原值与修改后的值即可，后续属性栏实现时再来补充。
+
+为什么这样实现是合理、安全、通用的：
+- 通过ID记录，无悬垂指针。
+- ID单向增长，undo/redo不会覆盖新实体。
+- 备份实体只存在于内存，不序列化。
+
+其他（未实现）：
+- 属性修改undo：需要记录属性原值和新值。
+- 系统变量修改undo：需要特殊类型记录。
+
+
 
 ## 图形引擎与图形数据缓存
 

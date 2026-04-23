@@ -12,6 +12,7 @@
 #include "TransformManager.h"
 #include "Database.h"
 #include "GraphicsDataCache.h"
+#include "UndoStack.h"
 
 
 namespace tch {
@@ -35,6 +36,9 @@ private:
     
     // 图形数据缓存（关联到数据库，管理实体渲染数据）
     std::unique_ptr<GraphicsDataCache> m_graphicsDataCache;
+
+    // Undo 栈（保存 Undo/Redo 记录）
+    UndoStack m_undoStack;
 
 public:
     // 默认构造函数：创建空文档，不构造 Database
@@ -104,6 +108,9 @@ public:
     
     // 获取图形数据缓存
     GraphicsDataCache* getGraphicsDataCache() const { return m_graphicsDataCache.get(); }
+
+    // 获取 Undo 栈
+    UndoStack& getUndoStack() { return m_undoStack; }
     
     // 从文件加载（使用 Database 反序列化）
     bool loadFromFile(const std::filesystem::path& filePath);

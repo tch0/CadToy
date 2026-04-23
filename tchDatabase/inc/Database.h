@@ -78,18 +78,36 @@ public:
     // Undo/Redo 支持（UndoManager 使用）
     // =======================================================================================
 
-    // 创建修改备份（克隆对象到备份区，使用偏移ID）
-    void backupForModify(ObjectId id);
+    // 分配普通备份 ID（用于修改、添加预留）
+    ObjectId allocateBackupId();
 
-    // 从备份区恢复对象（还原 ID）
-    void restoreFromBackup(ObjectId id);
+    // 获取删除备份 ID（静态方法，供 UndoManager 使用）
+    static ObjectId getRemoveBackupId(ObjectId objId);
+
+    // 创建修改备份（克隆对象到备份区，使用指定的 backupId）
+    void backupForModify(ObjectId objId, ObjectId backupId);
+
+    // 从备份区恢复对象（使用指定的 backupId）
+    void restoreFromBackup(ObjectId objId, ObjectId backupId);
 
     // 交换对象和备份（用于修改的 undo/redo）
-    void swapWithBackup(ObjectId id);
+    void swapWithBackup(ObjectId objId, ObjectId backupId);
+
+    // 转移对象到备份区（用于添加的 undo）
+    void moveToBackup(ObjectId objId, ObjectId backupId);
+
+    // 检查备份是否存在
+    bool hasBackup(ObjectId backupId) const;
 
     // 获取备份对象
     DbObject* getBackup(ObjectId backupId) const;
 
+    // 从备份区永久删除指定备份实体
+    void removeBackup(ObjectId backupId);
+
+    // 清理冗余备份实体
+    void purge();
+    
     // =======================================================================================
     // 图层管理
     // =======================================================================================
@@ -165,13 +183,13 @@ public:
     // 遍历和查询
     // =======================================================================================
 
-    // 遍历所有对象（不包括备份区的）
+    // 遍历所有对象（不包括备份区的），回调中不应该修改容器，比如添加移除对象
     void forEachObject(const std::function<void(DbObject*)>& callback) const;
 
-    // 遍历所有实体（不包括备份区的）
+    // 遍历所有实体（不包括备份区的），回调中不应该修改容器，比如添加移除对象
     void forEachEntity(const std::function<void(DbEntity*)>& callback) const;
 
-    // 遍历所有图层
+    // 遍历所有图层，回调中不应该修改容器，比如添加移除对象
     void forEachLayer(const std::function<void(DbLayer*)>& callback) const;
 
     // 遍历所有备份区的对象
@@ -189,13 +207,6 @@ public:
 
     void saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer);
     bool loadFromJson(const rapidjson::Value& value);
-
-    // =======================================================================================
-    // Purge 支持
-    // =======================================================================================
-
-    // 清理冗余备份实体
-    void purge();
 
     // =======================================================================================
     // 图形数据缓存关联
@@ -260,6 +271,7 @@ private:
     ObjectId m_nextSystemId = kSystemStart;
     ObjectId m_nextSymbolId = kSymbolStart;
     ObjectId m_nextEntityId = kEntityStart;
+    ObjectId m_nextBackupId = 1;  // 普通备份 ID 从 1 开始
 
     // 图形数据缓存指针（不参与序列化）
     IGraphicsDataCache* m_pGraphicsCache = nullptr;

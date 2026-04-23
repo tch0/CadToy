@@ -41,6 +41,8 @@ Document::Document(const std::string& fileName) :
     // 关联图形数据缓存到数据库（双向关联）
     m_graphicsDataCache->setDatabase(m_database.get());
     m_database->setGraphicsDataCache(m_graphicsDataCache.get());
+    // 关联数据库到 Undo 栈
+    m_undoStack.setDatabase(m_database.get());
 }
 
 // 从路径解析文件名和后缀

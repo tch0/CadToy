@@ -147,8 +147,10 @@ bool Database::removeEntity(ObjectId id) {
     // 清除数据库指针
     it->second->setDatabase(nullptr);
 
-    // 移动到备份区（保持原始ID）
-    m_backupObjects[id] = std::move(it->second);
+    // 移动到备份区（使用删除备份 ID）
+    ObjectId backupId = getRemoveBackupId(id);
+    it->second->setId(backupId);
+    m_backupObjects[backupId] = std::move(it->second);
     m_objects.erase(it);
     
     // 标记为已修改并通知删除了实体
@@ -200,71 +202,84 @@ void Database::eraseObject(ObjectId id) {
 // Undo/Redo 支持
 // ======================================================================================================
 
-void Database::backupForModify(ObjectId id) {
-    if (id == 0) {
+// 删除备份 ID 掩码（最高位为 1）
+static constexpr ObjectId kRemoveBackupMask = 0x8000000000000000;
+
+// 获取删除备份 ID（静态方法）
+ObjectId Database::getRemoveBackupId(ObjectId objId) {
+    return objId | kRemoveBackupMask;
+}
+
+ObjectId Database::allocateBackupId() {
+    return m_nextBackupId++;
+}
+
+void Database::backupForModify(ObjectId objId, ObjectId backupId) {
+    if (objId == 0 || backupId == 0) {
         return;
     }
 
-    auto it = m_objects.find(id);
+    auto it = m_objects.find(objId);
     if (it == m_objects.end() || !it->second) {
         return;
     }
 
-    // 克隆对象到备份区（保持原始ID）
+    // 克隆对象到备份区（使用指定的 backupId）
     std::unique_ptr<DbObject> backup = it->second->clone();
     if (backup) {
-        backup->setId(id);
-        m_backupObjects[id] = std::move(backup);
+        backup->setId(backupId);
+        m_backupObjects[backupId] = std::move(backup);
     }
 }
 
-void Database::restoreFromBackup(ObjectId id) {
-    if (id == 0) {
+void Database::restoreFromBackup(ObjectId objId, ObjectId backupId) {
+    if (objId == 0 || backupId == 0) {
         return;
     }
 
-    auto it = m_backupObjects.find(id);
+    auto it = m_backupObjects.find(backupId);
     if (it == m_backupObjects.end() || !it->second) {
         return;
     }
 
-    // 设置数据库指针
+    // 设置数据库指针和 ID
     it->second->setDatabase(this);
+    it->second->setId(objId);
 
     // 根据类型维护表格并通知缓存
     // 实体
     if (DbEntity* pEntity = it->second->as<DbEntity>()) {
-        addEntityToIndex(id, pEntity->layerId());
+        addEntityToIndex(objId, pEntity->layerId());
         // 通知添加了实体（只有实体需要通知）
         if (m_pGraphicsCache) {
-            m_pGraphicsCache->onEntityAdded(id);
+            m_pGraphicsCache->onEntityAdded(objId);
         }
     }
     // 图层
     else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
-        addLayerToTables(id, pLayer->name());
+        addLayerToTables(objId, pLayer->name());
     }
 
-    // 移回正常区（保持原始ID）
-    m_objects[id] = std::move(it->second);
+    // 移回正常区
+    m_objects[objId] = std::move(it->second);
     m_backupObjects.erase(it);
     
     // 标记为已修改
     m_modified = true;
 }
 
-void Database::swapWithBackup(ObjectId id) {
-    if (id == 0) {
+void Database::swapWithBackup(ObjectId objId, ObjectId backupId) {
+    if (objId == 0 || backupId == 0) {
         return;
     }
 
     // 获取对象和备份
-    auto objIt = m_objects.find(id);
+    auto objIt = m_objects.find(objId);
     if (objIt == m_objects.end() || !objIt->second) {
         return;
     }
 
-    auto backupIt = m_backupObjects.find(id);
+    auto backupIt = m_backupObjects.find(backupId);
     if (backupIt == m_backupObjects.end() || !backupIt->second) {
         return;
     }
@@ -272,36 +287,78 @@ void Database::swapWithBackup(ObjectId id) {
     // 交换前：从表格中移除当前对象的信息
     // 实体
     if (DbEntity* pEntity = objIt->second->as<DbEntity>()) {
-        removeEntityFromIndex(id, pEntity->layerId());
+        removeEntityFromIndex(objId, pEntity->layerId());
     }
     // 图层
     else if (DbLayer* pLayer = objIt->second->as<DbLayer>()) {
-        removeLayerFromTables(id, pLayer->name());
+        removeLayerFromTables(objId, pLayer->name());
     }
 
-    // 交换指针（ID保持不变）
+    // 交换指针
     std::swap(objIt->second, backupIt->second);
 
-    // 更新数据库指针
-    objIt->second->setDatabase(this);       // 正常区对象设置指针
-    backupIt->second->setDatabase(nullptr); // 备份区对象清除指针
+    // 更新数据库指针和 ID
+    objIt->second->setDatabase(this);
+    objIt->second->setId(objId);
+    backupIt->second->setDatabase(nullptr);
+    backupIt->second->setId(backupId);
 
     // 交换后：添加新对象的信息到表格并通知缓存
     // 实体
     if (DbEntity* pEntity = objIt->second->as<DbEntity>()) {
-        addEntityToIndex(id, pEntity->layerId());
+        addEntityToIndex(objId, pEntity->layerId());
         // 通知修改了实体（只有实体需要通知）
         if (m_pGraphicsCache) {
-            m_pGraphicsCache->onEntityModified(id);
+            m_pGraphicsCache->onEntityModified(objId);
         }
     }
     // 图层
     else if (DbLayer* pLayer = objIt->second->as<DbLayer>()) {
-        addLayerToTables(id, pLayer->name());
+        addLayerToTables(objId, pLayer->name());
     }
-    
+
     // 标记为已修改
     m_modified = true;
+}
+
+void Database::moveToBackup(ObjectId objId, ObjectId backupId) {
+    if (objId == 0 || backupId == 0) {
+        return;
+    }
+
+    auto it = m_objects.find(objId);
+    if (it == m_objects.end() || !it->second) {
+        return;
+    }
+
+    // 根据类型维护表格
+    // 实体
+    if (DbEntity* pEntity = it->second->as<DbEntity>()) {
+        removeEntityFromIndex(objId, pEntity->layerId());
+        // 通知删除了实体
+        if (m_pGraphicsCache) {
+            m_pGraphicsCache->onEntityRemoved(objId);
+        }
+    }
+    // 图层
+    else if (DbLayer* pLayer = it->second->as<DbLayer>()) {
+        removeLayerFromTables(objId, pLayer->name());
+    }
+
+    // 清除数据库指针
+    it->second->setDatabase(nullptr);
+
+    // 设置备份 ID 并移到备份区
+    it->second->setId(backupId);
+    m_backupObjects[backupId] = std::move(it->second);
+    m_objects.erase(it);
+
+    // 标记为已修改
+    m_modified = true;
+}
+
+bool Database::hasBackup(ObjectId backupId) const {
+    return m_backupObjects.find(backupId) != m_backupObjects.end();
 }
 
 DbObject* Database::getBackup(ObjectId id) const {
@@ -310,6 +367,15 @@ DbObject* Database::getBackup(ObjectId id) const {
         return it->second.get();
     }
     return nullptr;
+}
+
+void Database::removeBackup(ObjectId backupId) {
+    m_backupObjects.erase(backupId);
+}
+
+void Database::purge() {
+    // 清理所有备份实体
+    m_backupObjects.clear();
 }
 
 // ======================================================================================================
@@ -410,11 +476,15 @@ bool Database::removeLayer(ObjectId id) {
         removeLayerFromTables(id, pLayer->name());
     }
 
-    // 清除数据库指针并移动到备份区
+    // 清除数据库指针
     it->second->setDatabase(nullptr);
-    m_backupObjects[id] = std::move(it->second);
+
+    // 移动到备份区（使用删除备份 ID）
+    ObjectId backupId = getRemoveBackupId(id);
+    it->second->setId(backupId);
+    m_backupObjects[backupId] = std::move(it->second);
     m_objects.erase(it);
-    
+
     // 标记为已修改（图层上无实体，删除不影响显示，不需要通知缓存）
     m_modified = true;
 
@@ -780,15 +850,6 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
     }
 
     return true;
-}
-
-// ======================================================================================================
-// Purge 支持
-// ======================================================================================================
-
-void Database::purge() {
-    // 清理所有备份实体
-    m_backupObjects.clear();
 }
 
 // ======================================================================================================
