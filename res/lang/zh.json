@@ -160,6 +160,8 @@
   "command.circle.centerPrompt": "指定圆的圆心或 [三点(3P)/两点(2P)/切点、切点、半径(T)]:",
   "command.circle.radiusPrompt": "指定圆的半径或 [直径(D)] <{}>:",
   "command.circle.diameterPrompt": "指定圆的直径 <{}>:",
+  "command.circle.radiusZero": "半径为0，无效圆，重新输入正值或指定点。",
+  "command.circle.diameterZero": "直径为0，无效圆，重新输入正值或指定点。",
   "command.circle.3p.firstPoint": "指定圆上的第一个点:",
   "command.circle.3p.secondPoint": "指定圆上的第二个点:",
   "command.circle.3p.thirdPoint": "指定圆上的第三个点:",

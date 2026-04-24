@@ -34,52 +34,31 @@ CommandCircle::CommandCircle()
     , m_previewCircleId(0) {
 }
 
-// 创建圆并入库（记录undo）
-void CommandCircle::createCircle(const glm::dvec3& center, double radius) {
-    if (radius <= 0) {
-        return;
-    }
-
-    auto& db = *DocManager::getCurrentDocument().getDatabase();
-    auto circle = std::make_unique<DbCircle>(center, radius);
-    circle->setPropertiesFromDb();
-
-    ObjectId id = db.addObject(std::move(circle));
-    // 记录实体添加
-    UndoManager::getInstance().recordAdd(id);
-}
-
-// 创建预览圆（记录undo）
-void CommandCircle::createPreviewCircle(const glm::dvec3& center, double radius) {
-    auto& db = *DocManager::getCurrentDocument().getDatabase();
-    auto circle = std::make_unique<DbCircle>(center, radius);
-    circle->setPropertiesFromDb();
-
-    m_previewCircleId = db.addObject(std::move(circle));
-    // 记录实体添加
-    UndoManager::getInstance().recordAdd(m_previewCircleId);
-}
-
-// 更新预览圆（不记录undo）
+// 更新预览圆（ID无效时创建，有效时更新；预览圆就是最终圆）
 void CommandCircle::updatePreviewCircle(const glm::dvec3& center, double radius) {
-    if (m_previewCircleId == 0) {
-        return;
-    }
-
     auto& db = *DocManager::getCurrentDocument().getDatabase();
-    auto* pEntity = db.getEntity(m_previewCircleId);
-    if (!pEntity) {
-        return;
-    }
 
-    auto* pCircle = pEntity->as<DbCircle>();
-    if (pCircle) {
-        pCircle->setCenter(center);
-        pCircle->setRadius(radius);
+    if (m_previewCircleId == 0) {
+        // ID无效，创建新圆
+        auto circle = std::make_unique<DbCircle>(center, radius);
+        circle->setPropertiesFromDb();
+        m_previewCircleId = db.addObject(std::move(circle));
+        // 记录实体添加
+        UndoManager::getInstance().recordAdd(m_previewCircleId);
+    } else {
+        // ID有效，更新现有圆
+        auto* pEntity = db.getEntity(m_previewCircleId);
+        if (pEntity) {
+            auto* pCircle = pEntity->as<DbCircle>();
+            if (pCircle) {
+                pCircle->setCenter(center);
+                pCircle->setRadius(radius);
+            }
+        }
     }
 }
 
-// 删除预览圆（记录undo）
+// 删除预览圆（记录undo，在kCreateFailed状态统一调用）
 void CommandCircle::removePreviewCircle() {
     if (m_previewCircleId == 0) {
         return;
@@ -92,12 +71,11 @@ void CommandCircle::removePreviewCircle() {
     m_previewCircleId = 0;
 }
 
-// 输出无效提示并结束
+// 输出无效提示，切换到kCreateFailed状态
 void CommandCircle::failWithInvalid() {
     auto& loc = LocalizationManager::getInstance();
     Utils::cmdLinePrint(loc.get("command.circle.invalid")); // 圆不存在。
-    removePreviewCircle();
-    m_state = kCompleted;
+    m_state = kCreateFailed;
 }
 
 void CommandCircle::onUpdate() {
@@ -163,8 +141,6 @@ void CommandCircle::onUpdate() {
             m_state = kRadiusPointQuery;
             // 指定圆的半径或 [直径(D)] <默认值>:
             ctx.waitForPoint(StringUtils::format(loc.get("command.circle.radiusPrompt"), s_defaultRadius), m_center, {"D"});
-            // 创建初始预览圆（极小半径）
-            createPreviewCircle(m_center, 0.001);
             break;
 
         case kRadiusPointQuery: {
@@ -178,25 +154,32 @@ void CommandCircle::onUpdate() {
                 updatePreviewCircle(m_center, radius);
                 break;
             }
-            // Esc：取消命令，清理预览，结束
+            // Esc：取消命令，切换到创建失败状态（统一清理预览圆）
             else if (status == InputStatus::kCanceled) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
-            // Enter/Space：使用默认半径更新预览圆（预览圆就是最终圆），更新默认值，结束
+            // Enter/Space：使用默认半径更新预览圆（预览圆就是最终圆），结束
             else if (status == InputStatus::kEnterInput) {
                 updatePreviewCircle(m_center, s_defaultRadius);
-                s_defaultRadius = s_defaultRadius;
                 m_state = kCompleted;
             }
-            // 点输入：计算半径，更新预览圆（预览圆就是最终圆），更新默认值，结束
+            // 点输入：计算半径，检查是否重合（半径为0），更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
                 glm::dvec3 point;
                 if (ctx.getPickedPoint(point)) {
-                    m_radius = glm::distance(m_center, point);
-                    updatePreviewCircle(m_center, m_radius);
-                    s_defaultRadius = m_radius;
-                    m_state = kCompleted;
+                    // 检查点是否与圆心重合（半径为0）
+                    if (Geometry::isCoincident(m_center, point)) {
+                        // 半径为0，输出错误提示，继续等待输入
+                        Utils::cmdLinePrint(loc.get("command.circle.radiusZero")); // 半径为0，无效圆，重新输入正值或指定点。
+                        // 重新进入半径输入状态
+                        m_state = kRadiusPointEntry;
+                    }
+                    else {
+                        m_radius = glm::distance(m_center, point);
+                        updatePreviewCircle(m_center, m_radius);
+                        s_defaultRadius = m_radius;
+                        m_state = kCompleted;
+                    }
                 }
             }
             // 关键字D：进入直径模式
@@ -204,7 +187,6 @@ void CommandCircle::onUpdate() {
                 std::string keyword;
                 ctx.getKeyword(keyword);
                 if (keyword == "D") {
-                    removePreviewCircle();
                     m_state = kDiameterPointEntry;
                 }
             }
@@ -218,8 +200,6 @@ void CommandCircle::onUpdate() {
             m_state = kDiameterPointQuery;
             // 指定圆的直径 <默认值>:
             ctx.waitForPoint(StringUtils::format(loc.get("command.circle.diameterPrompt"), s_defaultRadius * 2), m_center, {});
-            // 创建初始预览圆
-            createPreviewCircle(m_center, 0.001);
             break;
 
         case kDiameterPointQuery: {
@@ -234,25 +214,33 @@ void CommandCircle::onUpdate() {
                 updatePreviewCircle(m_center, radius);
                 break;
             }
-            // Esc：取消命令，清理预览，结束
+            // Esc：取消命令，切换到创建失败状态（统一清理预览圆）
             else if (status == InputStatus::kCanceled) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
             // Enter/Space：使用默认直径（默认半径*2）更新预览圆（预览圆就是最终圆），结束
             else if (status == InputStatus::kEnterInput) {
                 updatePreviewCircle(m_center, s_defaultRadius);
                 m_state = kCompleted;
             }
-            // 点输入：计算半径（点到圆心距离是直径，除以2），更新预览圆（预览圆就是最终圆），更新默认值，结束
+            // 点输入：计算半径（点到圆心距离是直径，除以2），检查是否重合（直径为0），更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
                 glm::dvec3 point;
                 if (ctx.getPickedPoint(point)) {
-                    // 点到圆心的距离是直径，半径需要除以2
-                    double radius = glm::distance(m_center, point) / 2.0;
-                    updatePreviewCircle(m_center, radius);
-                    s_defaultRadius = radius;
-                    m_state = kCompleted;
+                    // 检查点是否与圆心重合（直径为0）
+                    if (Geometry::isCoincident(m_center, point)) {
+                        // 直径为0，输出错误提示，继续等待输入
+                        Utils::cmdLinePrint(loc.get("command.circle.diameterZero")); // 直径为0，无效圆，重新输入正值或指定点。
+                        // 重新进入直径输入状态
+                        m_state = kDiameterPointEntry;
+                    }
+                    else {
+                        // 点到圆心的距离是直径，半径需要除以2
+                        double radius = glm::distance(m_center, point) / 2.0;
+                        updatePreviewCircle(m_center, radius);
+                        s_defaultRadius = radius;
+                        m_state = kCompleted;
+                    }
                 }
             }
             break;
@@ -331,9 +319,6 @@ void CommandCircle::onUpdate() {
             m_state = k3P_ThirdPointQuery;
             // 指定圆上的第三个点:
             ctx.waitForPoint(loc.get("command.circle.3p.thirdPoint"));
-            // 创建初始预览圆（使用第一点和第二点计算临时圆心）
-            createPreviewCircle((m_firstPoint + m_secondPoint) * 0.5,
-                                glm::distance(m_firstPoint, m_secondPoint) * 0.5);
             break;
 
         case k3P_ThirdPointQuery: {
@@ -350,17 +335,15 @@ void CommandCircle::onUpdate() {
                 }
                 break;
             }
-            // Esc：取消命令，清理预览，结束
+            // Esc：取消命令，切换到创建失败状态（统一清理预览圆）
             else if (status == InputStatus::kCanceled) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
             // Enter/Space：结束命令
             else if (status == InputStatus::kEnterInput) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
-            // 点输入：获取第三点，检查重合，计算圆，更新预览圆（预览圆就是最终圆），更新默认值，结束
+            // 点输入：获取第三点，检查重合，计算圆，更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
                 glm::dvec3 thirdPoint;
                 if (ctx.getPickedPoint(thirdPoint)) {
@@ -424,8 +407,6 @@ void CommandCircle::onUpdate() {
             m_state = k2P_SecondPointQuery;
             // 指定圆直径的第二个端点:
             ctx.waitForPoint(loc.get("command.circle.2p.secondPoint"));
-            // 创建初始预览圆
-            createPreviewCircle(m_firstPoint, 0.001);
             break;
 
         case k2P_SecondPointQuery: {
@@ -440,17 +421,15 @@ void CommandCircle::onUpdate() {
                 updatePreviewCircle(center, radius);
                 break;
             }
-            // Esc：取消命令，清理预览，结束
+            // Esc：取消命令，切换到创建失败状态（统一清理预览圆）
             else if (status == InputStatus::kCanceled) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
             // Enter/Space：结束命令
             else if (status == InputStatus::kEnterInput) {
-                removePreviewCircle();
-                m_state = kCompleted;
+                m_state = kCreateFailed;
             }
-            // 点输入：获取第二点，检查重合，计算圆心和半径，更新预览圆（预览圆就是最终圆），更新默认值，结束
+            // 点输入：获取第二点，检查重合，计算圆心和半径，更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
                 glm::dvec3 secondPoint;
                 if (ctx.getPickedPoint(secondPoint)) {
@@ -558,7 +537,7 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kEnterInput) {
                 // TODO: 根据两切点和默认半径计算圆心（可能有两个解）
                 glm::dvec3 center = (m_firstPoint + m_secondPoint) * 0.5;
-                createCircle(center, s_defaultRadius);
+                updatePreviewCircle(center, s_defaultRadius);
                 m_state = kCompleted;
             }
             // 数值输入：获取半径，创建圆，更新默认值，结束
@@ -573,7 +552,7 @@ void CommandCircle::onUpdate() {
                     else {
                         // TODO: 根据两切点和半径计算圆心（可能有两个解）
                         glm::dvec3 center = (m_firstPoint + m_secondPoint) * 0.5;
-                        createCircle(center, radius);
+                        updatePreviewCircle(center, radius);
                         s_defaultRadius = radius;
                         m_state = kCompleted;
                     }
@@ -581,6 +560,14 @@ void CommandCircle::onUpdate() {
             }
             break;
         }
+
+        // ============================================================================
+        // 创建失败状态：统一清理预览圆，然后结束
+        // ============================================================================
+        case kCreateFailed:
+            removePreviewCircle();
+            m_state = kCompleted;
+            break;
 
         // ============================================================================
         // 结束状态

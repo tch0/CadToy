@@ -49,6 +49,7 @@ private:
         kT_RadiusEntry,         // T半径入口
         kT_RadiusQuery,         // T半径输入查询
 
+        kCreateFailed,          // 创建失败状态（统一清理预览圆）
         kCompleted              // 结束状态
     };
 
@@ -59,19 +60,13 @@ private:
     double m_radius;            // 半径
     ObjectId m_previewCircleId; // 预览圆ID，0表示无预览，有预览时如果创建成功预览圆就是最终圆
 
-    // 创建圆并入库（记录undo）
-    void createCircle(const glm::dvec3& center, double radius);
-
-    // 创建预览圆（记录undo，用于预览）
-    void createPreviewCircle(const glm::dvec3& center, double radius);
-
-    // 更新预览圆（不记录undo）
+    // 更新预览圆（ID无效时创建，有效时更新；预览圆就是最终圆）
     void updatePreviewCircle(const glm::dvec3& center, double radius);
 
-    // 删除预览圆（记录undo）
+    // 删除预览圆（记录undo，在kCreateFailed状态统一调用）
     void removePreviewCircle();
 
-    // 输出无效提示并结束
+    // 输出无效提示，切换到kCreateFailed状态
     void failWithInvalid();
 
     // 静态默认半径（上次创建的圆的半径）

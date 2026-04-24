@@ -160,6 +160,8 @@
   "command.circle.centerPrompt": "Specify center point or [3P/2P/Ttr (tan tan radius)]:",
   "command.circle.radiusPrompt": "Specify radius or [Diameter] <{}>:",
   "command.circle.diameterPrompt": "Specify diameter <{}>:",
+  "command.circle.radiusZero": "Radius is 0, invalid circle. Enter positive value or specify point.",
+  "command.circle.diameterZero": "Diameter is 0, invalid circle. Enter positive value or specify point.",
   "command.circle.3p.firstPoint": "Specify first point on circle:",
   "command.circle.3p.secondPoint": "Specify second point on circle:",
   "command.circle.3p.thirdPoint": "Specify third point on circle:",
