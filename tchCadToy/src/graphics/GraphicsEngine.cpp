@@ -216,8 +216,10 @@ EntityGraphicsCacheData GraphicsEngine::generateCircleCache(const DbCircle* pCir
     // 计算细分数量：基于半径动态调整，确保视觉平滑
     int segments = kCircleSegments;
     
-    // 生成顶点
-    cacheData.vertices.reserve(segments + 1);
+    // 生成顶点（GL_LINES格式：每段线段2个顶点）
+    // 第一个点(i=0)和最后一个点(i=segments)各添加1次，中间点添加2次
+    // 圆：i=segments时angle=2π，与i=0重合，自动闭合
+    cacheData.vertices.reserve(segments * 2);
     
     for (int i = 0; i <= segments; ++i) {
         double angle = (2.0 * Geometry::PI * i) / segments;
@@ -226,8 +228,16 @@ EntityGraphicsCacheData GraphicsEngine::generateCircleCache(const DbCircle* pCir
         pos.y = center.y + radius * std::sin(angle);
         pos.z = center.z;
         
-        cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        if (i == 0 || i == segments) {
+            // 第一个点和最后一个点：各添加1次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        } else {
+            // 中间点：添加2次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        }
     }
+    // 圆自动闭合：i=segments时angle=2π与i=0时angle=0重合
     
     return cacheData;
 }
@@ -274,11 +284,12 @@ EntityGraphicsCacheData GraphicsEngine::generateArcCache(const DbArc* pArc, Data
     int segments = std::max(kMinArcSegments,
                            static_cast<int>((angleSpan / (2.0 * Geometry::PI)) * kCircleSegments));
     
-    // 生成顶点
-    cacheData.vertices.reserve(segments + 1);
+    // 生成顶点（GL_LINES格式：每段线段2个顶点）
+    // 顶点数 = 2 * segments（偶数）
+    cacheData.vertices.reserve(segments * 2);
     
     for (int i = 0; i <= segments; ++i) {
-        double t = static_cast<double>(i) / segments;
+        double t = i * 1.0 / segments;
         double angle = startAngle + angleSpan * t;
         
         Geometry::Point pos;
@@ -286,7 +297,14 @@ EntityGraphicsCacheData GraphicsEngine::generateArcCache(const DbArc* pArc, Data
         pos.y = center.y + radius * std::sin(angle);
         pos.z = center.z;
         
-        cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        if (i == 0 || i == segments) {
+            // 第一个点和最后一个点：各添加1次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        } else {
+            // 中间点：添加2次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        }
     }
     
     return cacheData;
@@ -382,11 +400,12 @@ EntityGraphicsCacheData GraphicsEngine::generateEllipseCache(const DbEllipse* pE
     double cosRot = std::cos(rotation);
     double sinRot = std::sin(rotation);
     
-    // 生成顶点
-    cacheData.vertices.reserve(segments + 1);
+    // 生成顶点（GL_LINES格式：每段线段2个顶点）
+    // 顶点数 = 2 * segments（偶数）
+    cacheData.vertices.reserve(segments * 2);
     
     for (int i = 0; i <= segments; ++i) {
-        double t = static_cast<double>(i) / segments;
+        double t = i * 1.0 / segments;
         double angle = startParam + paramSpan * t;
         
         // 椭圆参数方程（局部坐标）
@@ -398,8 +417,15 @@ EntityGraphicsCacheData GraphicsEngine::generateEllipseCache(const DbEllipse* pE
         pos.x = center.x + localX * cosRot - localY * sinRot;
         pos.y = center.y + localX * sinRot + localY * cosRot;
         pos.z = center.z;
-        
-        cacheData.vertices.push_back({pos, color, flags, lineWidth});
+
+        if (i == 0 || i == segments) {
+            // 第一个点和最后一个点：各添加1次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        } else {
+            // 中间点：添加2次
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+            cacheData.vertices.push_back({pos, color, flags, lineWidth});
+        }
     }
     
     return cacheData;
