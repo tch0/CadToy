@@ -158,8 +158,8 @@
   "command.mredo.allCompleted": "所有操作都已重做。",
 
   "command.circle.centerPrompt": "指定圆的圆心或 [三点(3P)/两点(2P)/切点、切点、半径(T)]:",
-  "command.circle.radiusPrompt": "指定圆的半径或 [直径(D)] <{}>:",
-  "command.circle.diameterPrompt": "指定圆的直径 <{}>:",
+  "command.circle.radiusPrompt": "指定圆的半径或 [直径(D)] <{:.4f}>:",
+  "command.circle.diameterPrompt": "指定圆的直径 <{:.4f}>:",
   "command.circle.radiusZero": "半径为0，无效圆，重新输入正值或指定点。",
   "command.circle.diameterZero": "直径为0，无效圆，重新输入正值或指定点。",
   "command.circle.3p.firstPoint": "指定圆上的第一个点:",
@@ -169,6 +169,6 @@
   "command.circle.2p.secondPoint": "指定圆直径的第二个端点:",
   "command.circle.t.firstTangent": "指定对象与圆的第一个切点:",
   "command.circle.t.secondTangent": "指定对象与圆的第二个切点:",
-  "command.circle.t.radius": "指定圆的半径 <{0}>:",
+  "command.circle.t.radius": "指定圆的半径 <{:.4f}>:",
   "command.circle.invalid": "圆不存在。"
 }

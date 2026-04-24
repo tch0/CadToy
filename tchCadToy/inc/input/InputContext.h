@@ -198,10 +198,14 @@ public:
     
     // 获取交互数据
     InteractionData& getInteractionData();
-    
+
+    // 获取实时鼠标预览点的世界坐标
+    glm::dvec3 getPreviewPoint() const;
+
     // 更新输入上下文
     void onUpdate();
     
+private:
     // 激活选择任务
     void activateSelectionTask(SelectionMode mode);
 };

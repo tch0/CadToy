@@ -65,9 +65,9 @@ void CommandCircle::removePreviewCircle() {
     }
 
     auto& db = *DocManager::getCurrentDocument().getDatabase();
+    db.removeObject(m_previewCircleId);
     // 记录实体删除
     UndoManager::getInstance().recordRemove(m_previewCircleId);
-    db.removeObject(m_previewCircleId);
     m_previewCircleId = 0;
 }
 
@@ -148,9 +148,7 @@ void CommandCircle::onUpdate() {
 
             // 无输入：鼠标移动中，更新预览圆半径
             if (status == InputStatus::kNone) {
-                glm::dvec3 currentPos = DocManager::getCurrentDocument().getTransformManager().screenToWorld(
-                    InputHandler::getCursorPosition());
-                double radius = glm::distance(m_center, currentPos);
+                double radius = glm::distance(m_center, ctx.getPreviewPoint());
                 updatePreviewCircle(m_center, radius);
                 break;
             }
@@ -207,10 +205,8 @@ void CommandCircle::onUpdate() {
 
             // 无输入：鼠标移动中，更新预览圆半径
             if (status == InputStatus::kNone) {
-                glm::dvec3 currentPos = DocManager::getCurrentDocument().getTransformManager().screenToWorld(
-                    InputHandler::getCursorPosition());
                 // 点到圆心的距离是直径，半径需要除以2
-                double radius = glm::distance(m_center, currentPos) / 2.0;
+                double radius = glm::distance(m_center, ctx.getPreviewPoint()) / 2.0;
                 updatePreviewCircle(m_center, radius);
                 break;
             }
@@ -326,10 +322,8 @@ void CommandCircle::onUpdate() {
 
             // 无输入：鼠标移动中，更新预览圆
             if (status == InputStatus::kNone) {
-                glm::dvec3 currentPos = DocManager::getCurrentDocument().getTransformManager().screenToWorld(
-                    InputHandler::getCursorPosition());
                 auto [success, circle] = Geometry::Circle::fromThreePoints(
-                    m_firstPoint, m_secondPoint, currentPos);
+                    m_firstPoint, m_secondPoint, ctx.getPreviewPoint());
                 if (success) {
                     updatePreviewCircle(circle.center, circle.radius);
                 }
@@ -414,8 +408,7 @@ void CommandCircle::onUpdate() {
 
             // 无输入：鼠标移动中，更新预览圆
             if (status == InputStatus::kNone) {
-                glm::dvec3 currentPos = DocManager::getCurrentDocument().getTransformManager().screenToWorld(
-                    InputHandler::getCursorPosition());
+                glm::dvec3 currentPos = ctx.getPreviewPoint();
                 glm::dvec3 center = (m_firstPoint + currentPos) * 0.5;
                 double radius = glm::distance(m_firstPoint, currentPos) * 0.5;
                 updatePreviewCircle(center, radius);

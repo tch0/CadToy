@@ -15,6 +15,7 @@
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
 #include "StringUtils.h"
+#include "DocManager.h"
 
 namespace tch {
 
@@ -848,6 +849,14 @@ void InputContext::drawInfoWindow() {
 // 获取交互数据
 InteractionData& InputContext::getInteractionData() {
     return m_interactionData;
+}
+
+// 获取实时鼠标预览点的世界坐标
+glm::dvec3 InputContext::getPreviewPoint() const {
+    // 获取当前鼠标屏幕坐标
+    glm::dvec2 screenPos = InputHandler::getCursorPosition();
+    // 转换为世界坐标
+    return DocManager::getCurrentDocument().getTransformManager().screenToWorld(screenPos);
 }
 
 // 更新输入上下文

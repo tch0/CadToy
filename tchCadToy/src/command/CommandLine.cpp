@@ -67,10 +67,10 @@ void CommandLine::removeLastLine() {
     }
     
     ObjectId lastId = m_lineIds.back();
-    // 记录删除操作到undo栈
-    UndoManager::getInstance().recordRemove(lastId);
     m_pDb->removeObject(lastId);
     m_lineIds.pop_back();
+    // 记录删除操作到undo栈
+    UndoManager::getInstance().recordRemove(lastId);
     
     // 更新起点为新的最后一条线的终点
     if (!m_lineIds.empty()) {
@@ -95,10 +95,10 @@ void CommandLine::finalizeLastLine() {
     
     // 最后一条始终是预览线段，直接删除
     ObjectId lastId = m_lineIds.back();
-    // 记录删除操作到undo栈
-    UndoManager::getInstance().recordRemove(lastId);
     m_pDb->removeObject(lastId);
     m_lineIds.pop_back();
+    // 记录删除操作到undo栈
+    UndoManager::getInstance().recordRemove(lastId);
 }
 
 void CommandLine::onUpdate() {
@@ -171,7 +171,7 @@ void CommandLine::onUpdate() {
             // 无输入，更新预览
             if (status == InputStatus::kNone) {
                 // 获取鼠标当前位置更新预览
-                m_currentPoint = DocManager::getCurrentDocument().getTransformManager().screenToWorld(InputHandler::getCursorPosition());
+                m_currentPoint = ctx.getPreviewPoint();
                 updateLastLineEnd(m_currentPoint);
                 break;
             }
