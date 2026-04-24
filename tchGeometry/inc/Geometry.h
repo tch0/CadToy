@@ -187,7 +187,11 @@ struct Circle {
     static Circle xyPlane(const Point& c, double r) {
         return Circle(c, Vector(0, 0, 1), r);
     }
-    
+
+    /// 通过三点构造圆，返回 <是否成功, 圆>
+    /// 三点共线或重合时返回 false，此时圆为默认构造
+    static std::pair<bool, Circle> fromThreePoints(const Point& p1, const Point& p2, const Point& p3);
+
     double area() const { return PI * radius * radius; }           ///< 面积
     double circumference() const { return 2.0 * PI * radius; }     ///< 周长
     Point pointAt(double angle) const;  ///< 参数方程，angle∈[0,2π)

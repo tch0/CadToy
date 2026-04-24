@@ -21,6 +21,7 @@
 #include "CommandU.h"
 #include "CommandRedo.h"
 #include "CommandMRedo.h"
+#include "CommandCircle.h"
 #include "Logger.h"
 #include "DocManager.h"
 #include "InputContext.h"
@@ -46,6 +47,7 @@ CommandManager::CommandManager() :
     registerCommand<CommandSaveAs>("SAVEAS", {});
     // 实体创建类命令
     registerCommand<CommandLine>("LINE", {"L"});
+    registerCommand<CommandCircle>("CIRCLE", {"C"});
     // 实体编辑类命令
     
     // 重生成类命令

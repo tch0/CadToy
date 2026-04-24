@@ -56,6 +56,54 @@ double Circle::pointToParam(const Point& p) const {
     return angle;
 }
 
+std::pair<bool, Circle> Circle::fromThreePoints(const Point& p1, const Point& p2, const Point& p3) {
+    // 检查重复点
+    if (isCoincident(p1, p2) || isCoincident(p2, p3) || isCoincident(p1, p3)) {
+        return {false, Circle()};
+    }
+
+    Vector v1 = p2 - p1;
+    Vector v2 = p3 - p1;
+    Vector n = glm::cross(v1, v2);
+    double area2 = glm::length(n);
+
+    // 相对容差共线检测：面积平方与边长平方的比值
+    double maxLenSq = std::max(glm::dot(v1, v1), glm::dot(v2, v2));
+    if (area2 * area2 < Tolerance::Default.relative * maxLenSq) {
+        return {false, Circle()};  // 共线或近似共线
+    }
+
+    n = glm::normalize(n);
+    Vector u = glm::normalize(v1);
+    Vector v = glm::cross(n, u);
+
+    double x1 = 0, y1 = 0;
+    double x2 = glm::length(v1), y2 = 0;
+    double x3 = glm::dot(v2, u), y3 = glm::dot(v2, v);
+
+    double d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+    if (std::abs(d) < Tolerance::Default.absolute) {
+        return {false, Circle()};
+    }
+
+    double p1Sq = x1 * x1 + y1 * y1;
+    double p2Sq = x2 * x2 + y2 * y2;
+    double p3Sq = x3 * x3 + y3 * y3;
+
+    double cx = (p1Sq * (y2 - y3) + p2Sq * (y3 - y1) + p3Sq * (y1 - y2)) / d;
+    double cy = (p1Sq * (x3 - x2) + p2Sq * (x1 - x3) + p3Sq * (x2 - x1)) / d;
+
+    Point center = p1 + u * cx + v * cy;
+    double radius = glm::distance(center, p1);
+
+    // 半径合理性检查：避免巨大圆导致数值问题
+    if (radius > 1e10 * std::sqrt(maxLenSq)) {
+        return {false, Circle()};
+    }
+
+    return {true, Circle(center, n, radius)};
+}
+
 // ============================================================================
 // Arc 成员函数实现
 // ============================================================================

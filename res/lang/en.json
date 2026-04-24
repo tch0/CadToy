@@ -155,5 +155,18 @@
   "command.undo.allCompleted": "All operations have been undone.",
 
   "command.mredo.prompt": "Enter number of operations to redo or [All(A)] <1>:",
-  "command.mredo.allCompleted": "All operations have been redone."
+  "command.mredo.allCompleted": "All operations have been redone.",
+
+  "command.circle.centerPrompt": "Specify center point or [3P/2P/Ttr (tan tan radius)]:",
+  "command.circle.radiusPrompt": "Specify radius or [Diameter] <{}>:",
+  "command.circle.diameterPrompt": "Specify diameter <{}>:",
+  "command.circle.3p.firstPoint": "Specify first point on circle:",
+  "command.circle.3p.secondPoint": "Specify second point on circle:",
+  "command.circle.3p.thirdPoint": "Specify third point on circle:",
+  "command.circle.2p.firstPoint": "Specify first end point of diameter:",
+  "command.circle.2p.secondPoint": "Specify second end point of diameter:",
+  "command.circle.t.firstTangent": "Specify first tangent point:",
+  "command.circle.t.secondTangent": "Specify second tangent point:",
+  "command.circle.t.radius": "Specify radius <{0}>:",
+  "command.circle.invalid": "Circle does not exist."
 }
