@@ -367,8 +367,8 @@ EntityRenderer::EntityRenderer() :
     m_quadTextureLoc(-1)
 {
     // 预分配顶点缓冲区内存（避免首次渲染时的内存分配和后续扩容）
-    m_noLWVertices.reserve(10000);
-    m_withLWVertices.reserve(10000);
+    m_noLWVertices.reserve(500000);
+    m_withLWVertices.reserve(500000);
 }
 
 // 析构函数：清理所有资源
@@ -444,8 +444,8 @@ bool EntityRenderer::initialize() {
     
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    // 预分配足够大的缓冲区（100000个顶点）
-    glBufferData(GL_ARRAY_BUFFER, 100000 * sizeof(DataCacheVertex), nullptr, GL_DYNAMIC_DRAW);
+    // 预分配足够大的缓冲区（500000个顶点）
+    glBufferData(GL_ARRAY_BUFFER, 500000 * sizeof(DataCacheVertex), nullptr, GL_DYNAMIC_DRAW);
     
     // 设置顶点属性（根据新的Vertex结构体，使用glm::vec3）
     // location 0: position (vec3)

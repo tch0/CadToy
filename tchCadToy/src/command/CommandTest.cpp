@@ -8,17 +8,27 @@
 #include <vector>
 
 // 第三方库
+#include <glm/glm.hpp>
 
 // 项目头文件
 #include "CommonTypes.h"
 #include "InputContext.h"
 #include "GlobalUtils.h"
+#include "DocManager.h"
+#include "Database.h"
+#include "DbEntity.h"
+#include "DbLine.h"
+#include "DbCircle.h"
+#include "UndoManager.h"
 
 namespace tch {
 
 // 测试程序列表
 static const std::vector<std::pair<int, const char*>> s_programInfos = {
     {0, "实体选择测试 - 调用 waitForEntity 进行选择"},
+    {1, "压力测试1 - 创建2500个正方形（边长2到5000），1万个实体，2万个顶点"},
+    {2, "压力测试2 - 创建1000个圆（半径1到1000），1000个实体，12万8000个顶点"},
+    {3, "压力测试3 - 清除数据库中所有实体"},
 };
 
 CommandTest::CommandTest()
@@ -78,6 +88,24 @@ void CommandTest::onUpdate() {
             break;
         }
         
+        case kTest1: {
+            // 执行测试程序 1：创建2500个正方形
+            m_state = runTest1();
+            break;
+        }
+
+        case kTest2: {
+            // 执行测试程序 2：创建1000个圆
+            m_state = runTest2();
+            break;
+        }
+
+        case kTest3: {
+            // 执行测试程序 3：清除所有实体
+            m_state = runTest3();
+            break;
+        }
+
         case kDisplayHelp:
             // 打印所有测试程序用途
             Utils::cmdLinePrint("测试程序编号与说明:");
@@ -106,6 +134,15 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
             // 测试程序 0：实体选择
             inputContext.waitForEntity("选择对象:");
             return kTest0;
+        case 1:
+            // 测试程序 1：创建2500个正方形
+            return kTest1;
+        case 2:
+            // 测试程序 2：创建1000个圆
+            return kTest2;
+        case 3:
+            // 测试程序 3：清除所有实体
+            return kTest3;
         default:
             // 无效的测试程序编号
             Utils::cmdLinePrint("无效的测试程序编号");
@@ -138,6 +175,101 @@ CommandTest::TestState CommandTest::runTest0() {
     }
     
     return kTest0;
+}
+
+CommandTest::TestState CommandTest::runTest1() {
+    // 测试程序1：创建2500个正方形，边长从2、4、6到5000，原点为中心
+    auto* db = DocManager::getCurrentDocument().getDatabase();
+    if (!db) {
+        Utils::cmdLinePrint("数据库不可用");
+        return kCompleted;
+    }
+
+    int count = 0;
+    for (int sideLength = 2; sideLength <= 5000; sideLength += 2) {
+        double half = sideLength * 0.5;
+        glm::dvec3 p1(-half, -half, 0);
+        glm::dvec3 p2(half, -half, 0);
+        glm::dvec3 p3(half, half, 0);
+        glm::dvec3 p4(-half, half, 0);
+
+        // 创建正方形的四条边
+        auto line1 = std::make_unique<DbLine>(p1, p2);
+        auto line2 = std::make_unique<DbLine>(p2, p3);
+        auto line3 = std::make_unique<DbLine>(p3, p4);
+        auto line4 = std::make_unique<DbLine>(p4, p1);
+
+        line1->setPropertiesFromDb();
+        line2->setPropertiesFromDb();
+        line3->setPropertiesFromDb();
+        line4->setPropertiesFromDb();
+
+        ObjectId id1 = db->addObject(std::move(line1));
+        ObjectId id2 = db->addObject(std::move(line2));
+        ObjectId id3 = db->addObject(std::move(line3));
+        ObjectId id4 = db->addObject(std::move(line4));
+
+        UndoManager::getInstance().recordAdd(id1);
+        UndoManager::getInstance().recordAdd(id2);
+        UndoManager::getInstance().recordAdd(id3);
+        UndoManager::getInstance().recordAdd(id4);
+
+        count++;
+    }
+
+    Utils::cmdLinePrint(std::format("测试程序1完成：创建了{}个正方形（共{}条线段）", count, count * 4));
+    return kCompleted;
+}
+
+CommandTest::TestState CommandTest::runTest2() {
+    // 测试程序2：创建1000个圆，半径从1到1000，原点为中心
+    auto* db = DocManager::getCurrentDocument().getDatabase();
+    if (!db) {
+        Utils::cmdLinePrint("数据库不可用");
+        return kCompleted;
+    }
+
+    glm::dvec3 center(0, 0, 0);
+    int count = 0;
+    for (int radius = 1; radius <= 1000; ++radius) {
+        auto circle = std::make_unique<DbCircle>(center, radius * 1.0);
+        circle->setPropertiesFromDb();
+
+        ObjectId id = db->addObject(std::move(circle));
+        UndoManager::getInstance().recordAdd(id);
+
+        count++;
+    }
+
+    Utils::cmdLinePrint(std::format("测试程序2完成：创建了{}个圆", count));
+    return kCompleted;
+}
+
+CommandTest::TestState CommandTest::runTest3() {
+    // 测试程序3：清除数据库中所有实体
+    auto* db = DocManager::getCurrentDocument().getDatabase();
+    if (!db) {
+        Utils::cmdLinePrint("数据库不可用");
+        return kCompleted;
+    }
+
+    // 收集所有实体ID
+    std::vector<ObjectId> allIds;
+    db->forEachEntity([&allIds](DbEntity* entity) {
+        if (entity) {
+            allIds.push_back(entity->id());
+        }
+    });
+
+    int count = 0;
+    for (ObjectId id : allIds) {
+        db->removeObject(id);
+        UndoManager::getInstance().recordRemove(id);
+        count++;
+    }
+
+    Utils::cmdLinePrint(std::format("测试程序3完成：清除了{}个实体", count));
+    return kCompleted;
 }
 
 } // namespace tch

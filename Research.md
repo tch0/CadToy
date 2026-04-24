@@ -203,6 +203,7 @@ inline std::string toString(const std::filesystem::path& path) {
 发现的未修复BUG：
 - 字体文件缺失好像会直接assert失败在imgui逻辑中，应该fallback到默认字体。
 - 原点不在屏幕内时坐标轴不显示。
+- 放大不在原点附近的点到一定程度，会导致xy轴数量级差异太大，从而导致栅格渲染时一直在循环，导致无响应。正常逻辑是放大到一定程度栅格就不再绘制。
 
 ## 非模态命令交互研究
 
