@@ -153,13 +153,9 @@ void InputContext::handleLeftMouseClick() {
     // TODO: 命令中与选择中点输入流程完全一致，需不需要统一起来？
     // 检查是否有活动命令
     if (m_inCommandExecution) {
-        // 从InputHandler获取光标位置
-        glm::vec2 screenPos = InputHandler::getCursorPosition();
-        // 将屏幕坐标转换为世界坐标
-        glm::dvec3 worldPos = Renderer::getTransformManager().screenToWorld(screenPos);
         // 设置到输入上下文
         if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
-            m_pickedPoint = worldPos;
+            m_pickedPoint = getPreviewPoint(); // 鼠标点世界坐标
             m_currentStatus = InputStatus::kPointInput;
             Utils::cmdLinePrint(m_prompt);
         }
@@ -168,13 +164,9 @@ void InputContext::handleLeftMouseClick() {
         // 处理选择任务中的点输入
         if (m_selectionTask.isSelecting()) {
             // 正在选择
-            // 从InputHandler获取光标位置
-            glm::vec2 screenPos = InputHandler::getCursorPosition();
-            // 将屏幕坐标转换为世界坐标
-            glm::dvec3 worldPos = Renderer::getTransformManager().screenToWorld(screenPos);
             // 设置到输入上下文
             if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
-                m_pickedPoint = worldPos;
+                m_pickedPoint = getPreviewPoint(); // 鼠标点世界坐标
                 m_currentStatus = InputStatus::kPointInput;
                 Utils::cmdLinePrint(m_prompt);
             }
@@ -329,11 +321,10 @@ void InputContext::parseInput(const std::string& input) {
         }
         // 有基点，支持距离输入，尝试解析为距离输入, point = normalized(previewPoint - basePoint) * distance
         else if (m_bHasBasePoint) {
-            glm::dvec3 previewPointWorld = Renderer::getTransformManager().screenToWorld(InputHandler::getCursorPosition());
             try {
                 // TODO: 考虑误差和精度，当预览点和基点误差极小时，视为同一点，则获取到的新点直接等于基点
                 double distance = stod(input);
-                m_pickedPoint = m_basePoint + glm::normalize(previewPointWorld - m_basePoint) * distance;
+                m_pickedPoint = m_basePoint + glm::normalize(getPreviewPoint() - m_basePoint) * distance;
                 m_currentStatus = InputStatus::kPointInput;
                 Utils::cmdLinePrint(inputPrompt);
                 return;
