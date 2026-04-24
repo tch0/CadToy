@@ -15,7 +15,7 @@
 namespace tch {
 
 CommandClose::CommandClose() :
-    m_state(CommandCloseState::kCheckModified),
+    m_state(kCheckModified),
     m_saveConfirmResult(Utils::TriStateResult::kCancel),
     m_showSaveConfirm(false),
     m_showFileDialog(false),
@@ -31,30 +31,30 @@ void CommandClose::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandCloseState::kCheckModified:
+        case kCheckModified:
         {
             // 检查当前文档是否已修改
             Document& doc = DocManager::getCurrentDocument();
             if (doc.isModified()) {
                 // 文档已修改，需要显示保存确认对话框
-                m_state = CommandCloseState::kSaveConfirmEntry;
+                m_state = kSaveConfirmEntry;
             } else {
                 // 文档未修改，直接关闭
-                m_state = CommandCloseState::kCloseDocument;
+                m_state = kCloseDocument;
             }
             break;
         }
             
-        case CommandCloseState::kSaveConfirmEntry:
+        case kSaveConfirmEntry:
         {
             // 初始化保存确认对话框
             m_showSaveConfirm = true;
             m_saveConfirmResult = Utils::TriStateResult::kCancel;
-            m_state = CommandCloseState::kSaveConfirmShow;
+            m_state = kSaveConfirmShow;
             break;
         }
             
-        case CommandCloseState::kSaveConfirmShow:
+        case kSaveConfirmShow:
         {
             // 显示保存确认对话框
             Document& doc = DocManager::getCurrentDocument();
@@ -67,33 +67,33 @@ void CommandClose::onUpdate() {
                     case Utils::TriStateResult::kYes:
                         // 用户选择保存
                         // 修改为kFileDialogEntry启用内部文件对话框，或kImFileDialogEntry启用ImFileDialog
-                        m_state = CommandCloseState::kImFileDialogEntry;
+                        m_state = kImFileDialogEntry;
                         break;
                     case Utils::TriStateResult::kNo:
                         // 用户选择不保存，直接关闭
-                        m_state = CommandCloseState::kCloseDocument;
+                        m_state = kCloseDocument;
                         break;
                     case Utils::TriStateResult::kCancel:
                         // 用户取消关闭
                         Utils::cmdLinePrint(loc.get("command.close.canceled"));
-                        m_state = CommandCloseState::kCompleted;
+                        m_state = kCompleted;
                         break;
                 }
             }
             break;
         }
             
-        case CommandCloseState::kFileDialogEntry:
+        case kFileDialogEntry:
         {
             // 初始化内部文件对话框
             m_showFileDialog = true;
             m_dialogReturned = false;
             m_selectedPath.clear();
-            m_state = CommandCloseState::kFileDialogShow;
+            m_state = kFileDialogShow;
             break;
         }
             
-        case CommandCloseState::kFileDialogShow:
+        case kFileDialogShow:
         {
             // 显示内部文件对话框，传入当前文件名作为初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -106,22 +106,22 @@ void CommandClose::onUpdate() {
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(m_selectedPath)) {
                         // 保存成功，关闭文档
-                        m_state = CommandCloseState::kCloseDocument;
+                        m_state = kCloseDocument;
                     } else {
                         // 保存失败，取消关闭
                         Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(m_selectedPath)));
-                        m_state = CommandCloseState::kCompleted;
+                        m_state = kCompleted;
                     }
                 } else {
                     // 用户取消保存，取消关闭
                     Utils::cmdLinePrint(loc.get("command.close.canceled"));
-                    m_state = CommandCloseState::kCompleted;
+                    m_state = kCompleted;
                 }
             }
             break;
         }
         
-        case CommandCloseState::kImFileDialogEntry:
+        case kImFileDialogEntry:
         {
             // 获取初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -136,11 +136,11 @@ void CommandClose::onUpdate() {
                 "*.cad.json {.json},.*",
                 fullFileName);
             
-            m_state = CommandCloseState::kImFileDialogShow;
+            m_state = kImFileDialogShow;
             break;
         }
             
-        case CommandCloseState::kImFileDialogShow:
+        case kImFileDialogShow:
         {
             // 检查对话框是否完成
             if (ifd::FileDialog::getInstance().isDone("CloseSaveDialog")) {
@@ -150,16 +150,16 @@ void CommandClose::onUpdate() {
                     Document& doc = DocManager::getCurrentDocument();
                     if (doc.saveToFile(result)) {
                         // 保存成功，关闭文档
-                        m_state = CommandCloseState::kCloseDocument;
+                        m_state = kCloseDocument;
                     } else {
                         // 保存失败，取消关闭
                         Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(result)));
-                        m_state = CommandCloseState::kCompleted;
+                        m_state = kCompleted;
                     }
                 } else {
                     // 用户取消保存，取消关闭
                     Utils::cmdLinePrint(loc.get("command.close.canceled"));
-                    m_state = CommandCloseState::kCompleted;
+                    m_state = kCompleted;
                 }
                 // 关闭对话框
                 ifd::FileDialog::getInstance().close();
@@ -167,7 +167,7 @@ void CommandClose::onUpdate() {
             break;
         }
             
-        case CommandCloseState::kCloseDocument:
+        case kCloseDocument:
         {
             // 执行关闭文档
             std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
@@ -177,7 +177,7 @@ void CommandClose::onUpdate() {
             break;
         }
             
-        case CommandCloseState::kCompleted:
+        case kCompleted:
         {
             // 命令完成
             finish();

@@ -14,7 +14,7 @@ namespace tch {
 class CommandOptions : public Command {
 private:
     // Options命令状态枚举
-    enum class CommandOptionsState {
+    enum CommandOptionsState {
         kOptionsDialogEntry,    // 初始化并进入显示状态
         kOptionsDialogShow,     // 显示对话框并等待关闭
         kCompleted              // 完成状态

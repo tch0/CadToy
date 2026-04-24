@@ -22,7 +22,7 @@ static const std::vector<std::pair<int, const char*>> s_programInfos = {
 };
 
 CommandTest::CommandTest()
-    : m_state(TestState::kWaitForTestNumberEntry) {
+    : m_state(kWaitForTestNumberEntry) {
 }
 
 void CommandTest::onUpdate() {
@@ -33,14 +33,14 @@ void CommandTest::onUpdate() {
     InputContext& inputContext = InputContext::getInstance();
     
     switch (m_state) {
-        case TestState::kWaitForTestNumberEntry:
+        case kWaitForTestNumberEntry:
             // 进入等待测试程序编号状态
-            m_state = TestState::kWaitForTestNumberQuery;
+            m_state = kWaitForTestNumberQuery;
             // 等待整数输入，允许关键字 "?"
             inputContext.waitForInteger("请输入测试程序编号(?输出所有测试程序编号与说明)<?>:", 0, 1000, {"?"});
             break;
             
-        case TestState::kWaitForTestNumberQuery: {
+        case kWaitForTestNumberQuery: {
             // 检查输入状态
             InputStatus status = inputContext.getCurrentStatus();
             
@@ -57,28 +57,28 @@ void CommandTest::onUpdate() {
                 inputContext.getKeyword(keyword);
                 if (keyword == "?") {
                     // 显示帮助信息
-                    m_state = TestState::kDisplayHelp;
+                    m_state = kDisplayHelp;
                 }
             }
             // Enter/Space 输入，默认执行显示信息
             else if (status == InputStatus::kEnterInput) {
                 // 默认执行显示信息
-                m_state = TestState::kDisplayHelp;
+                m_state = kDisplayHelp;
             }
             // Esc 取消
             else if (status == InputStatus::kCanceled) {
-                m_state = TestState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
         
-        case TestState::kTest0: {
+        case kTest0: {
             // 执行测试程序 0：实体选择
             m_state = runTest0();
             break;
         }
         
-        case TestState::kDisplayHelp:
+        case kDisplayHelp:
             // 打印所有测试程序用途
             Utils::cmdLinePrint("测试程序编号与说明:");
             for (const auto& [number, description] : s_programInfos) {
@@ -86,10 +86,10 @@ void CommandTest::onUpdate() {
             }
             Utils::cmdLinePrint("");
             // 回到初始状态
-            m_state = TestState::kWaitForTestNumberEntry;
+            m_state = kWaitForTestNumberEntry;
             break;
             
-        case TestState::kCompleted:
+        case kCompleted:
             finish();
             break;
             
@@ -105,11 +105,11 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
         case 0:
             // 测试程序 0：实体选择
             inputContext.waitForEntity("选择对象:");
-            return TestState::kTest0;
+            return kTest0;
         default:
             // 无效的测试程序编号
             Utils::cmdLinePrint("无效的测试程序编号");
-            return TestState::kWaitForTestNumberEntry;
+            return kWaitForTestNumberEntry;
     }
 }
 
@@ -124,20 +124,20 @@ CommandTest::TestState CommandTest::runTest0() {
         std::vector<void*> entities;
         inputContext.getSelectedEntities(entities);
         inputContext.waitForEntity("选择对象:");
-        return TestState::kTest0;
+        return kTest0;
     }
     // Enter/Space 结束选择
     else if (status == InputStatus::kEnterInput) {
         Utils::cmdLinePrint("选择结束");
-        return TestState::kCompleted;
+        return kCompleted;
     }
     // Esc 取消选择
     else if (status == InputStatus::kCanceled) {
         Utils::cmdLinePrint("选择取消");
-        return TestState::kCompleted;
+        return kCompleted;
     }
     
-    return TestState::kTest0;
+    return kTest0;
 }
 
 } // namespace tch

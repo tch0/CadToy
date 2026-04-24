@@ -21,7 +21,7 @@ public:
     bool skipUndoRecording() const override { return true; }
     
 private:
-    enum class CommandUndoState {
+    enum CommandUndoState {
         kUndoNumberEntry,       // UNDO数量入口
         kUndoNumberQuery,       // UNDO数量输入查询
         kCompleted              // 结束状态

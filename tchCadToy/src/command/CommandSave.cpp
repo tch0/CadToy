@@ -15,7 +15,7 @@
 namespace tch {
 
 CommandSave::CommandSave() :
-    m_state(CommandSaveState::kDocumentSavedQuery),
+    m_state(kDocumentSavedQuery),
     m_showDialog(false),
     m_dialogReturned(false),
     m_selectedPath() {
@@ -30,7 +30,7 @@ void CommandSave::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandSaveState::kDocumentSavedQuery:
+        case kDocumentSavedQuery:
         {
             // 获取当前文档
             Document& doc = DocManager::getCurrentDocument();
@@ -43,26 +43,26 @@ void CommandSave::onUpdate() {
                 } else {
                     Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(doc.getFilePath())));
                 }
-                m_state = CommandSaveState::kCompleted;
+                m_state = kCompleted;
             } else {
                 // 未关联文件，需要打开对话框
                 // 修改为kFileDialogEntry启用内部文件对话框，或kImFileDialogEntry启用ImFileDialog
-                m_state = CommandSaveState::kImFileDialogEntry;
+                m_state = kImFileDialogEntry;
             }
             break;
         }
             
-        case CommandSaveState::kFileDialogEntry:
+        case kFileDialogEntry:
         {
             // 初始化内部文件对话框参数
             m_showDialog = true;
             m_dialogReturned = false;
             m_selectedPath.clear();
-            m_state = CommandSaveState::kFileDialogShow;
+            m_state = kFileDialogShow;
             break;
         }
             
-        case CommandSaveState::kFileDialogShow:
+        case kFileDialogShow:
         {
             // 显示内部文件对话框，传入当前文件名作为初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -83,12 +83,12 @@ void CommandSave::onUpdate() {
                     // 用户取消或关闭对话框
                     Utils::cmdLinePrint(loc.get("command.save.canceled"));
                 }
-                m_state = CommandSaveState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
         
-        case CommandSaveState::kImFileDialogEntry:
+        case kImFileDialogEntry:
         {
             // 获取初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -103,11 +103,11 @@ void CommandSave::onUpdate() {
                 "*.cad.json {.json},.*",
                 fullFileName);
             
-            m_state = CommandSaveState::kImFileDialogShow;
+            m_state = kImFileDialogShow;
             break;
         }
         
-        case CommandSaveState::kImFileDialogShow:
+        case kImFileDialogShow:
         {
             // 检查对话框是否完成
             if (ifd::FileDialog::getInstance().isDone("SaveDialog")) {
@@ -126,12 +126,12 @@ void CommandSave::onUpdate() {
                 }
                 // 关闭对话框
                 ifd::FileDialog::getInstance().close();
-                m_state = CommandSaveState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
             
-        case CommandSaveState::kCompleted:
+        case kCompleted:
         {
             // 命令完成
             finish();

@@ -17,7 +17,7 @@
 namespace tch {
 
 CommandUndo::CommandUndo()
-    : m_state(CommandUndoState::kUndoNumberEntry) {
+    : m_state(kUndoNumberEntry) {
 }
 
 void CommandUndo::onUpdate() {
@@ -29,14 +29,14 @@ void CommandUndo::onUpdate() {
     auto& loc = LocalizationManager::getInstance();
     
     switch (m_state) {
-        case CommandUndoState::kUndoNumberEntry:
+        case kUndoNumberEntry:
             // UNDO数量入口
-            m_state = CommandUndoState::kUndoNumberQuery;
+            m_state = kUndoNumberQuery;
             // 输入要撤销的操作数目或 [全部(A)] <1>:
             ctx.waitForInteger(loc.get("command.undo.prompt"), 1, INT_MAX, {"A"});
             break;
             
-        case CommandUndoState::kUndoNumberQuery: {
+        case kUndoNumberQuery: {
             InputStatus status = ctx.getCurrentStatus();
             
             // 无输入，继续等待
@@ -45,12 +45,12 @@ void CommandUndo::onUpdate() {
             }
             // Esc 取消
             else if (status == InputStatus::kCanceled) {
-                m_state = CommandUndoState::kCompleted;
+                m_state = kCompleted;
             }
             // Enter/Space，使用默认值 1
             else if (status == InputStatus::kEnterInput) {
                 executeUndo(1, false);
-                m_state = CommandUndoState::kCompleted;
+                m_state = kCompleted;
             }
             // 关键字 "A"，全部撤销
             else if (status == InputStatus::kKeywordInput) {
@@ -59,19 +59,19 @@ void CommandUndo::onUpdate() {
                 if (keyword == "A") {
                     executeUndo(0, true);
                 }
-                m_state = CommandUndoState::kCompleted;
+                m_state = kCompleted;
             }
             // 整数输入
             else if (status == InputStatus::kIntegerInput) {
                 int count;
                 ctx.getInteger(count);
                 executeUndo(count, false);
-                m_state = CommandUndoState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
             
-        case CommandUndoState::kCompleted:
+        case kCompleted:
             finish();
             break;
     }

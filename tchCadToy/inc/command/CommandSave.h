@@ -14,7 +14,7 @@ namespace tch {
 class CommandSave : public Command {
 private:
     // 保存命令状态枚举
-    enum class CommandSaveState {
+    enum CommandSaveState {
         kDocumentSavedQuery,    // 查询文档是否已关联文件
         kFileDialogEntry,       // 进入内部文件对话框状态
         kFileDialogShow,        // 显示内部文件对话框并等待用户选择

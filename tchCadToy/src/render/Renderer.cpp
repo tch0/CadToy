@@ -548,7 +548,7 @@ void Renderer::drawMenuBar() {
         // Edit菜单
         if (ImGui::BeginMenu(loc.get("menu.edit").c_str())) {
             if (ImGui::MenuItem(loc.get("menu.edit.undo").c_str(), "Ctrl+Z")) {
-                CommandManager::getInstance().cancelCurrentCommandAndExecute("undo");
+                CommandManager::getInstance().cancelCurrentCommandAndExecute("u");
             }
             if (ImGui::MenuItem(loc.get("menu.edit.redo").c_str(), "Ctrl+Y")) {
                 CommandManager::getInstance().cancelCurrentCommandAndExecute("redo");

@@ -12,7 +12,7 @@
 namespace tch {
 
 // 关闭命令状态枚举
-enum class CommandCloseState {
+enum CommandCloseState {
     kCheckModified,         // 检查文档是否已修改
     kSaveConfirmEntry,      // 进入保存确认对话框
     kSaveConfirmShow,       // 显示保存确认对话框

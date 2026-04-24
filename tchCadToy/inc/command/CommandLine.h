@@ -18,7 +18,7 @@ namespace tch {
 class CommandLine : public Command {
 private:
     // line命令状态枚举
-    enum class CommandLineState {
+    enum CommandLineState {
         kStartPointEntry,       // 起点入口
         kStartPointQuery,       // 起点输入查询
         kNextPointEntry,        // 下一点入口（等待输入，同时更新预览）

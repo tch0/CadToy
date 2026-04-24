@@ -21,7 +21,7 @@ public:
     bool skipUndoRecording() const override { return true; }
     
 private:
-    enum class CommandMRedoState {
+    enum CommandMRedoState {
         kRedoNumberEntry,       // REDO数量入口
         kRedoNumberQuery,       // REDO数量输入查询
         kCompleted              // 结束状态

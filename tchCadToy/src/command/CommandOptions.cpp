@@ -12,7 +12,7 @@
 namespace tch {
 
 CommandOptions::CommandOptions()
-    : m_state(CommandOptionsState::kOptionsDialogEntry) {
+    : m_state(kOptionsDialogEntry) {
 }
 
 void CommandOptions::onUpdate() {
@@ -21,22 +21,22 @@ void CommandOptions::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandOptionsState::kOptionsDialogEntry: {
+        case kOptionsDialogEntry: {
             // 初始化对话框
             OptionsDialog::getInstance().initialize();
-            m_state = CommandOptionsState::kOptionsDialogShow;
+            m_state = kOptionsDialogShow;
             break;
         }
         
-        case CommandOptionsState::kOptionsDialogShow: {
+        case kOptionsDialogShow: {
             // 显示并绘制对话框，返回false表示已关闭
             if (!OptionsDialog::getInstance().show()) {
-                m_state = CommandOptionsState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
         
-        case CommandOptionsState::kCompleted: {
+        case kCompleted: {
             finish();
             break;
         }

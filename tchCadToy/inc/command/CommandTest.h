@@ -18,7 +18,7 @@ public:
 
 private:
     // Test命令状态
-    enum class TestState {
+    enum TestState {
         kWaitForTestNumberEntry,    // 等待测试程序编号-入口
         kWaitForTestNumberQuery,    // 等待测试程序编号-输入查询
         kTest0,                     // 测试程序 0：实体选择

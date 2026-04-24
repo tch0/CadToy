@@ -23,7 +23,7 @@
 namespace tch {
 
 CommandLine::CommandLine() :
-    m_state(CommandLineState::kStartPointEntry),
+    m_state(kStartPointEntry),
     m_startPoint(0, 0, 0),
     m_currentPoint(0, 0, 0),
     m_lineIds(),
@@ -117,14 +117,14 @@ void CommandLine::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandLineState::kStartPointEntry: {
+        case kStartPointEntry: {
             // 等待起点输入
             ctx.waitForPoint(loc.get("command.line.startPoint"));
-            m_state = CommandLineState::kStartPointQuery;
+            m_state = kStartPointQuery;
             break;
         }
             
-        case CommandLineState::kStartPointQuery: {
+        case kStartPointQuery: {
             // 检查输入状态
             InputStatus status = ctx.getCurrentStatus();
             
@@ -134,7 +134,7 @@ void CommandLine::onUpdate() {
             }
             // Esc/Enter/Space，结束命令
             else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput) {
-                m_state = CommandLineState::kCompleted;
+                m_state = kCompleted;
             }
             // 获取第一点输入
             else if (status == InputStatus::kPointInput) {
@@ -143,13 +143,13 @@ void CommandLine::onUpdate() {
                     m_currentPoint = m_startPoint;
                     // 创建第一条线（起点=终点，作为预览）
                     createNewLine(m_startPoint, m_startPoint);
-                    m_state = CommandLineState::kNextPointEntry;
+                    m_state = kNextPointEntry;
                 }
             }
             break;
         }
             
-        case CommandLineState::kNextPointEntry: {
+        case kNextPointEntry: {
             // 等待下一点输入
             std::vector<std::string> keywords = {"U"};
             std::string prompt;
@@ -160,11 +160,11 @@ void CommandLine::onUpdate() {
                 prompt = loc.get("command.line.nextPoint");
             }
             ctx.waitForPoint(prompt, m_startPoint, keywords);
-            m_state = CommandLineState::kNextPointQuery;
+            m_state = kNextPointQuery;
             break;
         }
             
-        case CommandLineState::kNextPointQuery: {
+        case kNextPointQuery: {
             // 检查输入状态
             InputStatus status = ctx.getCurrentStatus();
             
@@ -178,7 +178,7 @@ void CommandLine::onUpdate() {
             // Esc、Enter，进入结束状态
             else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput) {
                 finalizeLastLine();
-                m_state = CommandLineState::kCompleted;
+                m_state = kCompleted;
             }
             else if (status == InputStatus::kKeywordInput) {
                 std::string keyword;
@@ -188,7 +188,7 @@ void CommandLine::onUpdate() {
                     // 闭合：连接到第一条线的起点
                     if (m_lineIds.size() >= 2) {
                         updateLastLineEnd(m_firstPoint);
-                        m_state = CommandLineState::kCompleted;
+                        m_state = kCompleted;
                     }
                 }
                 else if (keyword == "U") {
@@ -197,11 +197,11 @@ void CommandLine::onUpdate() {
                     
                     if (m_lineIds.empty()) {
                         // 所有线都删完了，回到起点输入
-                        m_state = CommandLineState::kStartPointEntry;
+                        m_state = kStartPointEntry;
                         Utils::cmdLinePrint(loc.get("command.line.abandonedAll"));
                     } else {
                         // 还有线，继续输入下一点
-                        m_state = CommandLineState::kNextPointEntry;
+                        m_state = kNextPointEntry;
                     }
                 }
             }
@@ -214,13 +214,13 @@ void CommandLine::onUpdate() {
                     
                     // 创建新的预览线
                     createNewLine(m_startPoint, m_startPoint);
-                    m_state = CommandLineState::kNextPointEntry;
+                    m_state = kNextPointEntry;
                 }
             }
             break;
         }
         
-        case CommandLineState::kCompleted: {
+        case kCompleted: {
             // 执行统一的结束操作
             finish();
             break;

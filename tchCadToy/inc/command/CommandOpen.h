@@ -14,7 +14,7 @@ namespace tch {
 class CommandOpen : public Command {
 private:
     // 打开命令状态枚举
-    enum class CommandOpenState {
+    enum CommandOpenState {
         kFileDialogEntry,       // 进入内部文件对话框状态
         kFileDialogShow,        // 显示内部文件对话框并等待用户选择
         kImFileDialogEntry,     // 进入ImFileDialog状态

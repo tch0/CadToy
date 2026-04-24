@@ -16,7 +16,7 @@ namespace tch {
 
 CommandSaveAs::CommandSaveAs() :
     // m_state初始化为kFileDialogEntry即可启用内部实现的文件对话框
-    m_state(CommandSaveAsState::kImFileDialogEntry),
+    m_state(kImFileDialogEntry),
     m_showDialog(false),
     m_dialogReturned(false),
     m_selectedPath() {
@@ -31,17 +31,17 @@ void CommandSaveAs::onUpdate() {
     }
     
     switch (m_state) {
-        case CommandSaveAsState::kFileDialogEntry:
+        case kFileDialogEntry:
         {
             // 初始化对话框参数
             m_showDialog = true;
             m_dialogReturned = false;
             m_selectedPath.clear();
-            m_state = CommandSaveAsState::kFileDialogShow;
+            m_state = kFileDialogShow;
             break;
         }
             
-        case CommandSaveAsState::kFileDialogShow:
+        case kFileDialogShow:
         {
             // 显示文件对话框（另存为模式），传入当前文件名作为初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -62,12 +62,12 @@ void CommandSaveAs::onUpdate() {
                     // 用户取消或关闭对话框
                     Utils::cmdLinePrint(loc.get("command.saveas.canceled"));
                 }
-                m_state = CommandSaveAsState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
         
-        case CommandSaveAsState::kImFileDialogEntry:
+        case kImFileDialogEntry:
         {
             // 获取初始文件名
             Document& doc = DocManager::getCurrentDocument();
@@ -82,11 +82,11 @@ void CommandSaveAs::onUpdate() {
                 "*.cad.json {.json},.*",
                 fullFileName);
             
-            m_state = CommandSaveAsState::kImFileDialogShow;
+            m_state = kImFileDialogShow;
             break;
         }
             
-        case CommandSaveAsState::kImFileDialogShow:
+        case kImFileDialogShow:
         {
             // 检查对话框是否完成
             if (ifd::FileDialog::getInstance().isDone("SaveAsDialog")) {
@@ -105,12 +105,12 @@ void CommandSaveAs::onUpdate() {
                 }
                 // 关闭对话框
                 ifd::FileDialog::getInstance().close();
-                m_state = CommandSaveAsState::kCompleted;
+                m_state = kCompleted;
             }
             break;
         }
             
-        case CommandSaveAsState::kCompleted:
+        case kCompleted:
         {
             // 命令完成
             finish();

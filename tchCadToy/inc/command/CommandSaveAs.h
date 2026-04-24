@@ -14,7 +14,7 @@ namespace tch {
 class CommandSaveAs : public Command {
 private:
     // 另存为命令状态枚举
-    enum class CommandSaveAsState {
+    enum CommandSaveAsState {
         kFileDialogEntry,       // 进入原始文件对话框状态
         kFileDialogShow,        // 显示原始文件对话框并等待用户选择
         kImFileDialogEntry,     // 进入ImFileDialog状态
