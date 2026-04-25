@@ -281,6 +281,18 @@ void CommandManager::cancelCurrentCommandAndExecute(const std::string& command)
     executeCommand(command);
 }
 
+void CommandManager::executeLastCommand() {
+    // 获取当前文档的命令执行历史
+    auto& history = DocManager::getCurrentDocument().getCommandExecutionHistory();
+
+    // 如果历史不为空，执行最后一条命令；否则执行HELP
+    if (!history.empty()) {
+        executeCommand(history.back());
+    } else {
+        executeCommand("HELP");
+    }
+}
+
 // 运行命令循环
 void CommandManager::runCommandLoop() {
     // 首先更新输入上下文

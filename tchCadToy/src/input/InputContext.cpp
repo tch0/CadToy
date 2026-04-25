@@ -11,7 +11,6 @@
 // 项目头文件
 #include "CommandManager.h"
 #include "InputHandler.h"
-#include "Renderer.h"
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
 #include "StringUtils.h"
@@ -408,14 +407,14 @@ void InputContext::handleEnterSpace(const std::string& input) {
     if (m_selectionTask.isSelecting() || m_inCommandExecution) {
         parseInput(input);
     }
+    // 什么任务、命令都没有在执行中，则解释为新命令去执行
     else {
-        // 输入为空则输出一个空行
+        // 输入为空则执行上一条有效命令
         if (input.empty())
         {
-            auto& loc = LocalizationManager::getInstance();
-            Utils::cmdLinePrint(loc.get("commandLine.prompt.command"));
+            CommandManager::getInstance().executeLastCommand();
         }
-        // 不为空则解析为新命令，输出当前执行的命令的操作会在executeCommand中做
+        // 不为空则解析为新命令，输出提示之类的操作会在executeCommand中做
         else {
             CommandManager::getInstance().executeCommand(input);
         }

@@ -64,6 +64,9 @@ public:
     // 取消当前正在执行的命令并执行新命令
     void cancelCurrentCommandAndExecute(const std::string& command);
     
+    // 执行上一条有效命令，如果没有则执行HELP
+    void executeLastCommand();
+    
     // 运行命令循环
     void runCommandLoop();
     
