@@ -106,9 +106,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令（无圆心，直接结束）
+            // Enter/Space：需要点或关键字，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.needPointOrKeyword")); // 需要点或关键字。
+                m_state = kCenterEntry;
             }
             // 点输入：获取圆心，进入半径输入
             else if (status == InputStatus::kPointInput) {
@@ -261,9 +262,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：无效点，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.invalidPoint")); // *无效点*
+                m_state = k3P_FirstPointEntry;
             }
             // 点输入：获取第一点，进入第二点输入
             else if (status == InputStatus::kPointInput) {
@@ -291,9 +293,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：无效点，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.invalidPoint")); // *无效点*
+                m_state = k3P_SecondPointEntry;
             }
             // 点输入：获取第二点，检查与第一点重合，进入第三点输入
             else if (status == InputStatus::kPointInput) {
@@ -332,9 +335,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCreateFailed;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：无效点，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCreateFailed;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.invalidPoint")); // *无效点*
+                m_state = k3P_ThirdPointEntry;
             }
             // 点输入：获取第三点，检查重合，计算圆，更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
@@ -383,9 +387,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：无效点，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.invalidPoint")); // *无效点*
+                m_state = k2P_FirstPointEntry;
             }
             // 点输入：获取第一点，进入第二点输入
             else if (status == InputStatus::kPointInput) {
@@ -417,9 +422,10 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCreateFailed;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：无效点，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCreateFailed;
+                Utils::cmdLinePrint(loc.get("inputContext.generalErrorPrompt.invalidPoint")); // *无效点*
+                m_state = k2P_SecondPointEntry;
             }
             // 点输入：获取第二点，检查重合，计算圆心和半径，更新预览圆（预览圆就是最终圆）或提示错误
             else if (status == InputStatus::kPointInput) {
@@ -462,9 +468,11 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：需要切点对象捕捉，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                // 需要"切点"对象捕捉并选择圆、圆弧或直线。
+                Utils::cmdLinePrint(loc.get("command.circle.t.tangentNeedObject"));
+                m_state = kT_FirstTangentEntry;
             }
             // 点输入：获取第一切点，进入第二切点输入
             else if (status == InputStatus::kPointInput) {
@@ -493,9 +501,11 @@ void CommandCircle::onUpdate() {
             else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
             }
-            // Enter/Space：结束命令
+            // Enter/Space：需要切点对象捕捉，输出提示并重新选择
             else if (status == InputStatus::kEnterInput) {
-                m_state = kCompleted;
+                // 需要"切点"对象捕捉并选择圆、圆弧或直线。
+                Utils::cmdLinePrint(loc.get("command.circle.t.tangentNeedObject"));
+                m_state = kT_SecondTangentEntry;
             }
             // 点输入：获取第二切点，进入半径输入
             else if (status == InputStatus::kPointInput) {
