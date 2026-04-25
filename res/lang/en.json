@@ -109,8 +109,8 @@
   "inputContext.generalErrorPrompt.invalidPoint": "*Invalid point*",
   "inputContext.generalErrorPrompt.invalidSelection": "*Invalid selection*",
   "inputContext.generalErrorPrompt.invalidKeyword": "*Invalid keyword*",
-  "inputContext.generalErrorPrompt.invalidInteger": "Enter an integer between {0} and {1}.",
-  "inputContext.generalErrorPrompt.invalidNumber": "Enter a number.",
+  "inputContext.generalErrorPrompt.needInteger": "Enter an integer between {0} and {1}.",
+  "inputContext.generalErrorPrompt.needNumber": "Enter a number.",
   "inputContext.generalErrorPrompt.needPointOrKeyword": "Point or keyword required.",
 
   "selection.prompt.single": "Select objects:",

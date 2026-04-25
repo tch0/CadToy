@@ -109,8 +109,8 @@
   "inputContext.generalErrorPrompt.invalidPoint": "*无效点*",
   "inputContext.generalErrorPrompt.invalidSelection": "*无效选择*",
   "inputContext.generalErrorPrompt.invalidKeyword": "*无效关键字*",
-  "inputContext.generalErrorPrompt.invalidInteger": "需要输入 {0} 到 {1} 的整数。",
-  "inputContext.generalErrorPrompt.invalidNumber": "需要输入数值。",
+  "inputContext.generalErrorPrompt.needInteger": "需要输入 {0} 到 {1} 的整数。",
+  "inputContext.generalErrorPrompt.needNumber": "需要输入数值。",
   "inputContext.generalErrorPrompt.needPointOrKeyword": "需要点或关键字。",
 
   "selection.prompt.single": "选择对象:",

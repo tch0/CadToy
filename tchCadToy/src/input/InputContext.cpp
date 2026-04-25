@@ -499,7 +499,7 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     setAllowedTypes({InputType::kInteger, InputType::kFloat});
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
-    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
+    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.needNumber"); // 需要输入数值。
     
     // 数值范围
     m_floatLimitMin = min;
@@ -521,7 +521,7 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
     }
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
-    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
+    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.needNumber"); // 需要输入数值。
     
     // 数值范围
     m_floatLimitMin = min;
@@ -537,7 +537,7 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max) {
     setAllowedTypes({InputType::kInteger});
     // 设置错误提示 - 从本地化资源加载并格式化
     auto& loc = LocalizationManager::getInstance();
-    std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
+    std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.needInteger"); // 需要输入{0}到{1}的整数
     // 使用StringUtils::format进行格式化，处理可能的异常
     m_errorPrompt = StringUtils::format(errorTemplate, min, max);
     
@@ -561,7 +561,7 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max, c
     }
     // 设置错误提示 - 从本地化资源加载并格式化
     auto& loc = LocalizationManager::getInstance();
-    std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.invalidInteger"); // 需要输入{0}到{1}的整数
+    std::string errorTemplate = loc.get("inputContext.generalErrorPrompt.needInteger"); // 需要输入{0}到{1}的整数
     // 使用StringUtils::format进行格式化，处理可能的异常
     m_errorPrompt = StringUtils::format(errorTemplate, min, max);
     
@@ -579,7 +579,7 @@ void InputContext::waitForFloat(const std::string& prompt, double min, double ma
     setAllowedTypes({InputType::kFloat});
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
-    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidNumber"); // 需要输入数值。
+    m_errorPrompt = loc.get("inputContext.generalErrorPrompt.needNumber"); // 需要输入数值。
     
     // 浮点数范围
     m_floatLimitMin = min;
