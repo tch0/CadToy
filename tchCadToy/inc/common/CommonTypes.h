@@ -85,12 +85,31 @@ public:
     glm::dvec3 selectionPreviewPointWorld = glm::dvec3(0.0, 0.0, 0.0); // 所有选择的当前预览点
     std::vector<glm::dvec3> selectionPointsWorld; // 选择点集合（世界坐标，用于套索、多边形、栏选等）
     
+    // RubberBand 橡皮线相关数据
+    bool isRubberBandVisible = false;                           // 是否显示橡皮线
+    glm::dvec3 rubberBandStartWorld = glm::dvec3(0.0);  // 橡皮线起点（世界坐标）
+    glm::dvec3 rubberBandEndWorld = glm::dvec3(0.0);    // 橡皮线终点（世界坐标）
+    
     // 后续可添加的其他数据
     // 例如：
     // - 捕捉相关数据
     // - 极轴追踪相关数据
     // - 命令预览相关数据
     // - 选择集相关数据
+    
+    // 更新橡皮线数据
+    void updateRubberBand(const glm::dvec3& start, const glm::dvec3& end) {
+        isRubberBandVisible = true;
+        rubberBandStartWorld = start;
+        rubberBandEndWorld = end;
+    }
+    
+    // 清除橡皮线数据
+    void clearRubberBand() {
+        isRubberBandVisible = false;
+        rubberBandStartWorld = glm::dvec3(0.0);
+        rubberBandEndWorld = glm::dvec3(0.0);
+    }
     
     // 压入当前光标状态并设置新光标
     void pushAndSetCursor(CursorMode mode, CursorMarker marker = CursorMarker::kNone) {
@@ -132,7 +151,7 @@ public:
     void reset() {
         resetCursor();
         resetSelection();
-        // 后续添加其他数据的重置
+        clearRubberBand();
     }
 };
 

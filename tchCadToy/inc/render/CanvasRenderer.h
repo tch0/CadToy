@@ -73,7 +73,8 @@ private:
     GLuint m_canvasProgram;  // 统一的画布着色器程序（支持实线和虚线模式）
     
     // 虚线纹理
-    GLuint m_dashTexture;  // 一维虚线纹理
+    GLuint m_dashTexture;       // 一维虚线纹理（4:4比例，用于选择）
+    GLuint m_rubberBandTexture; // 橡皮线虚线纹理（5:3比例）
     
     // Uniform locations
     GLint m_mvpLocation;       // uProjection uniform位置
@@ -98,6 +99,7 @@ public:
     void drawCursor();        // 绘制光标（十字、拾取框等）
     void drawSelection();     // 绘制选择区域
     void drawCursorMarker();  // 绘制光标标记（锁定、正交、选择模式等）
+    void drawRubberBand();    // 绘制橡皮线
     
     // 顶点管理
     void clearVertices();                                           // 清空顶点缓冲
@@ -107,8 +109,10 @@ public:
 
 private:
     // Shader辅助方法
-    void initDashTexture();        // 初始化虚线纹理
+    void initDashTexture();           // 初始化虚线纹理
+    void initRubberBandTexture();     // 初始化橡皮线虚线纹理（5:3比例）
     void setDashedMode(bool isDashed, float period = 8.0f);  // 设置虚线模式，period为虚线周期像素数
+    void setRubberBandMode(float period = 16.0f);  // 设置橡皮线模式
     
     // 多边形填充（使用模板缓冲支持凹多边形）
     void drawPolygonFill(const std::vector<glm::vec2>& points, const glm::vec4& fillColor);

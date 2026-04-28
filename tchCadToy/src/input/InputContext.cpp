@@ -20,7 +20,7 @@ namespace tch {
 
 // 构造函数
 InputContext::InputContext() :
-    m_inCommandExecution(false),
+    m_bInCommandExecution(false),
     m_currentStatus(InputStatus::kNone),
     m_allowedTypes(),
     m_prompt(""),
@@ -28,6 +28,7 @@ InputContext::InputContext() :
     m_pickedPoint(glm::dvec3(0, 0, 0)),
     m_bHasBasePoint(false),
     m_basePoint(glm::dvec3(0, 0, 0)),
+    m_bDrawRubberBand(false),
     m_inputInteger(0),
     m_intLimitMin(INT_MIN),
     m_intLimitMax(INT_MAX),
@@ -51,7 +52,7 @@ InputContext& InputContext::getInstance() {
 
 // 命令执行状态管理，CommandManager通过这个接口来管理这个标记，命令开始执行时置为true，执行结束/取消执行后置回false
 void InputContext::setInCommandExecution(bool inExecution) {
-    m_inCommandExecution = inExecution;
+    m_bInCommandExecution = inExecution;
     // 命令执行结束，重置输入上下文
     if (!inExecution) {
         resetStatus();
@@ -59,13 +60,13 @@ void InputContext::setInCommandExecution(bool inExecution) {
 }
 
 bool InputContext::isInCommandExecution() const {
-    return m_inCommandExecution;
+    return m_bInCommandExecution;
 }
 
 // 是否处于命令执行中或者任何任务(例如选择交互、夹点编辑交互)执行中
 bool InputContext::isAnyCommandOrTaskRunning() const
 {
-    return m_inCommandExecution || m_selectionTask.isSelecting();
+    return m_bInCommandExecution || m_selectionTask.isSelecting();
 }
 
 // 提示信息相关
@@ -89,6 +90,11 @@ InputStatus InputContext::getCurrentStatus() {
     InputStatus status = m_currentStatus;
     if (status == InputStatus::kEnterInput || status == InputStatus::kCanceled) {
         m_currentStatus = InputStatus::kNone;
+        // 清除橡皮线
+        if (m_bDrawRubberBand) {
+            m_bDrawRubberBand = false;
+            m_interactionData.clearRubberBand();
+        }
     }
     return status;
 }
@@ -102,6 +108,7 @@ void InputContext::resetStatusExceptInteractionData() {
     m_pickedPoint = glm::dvec3(0, 0, 0);
     m_bHasBasePoint = false;
     m_basePoint = glm::dvec3(0, 0, 0);
+    m_bDrawRubberBand = false;
     m_inputInteger = 0;
     m_intLimitMin = INT_MIN;
     m_intLimitMax = INT_MAX;
@@ -142,6 +149,11 @@ bool InputContext::getPickedPoint(glm::dvec3& point) {
     if (m_currentStatus == InputStatus::kPointInput) {
         point = m_pickedPoint;
         m_currentStatus = InputStatus::kNone;
+        // 清除橡皮线
+        if (m_bDrawRubberBand) {
+            m_bDrawRubberBand = false;
+            m_interactionData.clearRubberBand();
+        }
         return true;
     }
     return false;
@@ -151,7 +163,7 @@ bool InputContext::getPickedPoint(glm::dvec3& point) {
 void InputContext::handleLeftMouseClick() {
     // TODO: 命令中与选择中点输入流程完全一致，需不需要统一起来？
     // 检查是否有活动命令
-    if (m_inCommandExecution) {
+    if (m_bInCommandExecution) {
         // 设置到输入上下文
         if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
             m_pickedPoint = getPreviewPoint(); // 鼠标点世界坐标
@@ -180,7 +192,7 @@ void InputContext::handleLeftMouseClick() {
 // 处理鼠标右键点击（由InputHandler调用）
 void InputContext::handleRightMouseClick() {
     // 检查是否有活动命令
-    if (m_inCommandExecution) {
+    if (m_bInCommandExecution) {
         // 暂时空出
     }
 }
@@ -453,7 +465,7 @@ void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
 // 处理Enter/Space输入
 void InputContext::handleEnterSpace(const std::string& input) {
     // 选择或者命令执行中，解析输入
-    if (m_selectionTask.isSelecting() || m_inCommandExecution) {
+    if (m_selectionTask.isSelecting() || m_bInCommandExecution) {
         parseInput(input);
     }
     // 什么任务、命令都没有在执行中，则解释为新命令去执行
@@ -472,7 +484,7 @@ void InputContext::handleEnterSpace(const std::string& input) {
 
 // 处理Escape输入
 void InputContext::handleEscape(const std::string& input) {
-    if (m_selectionTask.isSelecting() || m_inCommandExecution) {
+    if (m_selectionTask.isSelecting() || m_bInCommandExecution) {
         // 选择或者命令执行中，设置取消状态
         m_currentStatus = InputStatus::kCanceled;
         // 更新命令提示，添加取消标记和用户输入
@@ -502,11 +514,11 @@ void InputContext::clearSpecialKeyEvent() {
 }
 
 // 等待点输入（带基点）
-void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords) {
+void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords, bool drawRubberBand) {
     setPrompt(prompt);
+    setKeywordOptions(keywords);
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kPoint, InputType::kKeyword});
-        setKeywordOptions(keywords);
     }
     else {
         setAllowedTypes({InputType::kPoint});
@@ -517,6 +529,12 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
     // 保存基点
     m_basePoint = basePoint;
     m_bHasBasePoint = true;
+
+    // 设置橡皮线
+    m_bDrawRubberBand = drawRubberBand;
+    if (drawRubberBand) {
+        m_interactionData.updateRubberBand(basePoint, basePoint);
+    }
     
     // 设置光标模式为十字光标
     m_interactionData.cursorMode = CursorMode::kCrosshair;
@@ -525,9 +543,9 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
 // 等待点输入（无基点）
 void InputContext::waitForPoint(const std::string& prompt, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
+    setKeywordOptions(keywords);
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kPoint, InputType::kKeyword});
-        setKeywordOptions(keywords);
     }
     else {
         setAllowedTypes({InputType::kPoint});
@@ -561,9 +579,9 @@ void InputContext::waitForNumber(const std::string& prompt, double min, double m
 // 等待数值输入，同时允许关键字
 void InputContext::waitForNumber(const std::string& prompt, double min, double max, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
+    setKeywordOptions(keywords);
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kInteger, InputType::kFloat, InputType::kKeyword});
-        setKeywordOptions(keywords);
     }
     else {
         setAllowedTypes({InputType::kInteger, InputType::kFloat});
@@ -601,9 +619,9 @@ void InputContext::waitForInteger(const std::string& prompt, int min, int max) {
 // 等待整数输入，同时允许关键字
 void InputContext::waitForInteger(const std::string& prompt, int min, int max, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
+    setKeywordOptions(keywords);
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kInteger, InputType::kKeyword});
-        setKeywordOptions(keywords);
     }
     else {
         setAllowedTypes({InputType::kInteger});
@@ -650,10 +668,10 @@ void InputContext::waitForString(const std::string& prompt) {
 }
 
 // 等待关键字输入
-void InputContext::waitForKeyword(const std::string& prompt, const std::vector<std::string>& options) {
+void InputContext::waitForKeyword(const std::string& prompt, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
     setAllowedTypes({InputType::kKeyword});
-    setKeywordOptions(options);
+    setKeywordOptions(keywords);
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidKeyword"); // *无效关键字*
@@ -677,9 +695,9 @@ void InputContext::waitForEnter(const std::string& prompt) {
 // 等待实体选择输入
 void InputContext::waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
+    setKeywordOptions(keywords);
     if (!keywords.empty()) {
         setAllowedTypes({InputType::kEntitySelection, InputType::kKeyword});
-        setKeywordOptions(keywords);
     }
     else {
         setAllowedTypes({InputType::kEntitySelection});
@@ -728,7 +746,7 @@ void InputContext::drawInfoWindow() {
     // 命令执行状态 - 显示是否正在执行命令
     ImGui::Text("%s: %s", 
                loc.get("window.inputContextInfo.inCommandExecution").c_str(), 
-               m_inCommandExecution ? "true" : "false");
+               m_bInCommandExecution ? "true" : "false");
                
     // 选择任务执行状态 - 显示是否正在进行选择
     ImGui::Text("%s: %s", 
@@ -781,6 +799,19 @@ void InputContext::drawInfoWindow() {
                loc.get("window.inputContextInfo.errorPrompt").c_str(), 
                m_errorPrompt.empty() ? "" : m_errorPrompt.c_str());
     
+    // 基点（如果有）
+    if (m_bHasBasePoint) {
+        ImGui::Text("%s: (%.2f, %.2f, %.2f)",
+                   loc.get("window.inputContextInfo.basePoint").c_str(),
+                   m_basePoint.x, m_basePoint.y, m_basePoint.z);
+    }
+
+    // 预览点
+    glm::dvec3 previewPoint = getPreviewPoint();
+    ImGui::Text("%s: (%.2f, %.2f, %.2f)",
+               loc.get("window.inputContextInfo.previewPoint").c_str(),
+               previewPoint.x, previewPoint.y, previewPoint.z);
+
     // 添加分隔线
     ImGui::Separator();
     
@@ -882,6 +913,23 @@ void InputContext::drawInfoWindow() {
                loc.get("window.inputContextInfo.selectionPointsCount").c_str(), 
                m_interactionData.selectionPointsWorld.size());
     
+    // 橡皮线数据
+    ImGui::Text("  %s: %s",
+               loc.get("window.inputContextInfo.rubberBandVisible").c_str(),
+               m_interactionData.isRubberBandVisible ? "true" : "false");
+    if (m_interactionData.isRubberBandVisible) {
+        ImGui::Text("    %s: (%.2f, %.2f, %.2f)",
+                   loc.get("window.inputContextInfo.rubberBandStart").c_str(),
+                   m_interactionData.rubberBandStartWorld.x,
+                   m_interactionData.rubberBandStartWorld.y,
+                   m_interactionData.rubberBandStartWorld.z);
+        ImGui::Text("    %s: (%.2f, %.2f, %.2f)",
+                   loc.get("window.inputContextInfo.rubberBandEnd").c_str(),
+                   m_interactionData.rubberBandEndWorld.x,
+                   m_interactionData.rubberBandEndWorld.y,
+                   m_interactionData.rubberBandEndWorld.z);
+    }
+    
     ImGui::End();
 }
 
@@ -933,7 +981,7 @@ void InputContext::onUpdate() {
             
             // 如果在命令执行中则需要获取选择返回的状态，以提供给命令来处理
             // 比如选择中Esc，命令可能直接结束
-            if (m_inCommandExecution)
+            if (m_bInCommandExecution)
             {
                 m_currentStatus = m_selectionTask.getInputStatus();
             }
@@ -941,6 +989,11 @@ void InputContext::onUpdate() {
             // 重置选择任务
             m_selectionTask.reset();
         }
+    }
+    
+    // 更新橡皮线（起点为基点，终点为鼠标位置）
+    if (m_bDrawRubberBand) {
+        m_interactionData.updateRubberBand(m_basePoint, getPreviewPoint());
     }
 }
 

@@ -96,6 +96,8 @@
   "window.inputContextInfo.keywordOptions": "关键字选项",
   "window.inputContextInfo.prompt": "提示信息",
   "window.inputContextInfo.errorPrompt": "错误提示",
+  "window.inputContextInfo.basePoint": "基点",
+  "window.inputContextInfo.previewPoint": "预览点",
   "window.inputContextInfo.unknown": "未知",
   "window.inputContextInfo.interactionData": "交互数据",
   "window.inputContextInfo.cursorMode": "光标模式",
@@ -105,6 +107,9 @@
   "window.inputContextInfo.selectionInitialPoint": "选择起点",
   "window.inputContextInfo.selectionPreviewPoint": "选择预览点",
   "window.inputContextInfo.selectionPointsCount": "选择点数量",
+  "window.inputContextInfo.rubberBandVisible": "橡皮线可见",
+  "window.inputContextInfo.rubberBandStart": "橡皮线起点",
+  "window.inputContextInfo.rubberBandEnd": "橡皮线终点",
 
   "inputContext.generalErrorPrompt.invalidPoint": "*无效点*",
   "inputContext.generalErrorPrompt.invalidSelection": "*无效选择*",

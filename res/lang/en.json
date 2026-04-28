@@ -96,6 +96,8 @@
   "window.inputContextInfo.keywordOptions": "Keyword Options",
   "window.inputContextInfo.prompt": "Prompt",
   "window.inputContextInfo.errorPrompt": "Error Prompt",
+  "window.inputContextInfo.basePoint": "Base Point",
+  "window.inputContextInfo.previewPoint": "Preview Point",
   "window.inputContextInfo.unknown": "Unknown",
   "window.inputContextInfo.interactionData": "Interaction Data",
   "window.inputContextInfo.cursorMode": "Cursor Mode",
@@ -105,6 +107,9 @@
   "window.inputContextInfo.selectionInitialPoint": "Selection Initial Point",
   "window.inputContextInfo.selectionPreviewPoint": "Selection Preview Point",
   "window.inputContextInfo.selectionPointsCount": "Selection Points Count",
+  "window.inputContextInfo.rubberBandVisible": "Rubber Band Visible",
+  "window.inputContextInfo.rubberBandStart": "Rubber Band Start",
+  "window.inputContextInfo.rubberBandEnd": "Rubber Band End",
 
   "inputContext.generalErrorPrompt.invalidPoint": "*Invalid point*",
   "inputContext.generalErrorPrompt.invalidSelection": "*Invalid selection*",

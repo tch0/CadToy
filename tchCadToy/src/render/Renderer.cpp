@@ -308,6 +308,7 @@ void Renderer::drawAll() {
     
     // 4. 前景层（CanvasRenderer）
     s_canvasRenderer.drawSelection();
+    s_canvasRenderer.drawRubberBand();
     s_canvasRenderer.drawCursor();
     s_canvasRenderer.drawCursorMarker();
 }

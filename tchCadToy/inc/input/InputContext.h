@@ -43,7 +43,7 @@ public:
     
 private:
     // 命令执行状态
-    bool m_inCommandExecution;
+    bool m_bInCommandExecution;
     
     // 当前输入状态
     InputStatus m_currentStatus;
@@ -61,6 +61,7 @@ private:
     glm::dvec3 m_pickedPoint; // 拾取获取输入的点
     bool m_bHasBasePoint; // 是否有基点
     glm::dvec3 m_basePoint; // 点输入的基点，由带基点版本waitForPoint传入
+    bool m_bDrawRubberBand; // 是否绘制橡皮线
     
     // 输入的整数
     int m_inputInteger;
@@ -163,7 +164,7 @@ public:
     void handleEscape(const std::string& input); // 处理Escape输入
     
     // 等待点输入（带基点）
-    void waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords);
+    void waitForPoint(const std::string& prompt, const glm::dvec3& basePoint, const std::vector<std::string>& keywords, bool drawRubberBand = false);
     
     // 等待点输入（无基点）
     void waitForPoint(const std::string& prompt, const std::vector<std::string>& keywords = {});
@@ -183,7 +184,7 @@ public:
     void waitForString(const std::string& prompt);
     
     // 等待关键字输入
-    void waitForKeyword(const std::string& prompt, const std::vector<std::string>& options);
+    void waitForKeyword(const std::string& prompt, const std::vector<std::string>& keywords);
     
     // 等待回车输入
     void waitForEnter(const std::string& prompt);

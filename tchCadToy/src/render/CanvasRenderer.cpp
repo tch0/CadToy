@@ -179,6 +179,7 @@ CanvasRenderer::CanvasRenderer()
     , m_vbo(0)
     , m_canvasProgram(0)
     , m_dashTexture(0)
+    , m_rubberBandTexture(0)
     , m_mvpLocation(-1)
     , m_isDashedLocation(-1)
     , m_dashScaleLocation(-1)
@@ -203,6 +204,24 @@ void CanvasRenderer::initDashTexture() {
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     
     LOG_INFO("Created dash texture: {}", m_dashTexture);
+}
+
+// 初始化橡皮线虚线纹理（5:3比例）
+void CanvasRenderer::initRubberBandTexture() {
+    // 5白3透明虚线模式（5:3比例，共8像素）
+    unsigned char pattern[8] = {
+        255, 255, 255, 255, 255,  // 5个白色
+        0, 0, 0                   // 3个透明
+    };
+
+    glGenTextures(1, &m_rubberBandTexture);
+    glBindTexture(GL_TEXTURE_1D, m_rubberBandTexture);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RED, 8, 0, GL_RED, GL_UNSIGNED_BYTE, pattern);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    LOG_INFO("Created rubber band texture: {}", m_rubberBandTexture);
 }
 
 // 初始化渲染器
@@ -270,6 +289,9 @@ bool CanvasRenderer::initialize() {
     // 初始化虚线纹理
     initDashTexture();
     
+    // 初始化橡皮线虚线纹理
+    initRubberBandTexture();
+    
     // 预分配顶点缓冲区
     m_vertices.reserve(10000);
     
@@ -297,6 +319,11 @@ void CanvasRenderer::cleanup() {
     if (m_dashTexture) {
         glDeleteTextures(1, &m_dashTexture);
         m_dashTexture = 0;
+    }
+    
+    if (m_rubberBandTexture) {
+        glDeleteTextures(1, &m_rubberBandTexture);
+        m_rubberBandTexture = 0;
     }
 }
 
@@ -339,6 +366,14 @@ void CanvasRenderer::flushVertices() {
 void CanvasRenderer::setDashedMode(bool isDashed, float period) {
     glUniform1i(m_isDashedLocation, isDashed ? 1 : 0);
     glUniform1f(m_dashScaleLocation, 1.0f / period);
+    glBindTexture(GL_TEXTURE_1D, m_dashTexture);
+}
+
+// 设置橡皮线模式
+void CanvasRenderer::setRubberBandMode(float period) {
+    glUniform1i(m_isDashedLocation, 1);
+    glUniform1f(m_dashScaleLocation, 1.0f / period);
+    glBindTexture(GL_TEXTURE_1D, m_rubberBandTexture);
 }
 
 // 多边形填充（使用模板缓冲支持凹多边形）
@@ -1357,6 +1392,53 @@ void CanvasRenderer::drawFenceSelectionVertices(const std::vector<glm::vec2>& po
     glBindVertexArray(m_vao);
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(m_vertices.size()));
     glBindVertexArray(0);
+}
+
+// 绘制橡皮线
+void CanvasRenderer::drawRubberBand() {
+    InteractionData& interactionData = InputContext::getInstance().getInteractionData();
+
+    if (!interactionData.isRubberBandVisible) {
+        return;
+    }
+
+    auto& transformManager = DocManager::getCurrentDocument().getTransformManager();
+
+    // 将世界坐标转换为屏幕坐标
+    glm::vec2 startScreen = transformManager.worldToScreen(interactionData.rubberBandStartWorld);
+    glm::vec2 endScreen = transformManager.worldToScreen(interactionData.rubberBandEndWorld);
+
+    // 橡皮线颜色 rgb(221, 167, 32)
+    glm::vec4 rubberBandColor(221.0f / 255.0f, 167.0f / 255.0f, 32.0f / 255.0f, 1.0f);
+
+    // 禁用深度测试
+    glDisable(GL_DEPTH_TEST);
+
+    // 使用shader绘制
+    glUseProgram(m_canvasProgram);
+    glUniformMatrix4fv(m_mvpLocation, 1, GL_FALSE, &m_projection[0][0]);
+
+    // 绑定橡皮线虚线纹理
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_1D, m_rubberBandTexture);
+
+    // 计算线段长度用于纹理坐标
+    float lineLength = glm::length(endScreen - startScreen);
+
+    // 添加顶点（使用累积纹理坐标）
+    clearVertices();
+    addVertex(startScreen, rubberBandColor, 0.0f);
+    addVertex(endScreen, rubberBandColor, lineLength);
+    flushVertices();
+
+    // 设置橡皮线模式（5:3比例，周期16像素）
+    setRubberBandMode(16.0f);
+
+    glBindVertexArray(m_vao);
+    glDrawArrays(GL_LINES, 0, 2);
+    glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
 }
 
 } // namespace tch

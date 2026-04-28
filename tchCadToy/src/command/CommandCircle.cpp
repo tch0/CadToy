@@ -140,7 +140,7 @@ void CommandCircle::onUpdate() {
         case kRadiusPointEntry:
             m_state = kRadiusPointQuery;
             // 指定圆的半径或 [直径(D)] <默认值>:
-            ctx.waitForPoint(StringUtils::format(loc.get("command.circle.radiusPrompt"), s_defaultRadius), m_center, {"D"});
+            ctx.waitForPoint(StringUtils::format(loc.get("command.circle.radiusPrompt"), s_defaultRadius), m_center, {"D"}, true);
             break;
 
         case kRadiusPointQuery: {
@@ -197,7 +197,7 @@ void CommandCircle::onUpdate() {
         case kDiameterPointEntry:
             m_state = kDiameterPointQuery;
             // 指定圆的直径 <默认值>:
-            ctx.waitForPoint(StringUtils::format(loc.get("command.circle.diameterPrompt"), s_defaultRadius * 2), m_center, {});
+            ctx.waitForPoint(StringUtils::format(loc.get("command.circle.diameterPrompt"), s_defaultRadius * 2), m_center, {}, true);
             break;
 
         case kDiameterPointQuery: {
@@ -279,7 +279,7 @@ void CommandCircle::onUpdate() {
         case k3P_SecondPointEntry:
             m_state = k3P_SecondPointQuery;
             // 指定圆上的第二个点:
-            ctx.waitForPoint(loc.get("command.circle.3p.secondPoint"));
+            ctx.waitForPoint(loc.get("command.circle.3p.secondPoint"), m_firstPoint, {}, true);
             break;
 
         case k3P_SecondPointQuery: {
@@ -316,7 +316,7 @@ void CommandCircle::onUpdate() {
         case k3P_ThirdPointEntry:
             m_state = k3P_ThirdPointQuery;
             // 指定圆上的第三个点:
-            ctx.waitForPoint(loc.get("command.circle.3p.thirdPoint"));
+            ctx.waitForPoint(loc.get("command.circle.3p.thirdPoint"), m_secondPoint, {}, true);
             break;
 
         case k3P_ThirdPointQuery: {
@@ -404,7 +404,7 @@ void CommandCircle::onUpdate() {
         case k2P_SecondPointEntry:
             m_state = k2P_SecondPointQuery;
             // 指定圆直径的第二个端点:
-            ctx.waitForPoint(loc.get("command.circle.2p.secondPoint"));
+            ctx.waitForPoint(loc.get("command.circle.2p.secondPoint"), m_firstPoint, {}, true);
             break;
 
         case k2P_SecondPointQuery: {
