@@ -32,6 +32,7 @@ private:
     glm::dvec3 m_currentPoint;          // 鼠标当前位置（预览终点）
     std::vector<ObjectId> m_lineIds;    // 所有入库线段的ID
     Database* m_pDb;                    // 数据库指针（构造时获取）
+    glm::dvec3 m_originalLastPoint;     // 命令开始时的原始LastPoint
     
     // 辅助方法
     void createNewLine(const glm::dvec3& start, const glm::dvec3& end);

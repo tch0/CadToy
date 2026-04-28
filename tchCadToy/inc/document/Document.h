@@ -14,6 +14,9 @@
 #include "GraphicsDataCache.h"
 #include "UndoStack.h"
 
+// 第三方库
+#include <glm/glm.hpp>
+
 
 namespace tch {
 
@@ -31,6 +34,10 @@ private:
     bool m_showGrid;                                        // 是否显示栅格
     bool m_showAxes;                                        // 是否显示坐标轴
     
+    // LastPoint：上一个点，上一个通过line/arc/pline命令创建的线段、圆弧的最后一个点
+    // 不参与序列化，在构造函数中初始化为原点
+    glm::dvec3 m_lastPoint;
+    
     // 数据库（每个文档拥有自己的 CAD 数据库）
     std::unique_ptr<Database> m_database;
     
@@ -39,7 +46,6 @@ private:
 
     // Undo 栈（保存 Undo/Redo 记录）
     UndoStack m_undoStack;
-
 public:
     // 默认构造函数：创建空文档，不构造 Database
     Document();
@@ -111,7 +117,11 @@ public:
 
     // 获取 Undo 栈
     UndoStack& getUndoStack() { return m_undoStack; }
-    
+
+    // LastPoint 相关方法
+    glm::dvec3 getLastPoint() const { return m_lastPoint; }
+    void setLastPoint(const glm::dvec3& point) { m_lastPoint = point; }
+
     // 从文件加载（使用 Database 反序列化）
     bool loadFromFile(const std::filesystem::path& filePath);
     bool loadFromFile();

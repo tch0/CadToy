@@ -24,7 +24,8 @@ Document::Document() :
     m_modified(false),
     m_saved(false),
     m_showGrid(true),
-    m_showAxes(true) {
+    m_showAxes(true),
+    m_lastPoint(0, 0, 0) {
     // m_database 不构造，保持 nullptr
 }
 
@@ -36,6 +37,7 @@ Document::Document(const std::string& fileName) :
     m_saved(false),
     m_showGrid(true),
     m_showAxes(true),
+    m_lastPoint(0, 0, 0),
     m_database(std::make_unique<Database>()),
     m_graphicsDataCache(std::make_unique<GraphicsDataCache>()) {
     // 关联图形数据缓存到数据库（双向关联）

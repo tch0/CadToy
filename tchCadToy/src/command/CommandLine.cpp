@@ -26,7 +26,8 @@ CommandLine::CommandLine() :
     m_startPoint(0, 0, 0),
     m_currentPoint(0, 0, 0),
     m_lineIds(),
-    m_pDb(DocManager::getCurrentDocument().getDatabase()) {
+    m_pDb(DocManager::getCurrentDocument().getDatabase()),
+    m_originalLastPoint(InputContext::getInstance().getLastPoint()) {
 }
 
 // 创建新线段并入库
@@ -71,7 +72,7 @@ void CommandLine::removeLastLine() {
     // 记录删除操作到undo栈
     UndoManager::getInstance().recordRemove(lastId);
     
-    // 更新起点为新的最后一条线的终点
+    // 更新起点为新的最后一条线的终点，并更新LastPoint
     if (!m_lineIds.empty()) {
         ObjectId newLastId = m_lineIds.back();
         auto* pEntity = m_pDb->getEntity(newLastId);
@@ -81,8 +82,13 @@ void CommandLine::removeLastLine() {
         
         auto* pLine = pEntity->as<DbLine>();
         if (pLine) {
-            m_startPoint = pLine->end();
+            // 预览线的起点就是上一段已经确定线段的终点
+            m_startPoint = pLine->start();
+            InputContext::getInstance().setLastPoint(pLine->start());
         }
+    } else {
+        // 所有线段都撤销了，恢复为原始LastPoint
+        InputContext::getInstance().setLastPoint(m_originalLastPoint);
     }
 }
 
@@ -131,9 +137,18 @@ void CommandLine::onUpdate() {
             if (status == InputStatus::kNone) {
                 break;
             }
-            // Esc/Enter/Space，结束命令
-            else if (status == InputStatus::kCanceled || status == InputStatus::kEnterInput) {
+            // Esc：结束命令
+            else if (status == InputStatus::kCanceled) {
                 m_state = kCompleted;
+            }
+            // Enter/Space：使用LastPoint作为起点
+            else if (status == InputStatus::kEnterInput) {
+                m_startPoint = ctx.getLastPoint();
+                m_firstPoint = m_startPoint;
+                m_currentPoint = m_startPoint;
+                // 创建第一条线（起点=终点，作为预览）
+                createNewLine(m_startPoint, m_startPoint);
+                m_state = kNextPointEntry;
             }
             // 获取第一点输入
             else if (status == InputStatus::kPointInput) {
@@ -187,6 +202,8 @@ void CommandLine::onUpdate() {
                     // 闭合：连接到第一条线的起点
                     if (m_lineIds.size() >= 2) {
                         updateLastLineEnd(m_firstPoint);
+                        // 更新LastPoint为闭合点（第一段起点）
+                        ctx.setLastPoint(m_firstPoint);
                         m_state = kCompleted;
                     }
                 }
@@ -207,8 +224,10 @@ void CommandLine::onUpdate() {
             // 获取点输入
             else if (status == InputStatus::kPointInput) {
                 if (ctx.getPickedPoint(m_currentPoint)) {
-                    // 更新最后一条线的终点
+                    // 更新最后一条线的终点（预览线变为确定线）
                     updateLastLineEnd(m_currentPoint);
+                    // 更新LastPoint为线段终点
+                    ctx.setLastPoint(m_currentPoint);
                     m_startPoint = m_currentPoint;
                     
                     // 创建新的预览线

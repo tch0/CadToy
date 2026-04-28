@@ -849,6 +849,16 @@ glm::dvec3 InputContext::getPreviewPoint() const {
     return DocManager::getCurrentDocument().getTransformManager().screenToWorld(screenPos);
 }
 
+// 设置LastPoint
+void InputContext::setLastPoint(const glm::dvec3& point) {
+    DocManager::getCurrentDocument().setLastPoint(point);
+}
+
+// 获取LastPoint
+glm::dvec3 InputContext::getLastPoint() const {
+    return DocManager::getCurrentDocument().getLastPoint();
+}
+
 // 更新输入上下文
 void InputContext::onUpdate() {
     // 如果调用了waitForEntity来选择实体

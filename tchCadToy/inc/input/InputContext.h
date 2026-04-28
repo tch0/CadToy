@@ -202,6 +202,10 @@ public:
     // 获取实时鼠标预览点的世界坐标
     glm::dvec3 getPreviewPoint() const;
 
+    // LastPoint相关方法
+    void setLastPoint(const glm::dvec3& point);
+    glm::dvec3 getLastPoint() const;
+
     // 更新输入上下文
     void onUpdate();
     
