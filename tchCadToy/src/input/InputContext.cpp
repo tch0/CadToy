@@ -295,35 +295,84 @@ void InputContext::parseInput(const std::string& input) {
         }
     }
     
-    // 尝试解析为点坐标（如果允许点输入）- 支持 "x,y" 格式的二维坐标与距离输入
+    // 尝试解析为点坐标（如果允许点输入）- 支持多种格式：绝对/相对笛卡尔、绝对/相对极坐标、直接距离
     if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kPoint) != m_allowedTypes.end()) {
-        size_t pos = input.find(',');
-        // 尝试解析为二维点输入: xpos,ypos -> point = (xpos,ypos,0)
-        if (pos != std::string::npos && pos > 0 && pos < input.length() - 1) {
+        // 确定基点：有基点时用基点，否则用LastPoint
+        glm::dvec3 basePoint = m_bHasBasePoint ? m_basePoint : getLastPoint();
+        
+        // 检查是否以@开头（相对坐标）
+        bool isRelative = false;
+        std::string coordInput = input;
+        if (!input.empty() && input[0] == '@') {
+            isRelative = true;
+            coordInput = input.substr(1);
+        }
+        
+        // 检查是否包含<（极坐标）
+        size_t anglePos = coordInput.find('<');
+        if (anglePos != std::string::npos && anglePos > 0 && anglePos < coordInput.length() - 1) {
+            // 极坐标解析: 距离<角度 或 @距离<角度
             try {
-                std::string xStr = input.substr(0, pos);
-                std::string yStr = input.substr(pos + 1);
+                std::string distStr = coordInput.substr(0, anglePos);
+                std::string angleStr = coordInput.substr(anglePos + 1);
+                
+                size_t posDist, posAngle;
+                double distance = std::stod(distStr, &posDist);
+                double angleDeg = std::stod(angleStr, &posAngle);
+                
+                if (posDist == distStr.length() && posAngle == angleStr.length()) {
+                    // 角度转换为弧度
+                    double angleRad = glm::radians(angleDeg);
+                    glm::dvec3 offset(distance * cos(angleRad), distance * sin(angleRad), 0.0);
+                    if (isRelative) {
+                        // 相对极坐标@dis<angle：从基点计算
+                        m_pickedPoint = basePoint + offset;
+                    } else {
+                        // 绝对极坐标dis<angle：从原点计算
+                        m_pickedPoint = offset;
+                    }
+                    m_currentStatus = InputStatus::kPointInput;
+                    Utils::cmdLinePrint(inputPrompt);
+                    return;
+                }
+            } catch (...) {
+                // 解析失败，不是合法极坐标输入
+            }
+        }
+        
+        // 尝试解析为笛卡尔坐标: x,y 或 @x,y
+        size_t pos = coordInput.find(',');
+        if (pos != std::string::npos && pos > 0 && pos < coordInput.length() - 1) {
+            try {
+                std::string xStr = coordInput.substr(0, pos);
+                std::string yStr = coordInput.substr(pos + 1);
                 
                 size_t posX, posY;
                 double x = std::stod(xStr, &posX);
                 double y = std::stod(yStr, &posY);
                 
                 if (posX == xStr.length() && posY == yStr.length()) {
-                    m_pickedPoint = glm::dvec3(x, y, 0.0);
+                    if (isRelative) {
+                        // 相对笛卡尔坐标@x,y：从基点计算
+                        m_pickedPoint = basePoint + glm::dvec3(x, y, 0.0);
+                    } else {
+                        // 绝对笛卡尔坐标x,y
+                        m_pickedPoint = glm::dvec3(x, y, 0.0);
+                    }
                     m_currentStatus = InputStatus::kPointInput;
                     Utils::cmdLinePrint(inputPrompt);
                     return;
                 }
             } catch (...) {
-                // 解析失败，不是合法点输入
+                // 解析失败，不是合法笛卡尔坐标输入
             }
         }
-        // 有基点，支持距离输入，尝试解析为距离输入, point = normalized(previewPoint - basePoint) * distance
-        else if (m_bHasBasePoint) {
+        
+        // 直接距离输入（沿光标方向）：简化版的相对极坐标，角度使用光标预览点方向
+        if (!isRelative) {
             try {
-                // TODO: 考虑误差和精度，当预览点和基点误差极小时，视为同一点，则获取到的新点直接等于基点
-                double distance = stod(input);
-                m_pickedPoint = m_basePoint + glm::normalize(getPreviewPoint() - m_basePoint) * distance;
+                double distance = stod(coordInput);
+                m_pickedPoint = basePoint + glm::normalize(getPreviewPoint() - basePoint) * distance;
                 m_currentStatus = InputStatus::kPointInput;
                 Utils::cmdLinePrint(inputPrompt);
                 return;
