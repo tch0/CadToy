@@ -8,9 +8,12 @@
 #include <vector>
 
 // 第三方库
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
 
 // 项目头文件
 #include "Command.h"
+
 
 namespace tch {
 
@@ -41,6 +44,12 @@ public:
     
     // 获取单例实例
     static CommandManager& getInstance();
+    
+    // 初始化命令管理器，保存窗口指针并注册关闭回调
+    void initialize(GLFWwindow* window);
+    
+    // 请求退出应用程序
+    void requestQuitApplication();
     
     // 注册命令
     template<typename T>
@@ -89,6 +98,12 @@ private:
     
     // 内部方法
     std::string findFullCommandName(const std::string& input) const;
+    
+    // 窗口关闭回调函数（静态，供GLFW调用）
+    static void windowCloseCallback(GLFWwindow* window);
+    
+    // GLFW窗口指针
+    GLFWwindow* m_window = nullptr;
 };
 
 } // namespace tch

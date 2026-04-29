@@ -5,12 +5,14 @@
 #include <algorithm>
 
 // 第三方库
+#include <imgui_internal.h>
 
 // 项目头文件
 #include "CommandTest.h"
 #include "CommandNew.h"
 #include "CommandOpen.h"
 #include "CommandClose.h"
+#include "CommandQuit.h"
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
 #include "CommandLine.h"
@@ -45,6 +47,7 @@ CommandManager::CommandManager() :
     registerCommand<CommandClose>("CLOSE", {});
     registerCommand<CommandSave>("SAVE", {});
     registerCommand<CommandSaveAs>("SAVEAS", {});
+    registerCommand<CommandQuit>("QUIT", {"EXIT"});
     // 实体创建类命令
     registerCommand<CommandLine>("LINE", {"L"});
     registerCommand<CommandCircle>("CIRCLE", {"C"});
@@ -78,7 +81,6 @@ CommandManager::CommandManager() :
     // registerCommand<CommandZoom>("ZOOM", {"Z"});
     // registerCommand<CommandPan>("PAN", {"P"});
     // registerCommand<CommandLayer>("LAYER", {"LA"});
-    // registerCommand<CommandQuit>("QUIT", {"EXIT"});
     
     // 所有命令注册完成后，建立补全候选池
     rebuildCommandCompletionPool();
@@ -88,6 +90,40 @@ CommandManager::CommandManager() :
 CommandManager& CommandManager::getInstance() {
     static CommandManager instance;
     return instance;
+}
+
+// 初始化命令管理器，保存窗口指针并注册关闭回调
+void CommandManager::initialize(GLFWwindow* window) {
+    m_window = window;
+    glfwSetWindowCloseCallback(window, windowCloseCallback);
+}
+
+// 窗口关闭回调函数（静态，供GLFW调用）
+void CommandManager::windowCloseCallback(GLFWwindow* window) {
+    // 取消关闭请求，由QUIT命令控制实际关闭
+    glfwSetWindowShouldClose(window, GLFW_FALSE);
+    
+    CommandManager& instance = getInstance();
+    // 正在执行QUIT命令，不再重复执行
+    if (instance.m_currentCommandName == "QUIT") {
+        return;
+    }
+    
+    // 如果有模态对话框打开，不执行QUIT，等待用户手动关闭，这符合Windows原生窗口的逻辑，GLFW窗口配合imgui对话框则需要自行实现这个逻辑
+    if (ImGui::GetTopMostPopupModal() != nullptr ||
+        ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        return;
+    }
+    
+    // 取消当前命令并执行QUIT命令
+    instance.cancelCurrentCommandAndExecute("QUIT");
+}
+
+// 请求退出应用程序（由QUIT命令调用，设置窗口关闭标志）
+void CommandManager::requestQuitApplication() {
+    if (m_window) {
+        glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+    }
 }
 
 // 注册命令模板实现
@@ -265,6 +301,7 @@ void CommandManager::cancelCurrentCommand()
         
         // 置空当前命令
         m_activeCommand = nullptr;
+        m_currentCommandName = "";
         
         // 重置输入上下文为无命令执行状态
         inputContext.setInCommandExecution(false);
@@ -314,6 +351,7 @@ void CommandManager::runCommandLoop() {
             
             // 完成命令后清空当前命令
             m_activeCommand = nullptr;
+            m_currentCommandName = "";
             
             // 重置输入上下文
             InputContext::getInstance().setInCommandExecution(false);

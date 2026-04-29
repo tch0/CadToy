@@ -108,6 +108,11 @@ int main(int argc, char* argv[])
     initializeImFileDialog();
     LOG_INFO("FileDialog initialized successfully!");
     
+    // 初始化命令管理器（保存窗口指针并注册关闭回调）
+    LOG_INFO("Initializing CommandManager...");
+    CommandManager::getInstance().initialize(window);
+    LOG_INFO("CommandManager initialized successfully!");
+    
     // 主循环
     LOG_INFO("Entering main loop...");
     while (!glfwWindowShouldClose(window)) {

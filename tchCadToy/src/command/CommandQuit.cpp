@@ -1,5 +1,5 @@
 // 对应头文件
-#include "CommandClose.h"
+#include "CommandQuit.h"
 
 // C++ 标准库
 
@@ -11,41 +11,47 @@
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
 #include "StringUtils.h"
+#include "CommandManager.h"
 
 namespace tch {
 
-CommandClose::CommandClose() :
-    m_state(kCheckModified),
+CommandQuit::CommandQuit() :
+    m_state(kCheckCurrentDocument),
     m_saveConfirmResult(Utils::TriStateResult::kCancel),
     m_showSaveConfirm(false),
-    m_saveConfirmFileName(),
-    m_showFileDialog(false),
-    m_dialogReturned(false),
-    m_selectedPath() {
+    m_saveConfirmFileName() {
 }
 
-void CommandClose::onUpdate() {
+void CommandQuit::onUpdate() {
     auto& loc = LocalizationManager::getInstance();
-    
+
     if (isCompleted()) {
         return;
     }
-    
+
     switch (m_state) {
-        case kCheckModified:
+        case kCheckCurrentDocument:
         {
-            // 检查当前文档是否已修改
             Document& doc = DocManager::getCurrentDocument();
+            // 文档已修改
             if (doc.isModified()) {
-                // 文档已修改，需要显示保存确认对话框
+                // 文档已修改，进入保存确认流程
                 m_state = kSaveConfirmEntry;
-            } else {
-                // 文档未修改，直接关闭
-                m_state = kCloseDocument;
+            }
+            // 文档未修改
+            else {
+                // 只有一个文档，直接退出应用程序（不需要关闭文档，避免自动创建新文档）
+                if (DocManager::getDocumentCount() == 1) {
+                    m_state = kQuitApplication;
+                }
+                // 多个文档，关闭当前文档继续处理下一个
+                else {
+                    m_state = kCloseAndContinue;
+                }
             }
             break;
         }
-            
+
         case kSaveConfirmEntry:
         {
             // 初始化保存确认对话框
@@ -61,12 +67,12 @@ void CommandClose::onUpdate() {
             m_state = kSaveConfirmShow;
             break;
         }
-            
+
         case kSaveConfirmShow:
         {
             // 显示保存确认对话框
             Utils::showSaveConfirmDialog(m_showSaveConfirm, m_saveConfirmResult, m_saveConfirmFileName);
-            
+
             // 检查对话框是否已关闭
             if (!m_showSaveConfirm) {
                 Document& doc = DocManager::getCurrentDocument();
@@ -75,11 +81,11 @@ void CommandClose::onUpdate() {
                 if (m_saveConfirmResult == Utils::TriStateResult::kYes) {
                     // 已保存过，直接保存
                     if (doc.isSaved()) {
-                        // 保存成功，关闭文档
+                        // 保存成功，回到检查状态
                         if (doc.saveToFile(doc.getFilePath())) {
-                            m_state = kCloseDocument;
+                            m_state = kCheckCurrentDocument;
                         }
-                        // 保存失败，取消关闭
+                        // 保存失败，结束命令
                         else {
                             Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(doc.getFilePath())));
                             m_state = kCompleted;
@@ -90,57 +96,18 @@ void CommandClose::onUpdate() {
                         m_state = kImFileDialogEntry;
                     }
                 }
-                // 用户选择不保存，直接关闭文档
+                // 用户选择不保存，关闭文档（关闭后会自动切换到下一个，然后回到检查状态）
                 else if (m_saveConfirmResult == Utils::TriStateResult::kNo) {
-                    m_state = kCloseDocument;
+                    m_state = kCloseAndContinue;
                 }
-                // 用户取消关闭
+                // 用户取消退出，结束命令
                 else if (m_saveConfirmResult == Utils::TriStateResult::kCancel) {
-                    Utils::cmdLinePrint(loc.get("command.close.canceled"));
                     m_state = kCompleted;
                 }
             }
             break;
         }
-            
-        case kFileDialogEntry:
-        {
-            // 初始化内部文件对话框
-            m_showFileDialog = true;
-            m_dialogReturned = false;
-            m_selectedPath.clear();
-            m_state = kFileDialogShow;
-            break;
-        }
-            
-        case kFileDialogShow:
-        {
-            // 显示内部文件对话框，传入当前文件名作为初始文件名
-            Document& doc = DocManager::getCurrentDocument();
-            Utils::showFileDialog(m_showFileDialog, m_dialogReturned, m_selectedPath, false, doc.getFileName());
-            
-            // 检查对话框是否已关闭
-            if (!m_showFileDialog) {
-                if (m_dialogReturned) {
-                    // 用户确认了保存路径，执行保存
-                    Document& doc = DocManager::getCurrentDocument();
-                    if (doc.saveToFile(m_selectedPath)) {
-                        // 保存成功，关闭文档
-                        m_state = kCloseDocument;
-                    } else {
-                        // 保存失败，取消关闭
-                        Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(m_selectedPath)));
-                        m_state = kCompleted;
-                    }
-                } else {
-                    // 用户取消保存，取消关闭
-                    Utils::cmdLinePrint(loc.get("command.close.canceled"));
-                    m_state = kCompleted;
-                }
-            }
-            break;
-        }
-        
+
         case kImFileDialogEntry:
         {
             // 获取初始文件名
@@ -149,38 +116,37 @@ void CommandClose::onUpdate() {
             if (fullFileName.empty()) {
                 fullFileName = "unnamed";
             }
-            
+
             // 打开ImFileDialog（只调用一次）
-            ifd::FileDialog::getInstance().save("CloseSaveDialog",
+            ifd::FileDialog::getInstance().save("QuitSaveDialog",
                 loc.get("fileDialog.title.save").c_str(),
                 "*.cad.json {.json},.*",
                 fullFileName);
-            
+
             m_state = kImFileDialogShow;
             break;
         }
-            
+
         case kImFileDialogShow:
         {
             // 检查对话框是否完成
-            if (ifd::FileDialog::getInstance().isDone("CloseSaveDialog")) {
+            if (ifd::FileDialog::getInstance().isDone("QuitSaveDialog")) {
                 // 用户确认了保存路径
                 if (ifd::FileDialog::getInstance().hasResult()) {
                     std::filesystem::path result = ifd::FileDialog::getInstance().getResult();
                     Document& doc = DocManager::getCurrentDocument();
-                    // 保存成功，关闭文档
+                    // 保存成功，回到检查状态
                     if (doc.saveToFile(result)) {
-                        m_state = kCloseDocument;
+                        m_state = kCheckCurrentDocument;
                     }
-                    // 保存失败，取消关闭
+                    // 保存失败，结束命令
                     else {
                         Utils::cmdLinePrint(StringUtils::format(loc.get("command.save.failed"), PathUtils::toString(result)));
                         m_state = kCompleted;
                     }
                 }
-                // 用户取消保存，取消关闭
+                // 用户取消保存，结束命令
                 else {
-                    Utils::cmdLinePrint(loc.get("command.close.canceled"));
                     m_state = kCompleted;
                 }
                 // 关闭对话框
@@ -188,20 +154,26 @@ void CommandClose::onUpdate() {
             }
             break;
         }
-            
-        case kCloseDocument:
+
+        case kCloseAndContinue:
         {
-            // 执行关闭文档
-            std::size_t currentIndex = DocManager::getCurrentDocumentIndex();
-            DocManager::closeDocument(currentIndex);
-            // 关闭后不需要输出，并且直接提前结束命令，而不是等到下一个状态才结束
+            // 关闭当前文档，closeDocument会自动切换当前文档到下一个，关闭最后一个会自动创建一个未修改的新文档
+            DocManager::closeDocument(DocManager::getCurrentDocumentIndex());
+            // 继续检查新的当前文档
+            m_state = kCheckCurrentDocument;
+            break;
+        }
+
+        case kQuitApplication:
+        {
+            // 请求关闭应用程序
+            CommandManager::getInstance().requestQuitApplication();
             finish();
             break;
         }
-            
+
         case kCompleted:
         {
-            // 命令完成
             finish();
             break;
         }
