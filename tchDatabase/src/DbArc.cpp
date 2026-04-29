@@ -84,6 +84,33 @@ Geometry::AABB DbArc::boundingBox() const {
     );
 }
 
+// 实体是否完全位于给定的轴对齐包围盒内
+bool DbArc::isInside(const Geometry::AABB& rect) const {
+    // 圆弧完全在矩形内：圆心在矩形内且两个端点和所有极值点都在矩形内
+    // 简化实现：使用包围盒检查
+    return rect.contains(Geometry::Point(m_arc.center.x - m_arc.radius, m_arc.center.y, m_arc.center.z)) &&
+           rect.contains(Geometry::Point(m_arc.center.x + m_arc.radius, m_arc.center.y, m_arc.center.z)) &&
+           rect.contains(Geometry::Point(m_arc.center.x, m_arc.center.y - m_arc.radius, m_arc.center.z)) &&
+           rect.contains(Geometry::Point(m_arc.center.x, m_arc.center.y + m_arc.radius, m_arc.center.z));
+}
+
+// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+bool DbArc::intersects(const Geometry::AABB& rect) const {
+    // 圆弧与矩形相交：使用包围盒近似
+    // 找到矩形上距离圆心最近的点，检查是否小于等于半径
+    double closestX = std::max(rect.min.x, std::min(m_arc.center.x, rect.max.x));
+    double closestY = std::max(rect.min.y, std::min(m_arc.center.y, rect.max.y));
+    double dx = m_arc.center.x - closestX;
+    double dy = m_arc.center.y - closestY;
+    double distSq = dx * dx + dy * dy;
+    if (distSq > m_arc.radius * m_arc.radius) {
+        return false;
+    }
+    // 还需要检查最近点是否在圆弧的角度范围内
+    // 简化实现：使用包围盒相交
+    return boundingBox().intersects(rect);
+}
+
 std::unique_ptr<DbObject> DbArc::clone() const {
     return std::make_unique<DbArc>(*this);
 }

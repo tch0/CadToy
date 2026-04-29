@@ -492,6 +492,47 @@ bool AABB::intersects(const AABB& other) const {
              max.z < other.min.z || min.z > other.max.z);
 }
 
+bool AABB::intersectsSegment(const Point& p1, const Point& p2) const {
+    // Liang-Barsky 线段裁剪算法
+    double dx = p2.x - p1.x;
+    double dy = p2.y - p1.y;
+    double dz = p2.z - p1.z;
+
+    double t0 = 0.0, t1 = 1.0;
+
+    // 定义辅助函数处理每个维度
+    auto updateRange = [&](double p, double q) -> bool {
+        if (std::abs(p) < Tolerance::Default.absolute) {
+            // 线段平行于该维度
+            if (q < 0) { return false; }  // 线段在该维度外部
+            return true;
+        }
+        double r = q / p;
+        if (p < 0) {
+            if (r > t1) { return false; }
+            if (r > t0) { t0 = r; }
+        } else {
+            if (r < t0) { return false; }
+            if (r < t1) { t1 = r; }
+        }
+        return true;
+    };
+
+    // 检查 x 维度
+    if (!updateRange(-dx, p1.x - min.x)) { return false; }
+    if (!updateRange(dx, max.x - p1.x)) { return false; }
+
+    // 检查 y 维度
+    if (!updateRange(-dy, p1.y - min.y)) { return false; }
+    if (!updateRange(dy, max.y - p1.y)) { return false; }
+
+    // 检查 z 维度
+    if (!updateRange(-dz, p1.z - min.z)) { return false; }
+    if (!updateRange(dz, max.z - p1.z)) { return false; }
+
+    return true;
+}
+
 // ============================================================================
 // 距离计算实现
 // ============================================================================

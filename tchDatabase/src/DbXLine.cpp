@@ -52,6 +52,19 @@ Geometry::AABB DbXLine::boundingBox() const {
     );
 }
 
+// 实体是否完全位于给定的轴对齐包围盒内
+bool DbXLine::isInside(const Geometry::AABB& rect) const {
+    // 构造线是无限延伸的，不可能完全在矩形内
+    return false;
+}
+
+// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+bool DbXLine::intersects(const Geometry::AABB& rect) const {
+    // 构造线与矩形相交：检查通过原点的构造线是否与矩形相交
+    // 简化实现：使用包围盒相交
+    return boundingBox().intersects(rect);
+}
+
 std::unique_ptr<DbObject> DbXLine::clone() const {
     return std::make_unique<DbXLine>(*this);
 }

@@ -30,6 +30,29 @@ Geometry::AABB DbCircle::boundingBox() const {
     );
 }
 
+// 实体是否完全位于给定的轴对齐包围盒内
+bool DbCircle::isInside(const Geometry::AABB& rect) const {
+    // 圆完全在矩形内：圆心在矩形内且圆不超出矩形边界
+    if (!rect.contains(m_circle.center)) {
+        return false;
+    }
+    // 检查圆的四个极值点是否都在矩形内
+    return rect.contains(Geometry::Point(m_circle.center.x - m_circle.radius, m_circle.center.y, m_circle.center.z)) &&
+           rect.contains(Geometry::Point(m_circle.center.x + m_circle.radius, m_circle.center.y, m_circle.center.z)) &&
+           rect.contains(Geometry::Point(m_circle.center.x, m_circle.center.y - m_circle.radius, m_circle.center.z)) &&
+           rect.contains(Geometry::Point(m_circle.center.x, m_circle.center.y + m_circle.radius, m_circle.center.z));
+}
+
+// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+bool DbCircle::intersects(const Geometry::AABB& rect) const {
+    // 圆与矩形相交：找到矩形上距离圆心最近的点，检查是否小于等于半径
+    double closestX = std::max(rect.min.x, std::min(m_circle.center.x, rect.max.x));
+    double closestY = std::max(rect.min.y, std::min(m_circle.center.y, rect.max.y));
+    double dx = m_circle.center.x - closestX;
+    double dy = m_circle.center.y - closestY;
+    return (dx * dx + dy * dy) <= (m_circle.radius * m_circle.radius);
+}
+
 std::unique_ptr<DbObject> DbCircle::clone() const {
     return std::make_unique<DbCircle>(*this);
 }

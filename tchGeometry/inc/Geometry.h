@@ -387,7 +387,8 @@ struct AABB {
     void expand(const Point& p);                 ///< 扩展包围盒以包含点 p
     void merge(const AABB& other);               ///< 合并另一个包围盒
     bool contains(const Point& p, const Tolerance& tol = Tolerance::Default) const;  ///< 是否包含点
-    bool intersects(const AABB& other) const;    ///< 是否与另一个包围盒相交
+    bool intersects(const AABB& other) const;    ///< 是否与另一个轴对齐包围盒相交
+    bool intersectsSegment(const Point& p1, const Point& p2) const;  ///< 是否与线段相交
     Point center() const { return (min + max) * 0.5; }  ///< 中心点
     Vector size() const { return max - min; }            ///< 尺寸
 };

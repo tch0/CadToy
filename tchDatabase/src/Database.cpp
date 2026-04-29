@@ -629,6 +629,42 @@ void Database::forEachEntity(const std::function<void(DbEntity*)>& callback) con
     }
 }
 
+// 查询与轴对齐包围盒发生指定关系的所有实体 ID
+// crossing = true  -> intersects  （窗交/拾取框，实体与包围盒有交叉）
+// crossing = false -> isInside    （圈围，实体完全在包围盒内部）
+std::vector<ObjectId> Database::queryWindow(const Geometry::AABB& rect, bool crossing) const {
+    std::vector<ObjectId> result;
+    for (const auto& [id, pObj] : m_objects) {
+        // 只处理实体对象
+        if (!pObj || !pObj->isType(DbObject::kEntity)) {
+            continue;
+        }
+        DbEntity* pEntity = pObj->as<DbEntity>();
+        if (!pEntity) {
+            continue;
+        }
+
+        // 第一层：包围盒粗筛
+        if (!pEntity->boundingBox().intersects(rect)) {
+            continue;
+        }
+
+        // 第二层：精确几何判定
+        if (crossing) {
+            // 交叉窗口：实体与矩形相交即可
+            if (pEntity->intersects(rect)) {
+                result.push_back(id);
+            }
+        } else {
+            // 窗选：实体必须完全在矩形内
+            if (pEntity->isInside(rect)) {
+                result.push_back(id);
+            }
+        }
+    }
+    return result;
+}
+
 // 遍历所有图层
 void Database::forEachLayer(const std::function<void(DbLayer*)>& callback) const {
     for (ObjectId layerId : m_layerIds) {

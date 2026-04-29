@@ -16,6 +16,7 @@
 // 项目头文件
 #include "DbObject.h"
 #include "DbCommon.h"
+#include "Geometry.h"
 
 
 namespace tch {
@@ -208,6 +209,9 @@ public:
 
     // 获取备份数量
     size_t backupCount() const { return m_backupObjects.size(); }
+
+    // 查询与轴对齐包围盒发生指定关系的所有实体 ID，支持窗交(窗口交叉 crossing=true)与圈围(窗口包围crossing=false)
+    std::vector<ObjectId> queryWindow(const Geometry::AABB& rect, bool crossing) const;
 
     // =======================================================================================
     // 序列化

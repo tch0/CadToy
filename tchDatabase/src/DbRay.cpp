@@ -49,6 +49,22 @@ Geometry::AABB DbRay::boundingBox() const {
     );
 }
 
+// 实体是否完全位于给定的轴对齐包围盒内
+bool DbRay::isInside(const Geometry::AABB& rect) const {
+    // 射线是无限延伸的，不可能完全在矩形内
+    return false;
+}
+
+// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+bool DbRay::intersects(const Geometry::AABB& rect) const {
+    // 射线与矩形相交：检查起点是否在矩形内，或射线与矩形相交
+    if (rect.contains(m_ray.origin)) {
+        return true;
+    }
+    // 简化实现：使用包围盒相交
+    return boundingBox().intersects(rect);
+}
+
 std::unique_ptr<DbObject> DbRay::clone() const {
     return std::make_unique<DbRay>(*this);
 }

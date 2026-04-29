@@ -56,6 +56,12 @@ public:
     // 几何接口
     virtual Geometry::AABB boundingBox() const = 0;
     
+    // 实体是否完全位于给定的轴对齐包围盒内
+    virtual bool isInside(const Geometry::AABB& rect) const = 0;
+    
+    // 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+    virtual bool intersects(const Geometry::AABB& rect) const = 0;
+    
     std::unique_ptr<DbObject> clone() const override = 0;
     
     // 通知数据库实体被修改
