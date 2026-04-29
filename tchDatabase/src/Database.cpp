@@ -789,9 +789,9 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
             std::unique_ptr<DbObject> pObj = DbObjectFactory::getInstance().createFromJson(layerValue);
             if (pObj && pObj->isType(DbObject::kLayer)) {
                 ObjectId id = pObj->id();
+                // ID 为 0 的对象不合法，直接抛弃
                 if (id == 0) {
-                    id = allocateId(DbObject::kLayer);
-                    pObj->setId(id);
+                    continue;
                 }
                 pObj->setDatabase(this);
                 m_objects[id] = std::move(pObj);
@@ -812,9 +812,9 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
             std::unique_ptr<DbObject> pObj = DbObjectFactory::getInstance().createFromJson(entityValue);
             if (pObj) {
                 ObjectId id = pObj->id();
+                // ID 为 0 的对象不合法，直接抛弃
                 if (id == 0) {
-                    id = allocateId(pObj->type());
-                    pObj->setId(id);
+                    continue;
                 }
                 
                 // 维护图层索引（在setDatabase之前，此时m_pDb为nullptr，不会触发moveEntityToLayer）
@@ -841,6 +841,26 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
         ObjectId layer0Id = ensureLayerZero();
         setCurrentLayerId(layer0Id);
     }
+
+    // 加载完成后，更新 ID 计数器为已加载对象的最大 ID + 1
+    // 避免新创建的实体/图层使用与已加载对象相同的 ID
+    ObjectId maxEntityId = kEntityStart;
+    ObjectId maxSymbolId = kSymbolStart;
+    for (const auto& [id, pObj] : m_objects) {
+        if (pObj->isType(DbObject::kLayer)) {
+            // 图层使用符号 ID 范围
+            if (id > maxSymbolId && id <= kSymbolEnd) {
+                maxSymbolId = id;
+            }
+        } else if (id >= kEntityStart) {
+            // 实体使用实体 ID 范围
+            if (id > maxEntityId) {
+                maxEntityId = id;
+            }
+        }
+    }
+    m_nextEntityId = maxEntityId + 1;
+    m_nextSymbolId = maxSymbolId + 1;
 
     // 加载完成后设置为未修改状态
     clearModified();
