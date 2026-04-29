@@ -196,12 +196,14 @@ bool CommandManager::hasActiveCommand() {
 void CommandManager::executeCommand(const std::string& command) {
     tchAssert(m_activeCommand == nullptr, "There should be no active commnd when executing a new command. Please use cancelCurrentCommandAndExecute.");
     
-    // 输出当前执行的命令的提示
     auto& loc = LocalizationManager::getInstance();
-    Utils::cmdLinePrint(loc.get("commandLine.prompt.command") + " " + command);
     
-    // 查找命令全名，创建并设置命令对象，记录命令名
+    // 查找命令全名
     std::string cmdFullName = findFullCommandName(command);
+    // 输出当前执行的命令的提示，输出大写的全名
+    Utils::cmdLinePrint(loc.get("commandLine.prompt.command") + " " + cmdFullName);
+    
+    // 创建并设置命令对象，记录命令名
     auto it = m_creators.find(cmdFullName);
     if (it != m_creators.end()) {
         m_activeCommand = it->second();
@@ -305,9 +307,6 @@ void CommandManager::cancelCurrentCommand()
         
         // 重置输入上下文为无命令执行状态
         inputContext.setInCommandExecution(false);
-        
-        // 最后再输出一个空行
-        inputContext.handleEnterSpace("");
     }
 }
 

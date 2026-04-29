@@ -759,10 +759,11 @@ void Renderer::drawFileBar() {
                 s_docIndexToBeClosed = i;
             }
         }
-        // 循环内执行会破坏循环条件，循环完成后再执行关闭，关闭后当前文档会自动切换，不需要再去切换
+        // 循环内执行会破坏循环条件，循环完成后再执行关闭，先切换到该文档再执行CLOSE命令来关闭，不然不好处理保存相关逻辑
         if (s_docIndexToBeClosed != DocManager::InvalidDocIndex) {
             CommandManager::getInstance().cancelCurrentCommand();
-            DocManager::closeDocument(s_docIndexToBeClosed);
+            DocManager::setCurrentDocumentIndex(s_docIndexToBeClosed);
+            CommandManager::getInstance().executeCommand("CLOSE");
             s_docIndexToBeClosed = DocManager::InvalidDocIndex;
         }
         

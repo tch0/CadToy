@@ -105,6 +105,7 @@
 - 实体与数据库设计与实现：见[CoreDesign.md](Docs/CoreDesign.md)
 - [字符串与路径编码问题](#%E5%AD%97%E7%AC%A6%E4%B8%B2%E4%B8%8E%E8%B7%AF%E5%BE%84%E7%BC%96%E7%A0%81%E9%97%AE%E9%A2%98)
 - 图形引擎、图形数据缓存、渲染器实现：见[CoreDesign.md](Docs/CoreDesign.md)
+- 拦截窗口关闭按钮消息，改为执行quit命令，自定义关闭流程
 
 Todo：
 - 命令执行框架中加入对透明命令的支持
@@ -121,11 +122,6 @@ Todo：
     - F2打开新文本窗口
     - 命令栏输入可能会使用的快捷键需要区分单独处理，比如Ctrl+V/Ctrl+A，在命令输入栏进行命令输入时是粘贴字符串，全选已输入的所有字符，在绘图区是粘贴图形、全选所有实体
 - 命令历史使用InputMultiText实现，使命令历史可选中
-- 修改主循环，拦截窗口关闭操作，替换为自己的窗口关闭逻辑，弹窗，继续渲染循环，
-    - 方法1：回调函数glfwSetWindowShouldClose设置标记
-    - 方法2：主循环中拦截窗口关闭消息，glfwWindowShouldClose(window, GLFW_FALSE)阻止窗口关闭，不调用拦截关闭动作的话，下一帧渲染循环就会结束
-    - 用方法2，依次调用每个文档的关闭操作就好了，有一个不关闭就留下来
-    - 待仔细研究
 - UCS支持：待研究
 
 细节问题或者功能TODO：
@@ -153,7 +149,6 @@ Todo：
 - 选择点时，按住Shift强制进入正交模式，会有marker标记
 - 第三方R树（或者自己实现）实现空间索引（如Boost.Geometry 或 libspatialindex），`boost::geometry::index::rtree`
 - 考虑使用更现代的ECS (Entity Component System，实体组件系统) 实现数据结构，而不是使用传统的继承，以实现超强的性能（百万量级图元），C++ECS库EnTT。
-- 实体渲染：预选中、选中高亮
 - 后续夹点实现：可以在InputContext中实现GripTask，在onUpdate中查询各个task是否激活，决定调用各个task的onUpdate
 - 命令执行中的分支选择历史与点输入历史，待研究。
 - 命令栏在输入命令时，也就是输入框不为空时，画布是锁定的，动态输入模式下光标都是锁定的，不会响应任何选择、点击操作。
