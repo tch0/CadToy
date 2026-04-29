@@ -79,12 +79,14 @@ graph BT
 |:-|:-|
 | LWDEFAULT| 默认线宽，图层线宽的默认值
 | LTSCALE| 全局线型比例缩放因子，影响所有实体显示
-| LWDISPLAY| 是否显示线宽
+| LWDISPLAY| 是否显示线宽，默认不显示
 | CECOLOR| 图纸默认颜色，影响新建实体，默认ByLayer（图层默认白色）
 | CLAYER| 当前默认图层，新建实体都在其上，默认`"0"`图层
 | CELTYPE| 图纸默认线型，影响新建实体，默认ByLayer（图层默认连续）
 | CELTSCALE| 图纸默认线型比例，影响新建实体的默认线型比例，默认值1
 | CELWEIGHT| 图纸默认线宽，影响新建实体，默认ByLayer
+| ORTHOMODE| 正交模式是否开启，默认false|
+| DYNMODE | 动态输入是否开启，默认true|
 
 
 ## 几何层

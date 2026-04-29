@@ -53,8 +53,8 @@ public:
     // 检查鼠标左键是否按下
     static bool isLeftMouseButtonPressed();
     
-    // 检查Shift键是否按下
-    static bool isShiftPressed();
+    // 检查Shift键是否按住（用于正交模式等需要持续检测的场景）
+    static bool isShiftHolding();
 
 private:
     // 处理键盘输入

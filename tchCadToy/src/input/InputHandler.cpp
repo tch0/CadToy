@@ -122,8 +122,8 @@ bool InputHandler::isLeftMouseButtonPressed() {
     return isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
 }
 
-// 检查Shift键是否按下
-bool InputHandler::isShiftPressed() {
+// 检查Shift键是否按住（用于正交模式等需要持续检测的场景）
+bool InputHandler::isShiftHolding() {
     return isKeyPressed(GLFW_KEY_LEFT_SHIFT) || isKeyPressed(GLFW_KEY_RIGHT_SHIFT);
 }
 

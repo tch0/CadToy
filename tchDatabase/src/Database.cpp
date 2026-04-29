@@ -554,6 +554,17 @@ void Database::setCurrentEntityLineWeight(DbLineWeight lw) {
     // 只影响后续创建的实体，不通知缓存重生成
 }
 
+void Database::setOrthoMode(bool enabled) {
+    m_orthoMode = enabled;
+    m_modified = true;
+    // 不影响显示，不需要通知重生成
+}
+
+void Database::setDynMode(bool enabled) {
+    m_dynMode = enabled;
+    m_modified = true;
+}
+
 // 移动实体到指定图层，返回实际设置的图层ID（如果目标图层不存在则移动到当前图层并返回当前图层ID）
 // 提供给实体setLayerId调用，以正确维护索引表，不再其他任何地方调用
 ObjectId Database::moveEntityToLayer(ObjectId entityId, ObjectId targetLayerId) {
@@ -683,7 +694,15 @@ void Database::saveToJson(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writ
     // 保存 CELWEIGHT
     writer.Key("CELWEIGHT");
     writer.Int(static_cast<int>(m_currentEntityLineWeight));
-    
+
+    // 保存 ORTHOMODE
+    writer.Key("ORTHOMODE");
+    writer.Bool(m_orthoMode);
+
+    // 保存 DYNMODE
+    writer.Key("DYNMODE");
+    writer.Bool(m_dynMode);
+
     writer.EndObject();
 
     // 图层列表
@@ -780,6 +799,24 @@ bool Database::loadFromJson(const rapidjson::Value& value) {
         // CELWEIGHT - 整数
         if (vars.HasMember("CELWEIGHT") && vars["CELWEIGHT"].IsInt()) {
             m_currentEntityLineWeight = static_cast<DbLineWeight>(vars["CELWEIGHT"].GetInt());
+        }
+
+        // ORTHOMODE - 布尔值或整数
+        if (vars.HasMember("ORTHOMODE")) {
+            if (vars["ORTHOMODE"].IsBool()) {
+                m_orthoMode = vars["ORTHOMODE"].GetBool();
+            } else if (vars["ORTHOMODE"].IsInt()) {
+                m_orthoMode = vars["ORTHOMODE"].GetInt() != 0;
+            }
+        }
+
+        // DYNMODE - 布尔值或整数
+        if (vars.HasMember("DYNMODE")) {
+            if (vars["DYNMODE"].IsBool()) {
+                m_dynMode = vars["DYNMODE"].GetBool();
+            } else if (vars["DYNMODE"].IsInt()) {
+                m_dynMode = vars["DYNMODE"].GetInt() != 0;
+            }
         }
     }
 

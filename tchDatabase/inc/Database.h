@@ -179,6 +179,14 @@ public:
     DbLineWeight currentEntityLineWeight() const { return m_currentEntityLineWeight; }
     void setCurrentEntityLineWeight(DbLineWeight lw);
 
+    // 正交模式 (ORTHOMODE)，0=关闭，1=开启
+    bool orthoMode() const { return m_orthoMode; }
+    void setOrthoMode(bool enabled);
+
+    // 动态输入模式 (DYNMODE)，0=关闭，1=开启，为以后预留
+    bool dynMode() const { return m_dynMode; }
+    void setDynMode(bool enabled);
+
     // =======================================================================================
     // 遍历和查询
     // =======================================================================================
@@ -263,6 +271,8 @@ private:
     DbColor m_currentEntityColor = DbColor::byLayer();                  // 当前实体颜色 (CECOLOR)，新建实体默认颜色，默认ByLayer
     DbLinetypeRef m_currentEntityLinetype = DbLinetypeRef::byLayer();   // 当前实体线型 (CELTYPE)，新建实体默认线型，默认ByLayer
     DbLineWeight m_currentEntityLineWeight = DbLineWeight::kByLayer;    // 当前实体线宽 (CELWEIGHT)，新建实体默认线宽，默认ByLayer
+    bool m_orthoMode = false;                               // 正交模式 (ORTHOMODE)，0=关闭，1=开启
+    bool m_dynMode = false;                                 // 动态输入模式 (DYNMODE)，0=关闭，1=开启，为以后预留
 
     // 脏标记
     bool m_modified = false;                                // 数据库是否被修改

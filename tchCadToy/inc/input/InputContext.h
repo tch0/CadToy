@@ -203,6 +203,9 @@ public:
     // 获取实时鼠标预览点的世界坐标
     glm::dvec3 getPreviewPoint() const;
 
+    // 正交模式是否激活（数据库ORTHOMODE与Shift状态共同决定，且需要基点才有效）
+    bool isOrthoActive() const;
+
     // LastPoint相关方法
     void setLastPoint(const glm::dvec3& point);
     glm::dvec3 getLastPoint() const;

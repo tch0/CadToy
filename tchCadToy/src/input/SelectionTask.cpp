@@ -67,7 +67,7 @@ void SelectionTask::onUpdate() {
     
     // 获取当前光标位置，更新预览点坐标
     m_previewPointScreen = InputHandler::getCursorPosition();
-    m_previewPointWorld = Renderer::getTransformManager().screenToWorld(m_previewPointScreen);
+    m_previewPointWorld = InputContext::getInstance().getPreviewPoint();
     interactionData.selectionPreviewPointWorld = m_previewPointWorld;
     
     // 平移模式下选择相关的光标不会覆盖平移光标，平移结束后则会立即覆盖
@@ -390,9 +390,14 @@ void SelectionTask::onUpdate() {
         }
         
         case SelectionState::kFenceSelectionEntry:
-            // 等待栏选点
-            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.fenceNext"),
-                {"U"}); // 指定下一个栏选点或 [放弃(U)]:
+            // 等待栏选点，使用上一个点作为基点
+            if (!m_selectionPointsWorld.empty()) {
+                InputContext::getInstance().waitForPoint(loc.get("selection.prompt.fenceNext"),
+                    m_selectionPointsWorld.back(), {"U"}); // 指定下一个栏选点或 [放弃(U)]:
+            } else {
+                InputContext::getInstance().waitForPoint(loc.get("selection.prompt.fenceNext"),
+                    {"U"}); // 指定下一个栏选点或 [放弃(U)]:
+            }
             m_state = SelectionState::kFenceSelectionQuery;
             break;
             
@@ -408,6 +413,8 @@ void SelectionTask::onUpdate() {
                 
                 // 更新交互数据
                 interactionData.selectionPointsWorld = m_selectionPointsWorld;
+                // 继续选择下一点
+                m_state = SelectionState::kFenceSelectionEntry;
             }
             // 关键字
             else if (status == InputStatus::kKeywordInput) {
@@ -421,6 +428,8 @@ void SelectionTask::onUpdate() {
                         interactionData.selectionPointsWorld = m_selectionPointsWorld;
                     }
                 }
+                // 继续选择下一点
+                m_state = SelectionState::kFenceSelectionEntry;
             }
             // Enter/Space
             else if (status == InputStatus::kEnterInput) {
@@ -437,9 +446,14 @@ void SelectionTask::onUpdate() {
         }
         
         case SelectionState::kPolygonSelectionEntry:
-            // 等待多边形点
-            InputContext::getInstance().waitForPoint(loc.get("selection.prompt.polygonNext"),
-                {"U"}); // 指定直线的端点或 [放弃(U)]:
+            // 等待多边形点，使用上一个点作为基点
+            if (!m_selectionPointsWorld.empty()) {
+                InputContext::getInstance().waitForPoint(loc.get("selection.prompt.polygonNext"),
+                    m_selectionPointsWorld.back(), {"U"}); // 指定直线的端点或 [放弃(U)]:
+            } else {
+                InputContext::getInstance().waitForPoint(loc.get("selection.prompt.polygonNext"),
+                    {"U"}); // 指定直线的端点或 [放弃(U)]:
+            }
             m_state = SelectionState::kPolygonSelectionQuery;
             break;
             
@@ -455,6 +469,8 @@ void SelectionTask::onUpdate() {
                 
                 // 更新交互数据
                 interactionData.selectionPointsWorld = m_selectionPointsWorld;
+                // 继续选择下一点
+                m_state = SelectionState::kPolygonSelectionEntry;
             }
             // 处理关键字
             else if (status == InputStatus::kKeywordInput) {
@@ -467,6 +483,8 @@ void SelectionTask::onUpdate() {
                         interactionData.selectionPointsWorld = m_selectionPointsWorld;
                     }
                 }
+                // 继续选择下一点
+                m_state = SelectionState::kPolygonSelectionEntry;
             }
             // Enter/Space
             else if (status == InputStatus::kEnterInput) {

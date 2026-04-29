@@ -938,12 +938,56 @@ InteractionData& InputContext::getInteractionData() {
     return m_interactionData;
 }
 
-// 获取实时鼠标预览点的世界坐标
+// 正交模式是否激活（数据库ORTHOMODE与Shift状态共同决定，且需要基点才有效）
+bool InputContext::isOrthoActive() const {
+    // 检查是否有基点，没有基点正交模式无效
+    if (!m_bHasBasePoint) {
+        return false;
+    }
+
+    // 获取数据库ORTHOMODE设置
+    Database* pDb = DocManager::getCurrentDocument().getDatabase();
+    if (!pDb) {
+        return false;
+    }
+    bool orthoMode = pDb->orthoMode();
+
+    // Shift状态临时反转正交模式
+    bool shiftHolding = InputHandler::isShiftHolding();
+    bool effectiveOrtho = orthoMode ^ shiftHolding;
+
+    return effectiveOrtho;
+}
+
+// 将点约束到正交方向（水平或垂直）
+static glm::dvec3 constrainToOrtho(const glm::dvec3& point, const glm::dvec3& basePoint) {
+    glm::dvec3 delta = point - basePoint;
+    double dx = std::abs(delta.x);
+    double dy = std::abs(delta.y);
+
+    // 判断更接近水平还是垂直
+    if (dx > dy) {
+        // 水平方向，保持x，y与基点相同
+        return glm::dvec3(point.x, basePoint.y, point.z);
+    } else {
+        // 垂直方向，保持y，x与基点相同
+        return glm::dvec3(basePoint.x, point.y, point.z);
+    }
+}
+
+// 获取实时预览点的世界坐标
 glm::dvec3 InputContext::getPreviewPoint() const {
     // 获取当前鼠标屏幕坐标
     glm::dvec2 screenPos = InputHandler::getCursorPosition();
     // 转换为世界坐标
-    return DocManager::getCurrentDocument().getTransformManager().screenToWorld(screenPos);
+    glm::dvec3 worldPos = DocManager::getCurrentDocument().getTransformManager().screenToWorld(screenPos);
+
+    // 如果正交模式激活，约束到正交方向
+    if (isOrthoActive()) {
+        worldPos = constrainToOrtho(worldPos, m_basePoint);
+    }
+
+    return worldPos;
 }
 
 // 设置LastPoint
@@ -994,6 +1038,15 @@ void InputContext::onUpdate() {
     // 更新橡皮线（起点为基点，终点为鼠标位置）
     if (m_bDrawRubberBand) {
         m_interactionData.updateRubberBand(m_basePoint, getPreviewPoint());
+    }
+
+    // 更新正交光标标记
+    if (isOrthoActive()) {
+        // 正交模式激活，设置正交标记
+        m_interactionData.cursorMarker = CursorMarker::kOrthogonal;
+    } else if (m_interactionData.cursorMarker == CursorMarker::kOrthogonal) {
+        // 非正交模式且当前是正交标记，清除标记
+        m_interactionData.cursorMarker = CursorMarker::kNone;
     }
 }
 
