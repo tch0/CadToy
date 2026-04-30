@@ -46,16 +46,8 @@ Geometry::AABB DbArc::boundingBox() const {
     double minY = std::min(sy, ey);
     double maxY = std::max(sy, ey);
     
-    auto normalizeAngle = [](double angle) {
-        angle = std::fmod(angle, 2 * Geometry::PI);
-        if (angle < 0) {
-            angle += 2 * Geometry::PI;
-        }
-        return angle;
-    };
-    
-    double start = normalizeAngle(m_arc.startAngle);
-    double end = normalizeAngle(m_arc.endAngle);
+    double start = Geometry::normalizeAngle(m_arc.startAngle);
+    double end = Geometry::normalizeAngle(m_arc.endAngle);
     
     auto inRange = [&](double angle) {
         if (start <= end) {
@@ -68,13 +60,13 @@ Geometry::AABB DbArc::boundingBox() const {
     if (inRange(0)) {
         maxX = m_arc.center.x + m_arc.radius;
     }
-    if (inRange(Geometry::PI / 2)) {
+    if (inRange(Geometry::HALF_PI)) {
         maxY = m_arc.center.y + m_arc.radius;
     }
     if (inRange(Geometry::PI)) {
         minX = m_arc.center.x - m_arc.radius;
     }
-    if (inRange(3 * Geometry::PI / 2)) {
+    if (inRange(3 * Geometry::HALF_PI)) {
         minY = m_arc.center.y - m_arc.radius;
     }
     
@@ -86,29 +78,62 @@ Geometry::AABB DbArc::boundingBox() const {
 
 // 实体是否完全位于给定的轴对齐包围盒内
 bool DbArc::isInside(const Geometry::AABB& rect) const {
-    // 圆弧完全在矩形内：圆心在矩形内且两个端点和所有极值点都在矩形内
-    // 简化实现：使用包围盒检查
-    return rect.contains(Geometry::Point(m_arc.center.x - m_arc.radius, m_arc.center.y, m_arc.center.z)) &&
-           rect.contains(Geometry::Point(m_arc.center.x + m_arc.radius, m_arc.center.y, m_arc.center.z)) &&
-           rect.contains(Geometry::Point(m_arc.center.x, m_arc.center.y - m_arc.radius, m_arc.center.z)) &&
-           rect.contains(Geometry::Point(m_arc.center.x, m_arc.center.y + m_arc.radius, m_arc.center.z));
+    // 圆弧完全在矩形内：使用圆弧自身的包围盒检查
+    Geometry::AABB bbox = boundingBox();
+    return rect.contains(bbox.min) && rect.contains(bbox.max);
 }
 
 // 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
 bool DbArc::intersects(const Geometry::AABB& rect) const {
-    // 圆弧与矩形相交：使用包围盒近似
-    // 找到矩形上距离圆心最近的点，检查是否小于等于半径
-    double closestX = std::max(rect.min.x, std::min(m_arc.center.x, rect.max.x));
-    double closestY = std::max(rect.min.y, std::min(m_arc.center.y, rect.max.y));
-    double dx = m_arc.center.x - closestX;
-    double dy = m_arc.center.y - closestY;
-    double distSq = dx * dx + dy * dy;
-    if (distSq > m_arc.radius * m_arc.radius) {
+    // 1. 快速排斥：包围盒不相交
+    if (!boundingBox().intersects(rect)) {
         return false;
     }
-    // 还需要检查最近点是否在圆弧的角度范围内
-    // 简化实现：使用包围盒相交
-    return boundingBox().intersects(rect);
+    
+    // 2. 快速排斥：矩形完全在圆外（圆心到矩形最近距离 > 半径）
+    double cx = m_arc.center.x, cy = m_arc.center.y, r = m_arc.radius;
+    double closestX = std::max(rect.min.x, std::min(cx, rect.max.x));
+    double closestY = std::max(rect.min.y, std::min(cy, rect.max.y));
+    double dx = cx - closestX;
+    double dy = cy - closestY;
+    if (dx * dx + dy * dy > r * r) {
+        return false;
+    }
+    
+    // 3. 特殊情况：半径极小，视为点
+    if (r <= Geometry::Tolerance::Default.absolute) {
+        Geometry::Point arcPoint(cx + r * std::cos(m_arc.startAngle),
+                                 cy + r * std::sin(m_arc.startAngle),
+                                 m_arc.center.z);
+        return rect.contains(arcPoint);
+    }
+    
+    // 4. 将弧按弦高误差自适应离散为线段序列，逐段测试
+    double start = Geometry::normalizeAngle(m_arc.startAngle);
+    double end   = Geometry::normalizeAngle(m_arc.endAngle);
+    double sweep = end - start;
+    if (sweep < 0) { sweep += 2.0 * Geometry::PI; }  // 保证逆时针正角度
+
+    double maxStep = 2.0 * std::acos(1.0 - Geometry::Tolerance::Selection.absolute / r);  // 弦高误差控制步长
+    int steps = std::max(1, static_cast<int>(std::ceil(sweep / maxStep)));
+    double thetaStep = sweep / steps;
+    
+    // 生成端点的 lambda
+    auto pointAtAngle = [cx, cy, r, z = m_arc.center.z](double angle) -> Geometry::Point {
+        return Geometry::Point(cx + r * std::cos(angle),
+                               cy + r * std::sin(angle),
+                               z);
+    };
+    
+    Geometry::Point prev = pointAtAngle(start);
+    for (int i = 1; i <= steps; ++i) {
+        Geometry::Point curr = pointAtAngle(start + i * thetaStep);
+        if (rect.intersectsSegment(prev, curr)) {
+            return true;
+        }
+        prev = curr;
+    }
+    return false;
 }
 
 std::unique_ptr<DbObject> DbArc::clone() const {

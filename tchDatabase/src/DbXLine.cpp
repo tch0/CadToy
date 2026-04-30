@@ -2,7 +2,6 @@
 #include "DbXLine.h"
 
 // C++ 标准库
-#include <limits>
 
 // 第三方库
 
@@ -26,7 +25,7 @@ void DbXLine::setDirection(const Geometry::Vector& d) {
 
 Geometry::AABB DbXLine::boundingBox() const {
     const Geometry::Point& o = m_line.origin;
-    constexpr double inf = std::numeric_limits<double>::infinity();
+    constexpr double inf = Geometry::INF;
     const double tol = Geometry::Tolerance::Default.absolute;
     
     double minX = o.x, maxX = o.x;
@@ -53,7 +52,7 @@ Geometry::AABB DbXLine::boundingBox() const {
 }
 
 // 实体是否完全位于给定的轴对齐包围盒内
-bool DbXLine::isInside(const Geometry::AABB& rect) const {
+bool DbXLine::isInside(const Geometry::AABB&) const {
     // 构造线是无限延伸的，不可能完全在矩形内
     return false;
 }

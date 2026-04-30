@@ -23,6 +23,10 @@ namespace Geometry {
 constexpr double PI = 3.14159265358979323846;
 /// 2π
 constexpr double TWO_PI = 2.0 * PI;
+// π/2
+constexpr double HALF_PI = PI / 2.0;
+// INFINITY, 负无穷直接用-INF即可
+constexpr double INF = std::numeric_limits<double>::infinity();
 
 /// 精度配置结构体，用于控制几何计算中的容差，支持绝对精度、相对精度和角度精度
 struct Tolerance {
@@ -30,15 +34,17 @@ struct Tolerance {
     double relative = 1e-12;  ///< 相对精度，用于大坐标下的比较
     double angle = 1e-8;      ///< 角度容差（弧度）
 
-    static const Tolerance Default;  ///< 默认精度
-    static const Tolerance Loose;    ///< 宽松精度（1e-6, 1e-9, 1e-6）
-    static const Tolerance Strict;   ///< 严格精度（1e-12, 1e-14, 1e-10）
+    static const Tolerance Default;     ///< 默认精度
+    static const Tolerance Loose;       ///< 宽松精度（1e-6, 1e-9, 1e-6）
+    static const Tolerance Strict;      ///< 严格精度（1e-12, 1e-14, 1e-10）
+    static const Tolerance Selection;   ///< 选择精度，非常宽松，不应该用于几何计算，只用于相交测试这类场景
 };
 
 // 注意：需要 inline 避免多重定义
 inline const Tolerance Tolerance::Default;
 inline const Tolerance Tolerance::Loose{1e-6, 1e-9, 1e-6};
 inline const Tolerance Tolerance::Strict{1e-12, 1e-14, 1e-10};
+inline const Tolerance Tolerance::Selection{0.01, 1e-5, 1e-4};
 
 // ============================================================================
 // 基础类型
@@ -369,7 +375,7 @@ struct AABB {
     Point min;  ///< 最小点
     Point max;  ///< 最大点
     
-    AABB() : min(Point(INFINITY, INFINITY, INFINITY)), max(Point(-INFINITY, -INFINITY, -INFINITY)) {}
+    AABB() : min(Point(INF, INF, INF)), max(Point(-INF, -INF, -INF)) {}
     // 通过两点构造包围盒
     AABB(const Point& a, const Point& b) {
         min = Point(
