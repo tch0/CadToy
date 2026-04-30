@@ -101,7 +101,7 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
 // ============================================================================
 
 EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEntity, Database* pDb) const {
-    static const EntityGraphicsCacheData emptyData{EntityGraphicsCacheData::kInvisibleEntity, {}};
+    static const EntityGraphicsCacheData emptyData {false, false, EntityGraphicsCacheData::kInvisibleEntity, {}};
     if (!pEntity || !pDb) {
         return emptyData;
     }

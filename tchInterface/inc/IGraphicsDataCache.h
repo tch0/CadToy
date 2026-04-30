@@ -24,7 +24,7 @@ struct DataCacheVertex {
     float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
 
     // 标志位定义
-    static constexpr uint32_t kFlagPreselected = 1 << 0;    // bit0: 预选高亮
+    static constexpr uint32_t kFlagPreSelected = 1 << 0;    // bit0: 预选高亮
     static constexpr uint32_t kFlagSelected = 1 << 1;       // bit1: 选中高亮
     static constexpr uint32_t kFlagDimmed = 1 << 2;         // bit2: 暗显，如锁定图层
 };
@@ -41,10 +41,11 @@ struct EntityGraphicsCacheData {
         kLineWidthDependsOnLwDisplay,   // 实体原始线宽大于1像素的情况，但是否显示出来取决于Lwdisplay系统变量，开启时使用线宽版本渲染器，关闭时使用无线宽版本
         kAlwaysShowLineWidth,           // 总是显示为有线宽的图元，比如预选高亮就一定有宽度，总是调用有线宽版本渲染器
         kInvisibleEntity,               // 不可见实体，渲染时将直接跳过
-        kPreviewCacheData,              // 暂未使用，预览数据类型，
     };
-    Type type = kInvalidEmtpyData;
-    std::vector<DataCacheVertex> vertices;
+    bool bPreSelected = false;          // 是否预选中，预选触发会很频繁，所以不修改正常顶点数据而是单独创建独立预选顶点缓存数据，上传顶点数据时根据此标记用预选顶点数据替换正常顶点以实现高效高性能的预选高亮
+    bool bSelected = false;             // 是否选中，有标记时单独建立选中顶点缓存，上传时根据标记来替换
+    Type type = kInvalidEmtpyData;      // 实体渲染类型
+    std::vector<DataCacheVertex> vertices;  // 顶点
 };
 
 
@@ -96,10 +97,28 @@ public:
     // 缓存数据查询接口：提供给渲染器渲染
     // 获取所有实体ID
     virtual std::vector<ObjectId> getAllEntityIds() const = 0;
-    // 通过ID查询读取缓存数据
+    // 通过ID查询读取实体缓存数据
     virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) const = 0;
     // 提供更通用的遍历接口，方便渲染器渲染，相比查询ID再根据ID去依次查询性能会更好，回调参数为实体id和实体缓存数据
     virtual void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) = 0;
+    
+    // ============================================================================
+    // 预选实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
+    // 根据ID查询预选实体的预选缓存数据
+    virtual const EntityGraphicsCacheData& getPreSelectedEntityCacheData(ObjectId id) const = 0;
+    // 通知实体被预选中，通知后需要设置数据预选标记，获取时懒生成即可（没有就生成，有就读取），由选择任务负责通知
+    virtual void notifyEntityPreSelected(ObjectId id) = 0;
+    // 通知实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    virtual void notifyEntityUnPreSelected(ObjectId id) = 0;
+
+    // ============================================================================
+    // 选中实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
+    // 根据ID查询选中实体的选中缓存数据
+    virtual const EntityGraphicsCacheData& getSelectedEntityCacheData(ObjectId id) const = 0;
+    // 通知实体被选中，通知后需要设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
+    virtual void notifyEntitySelected(ObjectId id) = 0;
+    // 通知实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    virtual void notifyEntityUnSelected(ObjectId id) = 0;
 };
 
 } // namespace tch

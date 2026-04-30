@@ -657,39 +657,48 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     
     // 遍历所有缓存数据，根据类型分发到不同批次
     pDataCache->iterateAllCacheData([&](ObjectId id, const EntityGraphicsCacheData& cacheData) {
-        (void)id;  // 暂时未使用实体ID
-        
-        // 跳过不可见实体
-        if (cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
+        // 跳过无效数据与不可见实体
+        if (cacheData.type == EntityGraphicsCacheData::kInvalidEmtpyData ||
+            cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
             return;
+        }
+
+        // 检查是否被预选或选中，预选优先于选中
+        const EntityGraphicsCacheData* pRenderData = &cacheData;
+        if (cacheData.bPreSelected) {
+            // 预选优先
+            pRenderData = &pDataCache->getPreSelectedEntityCacheData(id);
+        } else if (cacheData.bSelected) {
+            // 选中次之
+            pRenderData = &pDataCache->getSelectedEntityCacheData(id);
         }
         
         // 根据缓存类型分发到不同批次
-        switch (cacheData.type) {
+        switch (pRenderData->type) {
             case EntityGraphicsCacheData::kAlwaysNoLineWidth:
                 // 无线宽批次（始终不显示线宽）
-                for (const auto& vertex : cacheData.vertices) {
+                for (const auto& vertex : pRenderData->vertices) {
                     m_noLWVertices.push_back(vertex);
                 }
                 break;
                 
             case EntityGraphicsCacheData::kAlwaysShowLineWidth:
                 // 有线宽批次（始终显示线宽）
-                for (const auto& vertex : cacheData.vertices) {
+                for (const auto& vertex : pRenderData->vertices) {
                     m_withLWVertices.push_back(vertex);
                 }
                 break;
                 
             case EntityGraphicsCacheData::kLineWidthDependsOnLwDisplay:
-                // 有线宽但显示取决于LWDISPLAY设置决定使用哪个批次
+                // 有线宽但是否显示取决于LWDISPLAY设置
                 if (lineWeightDisplay) {
                     // LWDISPLAY=1，显示线宽，使用有线宽渲染
-                    for (const auto& vertex : cacheData.vertices) {
+                    for (const auto& vertex : pRenderData->vertices) {
                         m_withLWVertices.push_back(vertex);
                     }
                 } else {
                     // LWDISPLAY=0，不显示线宽，使用无线宽渲染
-                    for (const auto& vertex : cacheData.vertices) {
+                    for (const auto& vertex : pRenderData->vertices) {
                         m_noLWVertices.push_back(vertex);
                     }
                 }

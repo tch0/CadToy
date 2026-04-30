@@ -88,11 +88,43 @@ public:
     // 遍历所有缓存数据，供渲染器高效遍历所有实体缓存
     void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) override;
 
+    // ============================================================================
+    // 预选实体缓存数据相关接口
+    // ============================================================================
+    
+    // 根据ID查询预选实体的预选缓存数据
+    const EntityGraphicsCacheData& getPreSelectedEntityCacheData(ObjectId id) const override;
+    
+    // 通知实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
+    void notifyEntityPreSelected(ObjectId id) override;
+    
+    // 通知实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    void notifyEntityUnPreSelected(ObjectId id) override;
+
+    // ============================================================================
+    // 选中实体缓存数据相关接口
+    // ============================================================================
+    
+    // 根据ID查询选中实体的选中缓存数据
+    const EntityGraphicsCacheData& getSelectedEntityCacheData(ObjectId id) const override;
+    
+    // 通知实体被选中，通知后需要设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
+    void notifyEntitySelected(ObjectId id) override;
+    
+    // 通知实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    void notifyEntityUnSelected(ObjectId id) override;
+
 private:
     Database* m_pDatabase = nullptr;                                    // 关联的数据库指针
     std::unordered_map<ObjectId, EntityGraphicsCacheData> m_cacheData;  // 实体ID到缓存数据的映射
     std::unordered_set<ObjectId> m_dirtyEntities;                       // 脏实体ID集合，需要重生成的实体
     bool m_regenAll = false;                                            // 全量重新生成标记
+
+    // 预选实体相关数据
+    mutable std::unordered_map<ObjectId, EntityGraphicsCacheData> m_preSelectedCacheData;  // 预选实体缓存数据（懒生成）
+
+    // 选中实体相关数据
+    mutable std::unordered_map<ObjectId, EntityGraphicsCacheData> m_selectedCacheData;     // 选中实体缓存数据（懒生成）
 };
 
 } // namespace tch
