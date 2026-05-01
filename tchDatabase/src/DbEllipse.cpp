@@ -48,7 +48,9 @@ void DbEllipse::setEndParam(double param) {
     notifyModified();
 }
 
-Geometry::AABB DbEllipse::boundingBox() const {
+// TODO: 这个包围盒计算并不准确，没有考虑椭圆弧，椭圆弧也返回整个椭圆的包围盒，计算椭圆弧的包围盒最好像圆弧一样离散之后计算比较好
+// 因为现在已经实现了使用实体缓存数据计算包围盒的机制，可以暂时不用实现管
+Geometry::AABB DbEllipse::computeBoundingBox() const {
     double rx = m_ellipse.radiusX;
     double ry = m_ellipse.radiusY;
     double cosR = std::cos(m_ellipse.rotation);

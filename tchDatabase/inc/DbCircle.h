@@ -36,7 +36,7 @@ public:
     
     const Geometry::Circle& circle() const { return m_circle; }
     
-    Geometry::AABB boundingBox() const override;
+    Geometry::AABB computeBoundingBox() const override;
 
     // 实体是否完全位于给定的轴对齐包围盒内
     bool isInside(const Geometry::AABB& rect) const override;

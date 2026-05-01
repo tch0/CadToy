@@ -50,7 +50,7 @@ public:
     
     const Geometry::Ellipse& ellipse() const { return m_ellipse; }
     
-    Geometry::AABB boundingBox() const override;
+    Geometry::AABB computeBoundingBox() const override;
 
     // 实体是否完全位于给定的轴对齐包围盒内
     bool isInside(const Geometry::AABB& rect) const override;

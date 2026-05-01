@@ -82,8 +82,8 @@ public:
     // 获取所有实体ID，渲染器遍历使用
     std::vector<ObjectId> getAllEntityIds() const override;
     
-    // 通过ID查询读取缓存数据，无效ID返回空缓存数据（kInvalidEmtpyData类型）
-    const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) const override;
+    // 通过ID查询读取缓存数据，无效ID返回空缓存数据（kInvalidEmptyData类型）
+    const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) override;
     
     // 遍历所有缓存数据，供渲染器高效遍历所有实体缓存
     void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) override;

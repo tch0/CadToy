@@ -40,6 +40,9 @@ public:
     // 生成数据缓存，为缓存中所有脏实体生成缓存
     void generate(IGraphicsDataCache* pDataCache) const override;
 
+    // 单独为指定实体生成图形缓存数据
+    void generateForEntity(IGraphicsDataCache* pDataCache, ObjectId id) const override;
+
 private:
     // 私有构造函数
     GraphicsEngine() = default;
@@ -77,8 +80,8 @@ private:
     EntityGraphicsCacheData::Type determineCacheType(float lineWidth, bool visible) const;
 
     // 圆/圆弧细分参数
-    static constexpr int kCircleSegments = 64;      // 完整圆细分数
-    static constexpr int kMinArcSegments = 8;       // 圆弧最少细分数
+    static constexpr int kCircleSegments = 128;     // 完整圆细分数
+    static constexpr int kMinArcSegments = 32;      // 圆弧最少细分数
     static constexpr float kMaxLineWidthPixels = 100.0f;  // 最大线宽像素值
     static constexpr float kDefaultLineWidthPixels = 1.0f; // 默认线宽像素值
 };

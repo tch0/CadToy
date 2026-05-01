@@ -657,7 +657,7 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     // 遍历所有缓存数据，根据类型分发到不同批次
     pDataCache->iterateAllCacheData([&](ObjectId id, const EntityGraphicsCacheData& cacheData) {
         // 跳过无效数据与不可见实体
-        if (cacheData.type == EntityGraphicsCacheData::kInvalidEmtpyData ||
+        if (cacheData.type == EntityGraphicsCacheData::kInvalidEmptyData ||
             cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
             return;
         }
@@ -704,7 +704,7 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
                 break;
                 
             default:
-                // 其他类型（如kInvalidEmtpyData）跳过
+                // 其他类型（如kInvalidEmptyData）跳过
                 break;
         }
     });

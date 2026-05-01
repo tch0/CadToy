@@ -36,7 +36,7 @@ struct DataCacheVertex {
 // ================================================================================================
 struct EntityGraphicsCacheData {
     enum Type {
-        kInvalidEmtpyData,              // 无效空数据，获取无效ID则会返回这个
+        kInvalidEmptyData,              // 无效空数据，获取无效ID则会返回这个
         kAlwaysNoLineWidth,             // 没有线宽，无论LwDisplay是否打开，线宽总是显示为1像素的情况，总是调用无线宽版本
         kLineWidthDependsOnLwDisplay,   // 实体原始线宽大于1像素的情况，但是否显示出来取决于Lwdisplay系统变量，开启时使用线宽版本渲染器，关闭时使用无线宽版本
         kAlwaysShowLineWidth,           // 总是显示为有线宽的图元，比如预选高亮就一定有宽度，总是调用有线宽版本渲染器
@@ -44,7 +44,7 @@ struct EntityGraphicsCacheData {
     };
     bool bPreSelected = false;          // 是否预选中，预选触发会很频繁，所以不修改正常顶点数据而是单独创建独立预选顶点缓存数据，上传顶点数据时根据此标记用预选顶点数据替换正常顶点以实现高效高性能的预选高亮
     bool bSelected = false;             // 是否选中，有标记时单独建立选中顶点缓存，上传时根据标记来替换
-    Type type = kInvalidEmtpyData;      // 实体渲染类型
+    Type type = kInvalidEmptyData;      // 实体渲染类型
     std::vector<DataCacheVertex> vertices;  // 顶点
 };
 
@@ -98,7 +98,7 @@ public:
     // 获取所有实体ID
     virtual std::vector<ObjectId> getAllEntityIds() const = 0;
     // 通过ID查询读取实体缓存数据
-    virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) const = 0;
+    virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) = 0;
     // 提供更通用的遍历接口，方便渲染器渲染，相比查询ID再根据ID去依次查询性能会更好，回调参数为实体id和实体缓存数据
     virtual void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) = 0;
     

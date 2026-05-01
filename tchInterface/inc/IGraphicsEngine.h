@@ -22,6 +22,9 @@ public:
 
     // 生成数据缓存，为缓存中所有脏实体生成缓存，调用数据缓存的相关接口
     virtual void generate(IGraphicsDataCache* pDataCache) const = 0;
+
+    // 单独为指定实体生成图形缓存数据
+    virtual void generateForEntity(IGraphicsDataCache* pDataCache, ObjectId id) const = 0;
 };
 
 } // namespace tch

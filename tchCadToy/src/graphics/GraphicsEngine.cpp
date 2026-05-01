@@ -97,6 +97,32 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
 }
 
 // ============================================================================
+// 单个实体生成
+// ============================================================================
+
+// 单独为指定实体生成图形缓存数据
+void GraphicsEngine::generateForEntity(IGraphicsDataCache* pDataCache, ObjectId id) const {
+    if (!pDataCache || id == 0) { return; }
+
+    // 获取数据库
+    Database* pDb = pDataCache->getDatabase();
+    if (!pDb) { return; }
+
+    // 获取实体
+    DbEntity* pEntity = pDb->getEntity(id);
+    if (!pEntity) { return; }
+
+    // 生成缓存数据
+    EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb);
+
+    // 存储缓存数据
+    pDataCache->setEntityCacheData(id, std::move(cacheData));
+
+    // 清除脏标记
+    pDataCache->clearDirty(id);
+}
+
+// ============================================================================
 // 实体生成分发
 // ============================================================================
 

@@ -23,7 +23,7 @@ void DbRay::setDirection(const Geometry::Vector& d) {
     notifyModified();
 }
 
-Geometry::AABB DbRay::boundingBox() const {
+Geometry::AABB DbRay::computeBoundingBox() const {
     const Geometry::Point& o = m_ray.origin;
     constexpr double inf = Geometry::INF;
     const double tol = Geometry::Tolerance::Default.absolute;

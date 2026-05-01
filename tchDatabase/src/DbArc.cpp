@@ -35,7 +35,7 @@ void DbArc::setEndAngle(double angle) {
     notifyModified();
 }
 
-Geometry::AABB DbArc::boundingBox() const {
+Geometry::AABB DbArc::computeBoundingBox() const {
     double sx = m_arc.center.x + m_arc.radius * std::cos(m_arc.startAngle);
     double sy = m_arc.center.y + m_arc.radius * std::sin(m_arc.startAngle);
     double ex = m_arc.center.x + m_arc.radius * std::cos(m_arc.endAngle);

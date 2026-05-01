@@ -23,7 +23,7 @@ void DbCircle::setRadius(double r) {
     notifyModified();
 }
 
-Geometry::AABB DbCircle::boundingBox() const {
+Geometry::AABB DbCircle::computeBoundingBox() const {
     return Geometry::AABB(
         Geometry::Point(m_circle.center.x - m_circle.radius, m_circle.center.y - m_circle.radius, m_circle.center.z),
         Geometry::Point(m_circle.center.x + m_circle.radius, m_circle.center.y + m_circle.radius, m_circle.center.z)

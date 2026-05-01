@@ -7,6 +7,7 @@
 
 // 项目头文件
 #include "IGraphicsDataCache.h"
+#include "GraphicsEngine.h"
 
 
 namespace tch {
@@ -117,12 +118,18 @@ std::vector<ObjectId> GraphicsDataCache::getAllEntityIds() const {
     return ids;
 }
 
-const EntityGraphicsCacheData& GraphicsDataCache::getEntityCacheData(ObjectId id) const {
+const EntityGraphicsCacheData& GraphicsDataCache::getEntityCacheData(ObjectId id) {
     // 局部静态空缓存数据，用于返回无效ID的引用
     static const EntityGraphicsCacheData kEmptyCacheData;
-    
-    if (id == 0) {
-        return kEmptyCacheData;
+
+    if (id == 0) { return kEmptyCacheData; }
+
+    // 检查是否需要重生成（脏标记或缓存不存在）
+    // 如果实体在脏集合中，或者缓存中不存在该实体，则需要重生成
+    bool needRegen = (m_dirtyEntities.find(id) != m_dirtyEntities.end()) || (m_cacheData.find(id) == m_cacheData.end());
+    if (needRegen) {
+        // 直接调用图形引擎生成单个实体的缓存
+        GraphicsEngine::getInstance().generateForEntity(this, id);
     }
     
     auto it = m_cacheData.find(id);

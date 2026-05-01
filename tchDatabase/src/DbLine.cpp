@@ -23,7 +23,7 @@ void DbLine::setEnd(const Geometry::Point& p) {
     notifyModified();
 }
 
-Geometry::AABB DbLine::boundingBox() const {
+Geometry::AABB DbLine::computeBoundingBox() const {
     return Geometry::AABB(m_segment.start, m_segment.end);
 }
 

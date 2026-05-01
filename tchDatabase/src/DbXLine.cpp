@@ -23,7 +23,7 @@ void DbXLine::setDirection(const Geometry::Vector& d) {
     notifyModified();
 }
 
-Geometry::AABB DbXLine::boundingBox() const {
+Geometry::AABB DbXLine::computeBoundingBox() const {
     const Geometry::Point& o = m_line.origin;
     constexpr double inf = Geometry::INF;
     const double tol = Geometry::Tolerance::Default.absolute;
@@ -59,9 +59,43 @@ bool DbXLine::isInside(const Geometry::AABB&) const {
 
 // 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
 bool DbXLine::intersects(const Geometry::AABB& rect) const {
-    // 构造线与矩形相交：检查通过原点的构造线是否与矩形相交
-    // 简化实现：使用包围盒相交
-    return boundingBox().intersects(rect);
+    const Geometry::Point& O = m_line.origin;
+    const Geometry::Point& D = m_line.direction;
+    const double tol = Geometry::Tolerance::Default.absolute;
+
+    // 采用 Slab 方法，t 范围 (-∞, ∞)
+    double tMin = -Geometry::INF;
+    double tMax =  Geometry::INF;
+
+    auto clip = [&](double p, double q) -> bool {
+        if (std::abs(p) < tol) {
+            // 方向在该维度上的分量为零，直线平行于该边界
+            if (q < 0) { return false; }   // 在边界外侧，永不相交
+            return true;
+        }
+        double r = q / p;
+        if (p < 0) {
+            if (r > tMax) { return false; }
+            if (r > tMin) { tMin = r; }
+        } else {
+            if (r < tMin) { return false; }
+            if (r < tMax) { tMax = r; }
+        }
+        return true;
+    };
+
+    // X 维度
+    if (!clip(-D.x, O.x - rect.min.x)) { return false; }
+    if (!clip( D.x, rect.max.x - O.x)) { return false; }
+    // Y 维度
+    if (!clip(-D.y, O.y - rect.min.y)) { return false; }
+    if (!clip( D.y, rect.max.y - O.y)) { return false; }
+    // Z 维度（若为 2D，通常通过）
+    if (!clip(-D.z, O.z - rect.min.z)) { return false; }
+    if (!clip( D.z, rect.max.z - O.z)) { return false; }
+
+    // 存在合法的 t（任何实数）即表示相交
+    return tMin <= tMax;
 }
 
 std::unique_ptr<DbObject> DbXLine::clone() const {

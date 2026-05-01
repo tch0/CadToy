@@ -7,6 +7,7 @@
 
 // 项目头文件
 #include "Database.h"
+#include "IGraphicsDataCache.h"
 
 
 namespace tch {
@@ -27,7 +28,34 @@ void DbEntity::setLayerId(ObjectId id) {
     }
 }
 
+Geometry::AABB DbEntity::boundingBox() const {
+    if (!m_bboxDirty) { return m_cachedBBox; }
+
+    // 尝试从图形缓存计算（离散化顶点，适合选择）
+    // getEntityCacheData 会自动处理脏缓存的重生成
+    if (m_pDb) {
+        IGraphicsDataCache* pDataCache = m_pDb->getGraphicsDataCache();
+        if (pDataCache) {
+            const auto& entCache = pDataCache->getEntityCacheData(m_id);
+            if (entCache.type != EntityGraphicsCacheData::kInvalidEmptyData && !entCache.vertices.empty()) {
+                m_cachedBBox = Geometry::AABB(entCache.vertices[0].position, entCache.vertices[0].position);
+                for (const auto& v : entCache.vertices) {
+                    m_cachedBBox.expand(v.position);
+                }
+                m_bboxDirty = false;
+                return m_cachedBBox;
+            }
+        }
+    }
+
+    // 如果没有图形数据则回退到解析公式计算
+    m_cachedBBox = computeBoundingBox();
+    m_bboxDirty = false;
+    return m_cachedBBox;
+}
+
 void DbEntity::notifyModified() {
+    m_bboxDirty = true;
     if (m_pDb && m_id != 0) {
         m_pDb->onEntityModified(m_id);
     }

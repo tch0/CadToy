@@ -53,8 +53,11 @@ public:
     bool isVisible() const { return m_visible; }
     void setVisible(bool visible);
     
-    // 几何接口
-    virtual Geometry::AABB boundingBox() const = 0;
+    // 几何接口 - 获取包围盒（带缓存）
+    virtual Geometry::AABB boundingBox() const final;
+    
+    // 计算包围盒 - 由各派生类实现具体计算逻辑
+    virtual Geometry::AABB computeBoundingBox() const = 0;
     
     // 实体是否完全位于给定的轴对齐包围盒内
     virtual bool isInside(const Geometry::AABB& rect) const = 0;
@@ -81,6 +84,10 @@ protected:
     double m_linetypeScale = 1.0;
     DbLineWeight m_lineWeight = DbLineWeight::kByLayer;
     bool m_visible = true;
+    
+    // 包围盒缓存
+    mutable Geometry::AABB m_cachedBBox;   // 缓存包围盒
+    mutable bool m_bboxDirty = true;       // 脏标记
 };
 
 } // namespace tch
