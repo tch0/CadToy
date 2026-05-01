@@ -72,19 +72,6 @@ Geometry::AABB DbEllipse::computeBoundingBox() const {
     );
 }
 
-// 实体是否完全位于给定的轴对齐包围盒内
-bool DbEllipse::isInside(const Geometry::AABB& rect) const {
-    // 椭圆完全在矩形内：使用包围盒近似
-    Geometry::AABB bbox = boundingBox();
-    return rect.contains(bbox.min) && rect.contains(bbox.max);
-}
-
-// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
-bool DbEllipse::intersects(const Geometry::AABB& rect) const {
-    // TODO: 相交测试使用包围盒近似并不精确，但基本能用，后续考虑是否需要精确计算
-    return boundingBox().intersects(rect);
-}
-
 std::unique_ptr<DbObject> DbEllipse::clone() const {
     return std::make_unique<DbEllipse>(*this);
 }

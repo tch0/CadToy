@@ -76,68 +76,6 @@ Geometry::AABB DbArc::computeBoundingBox() const {
     );
 }
 
-// 实体是否完全位于给定的轴对齐包围盒内
-bool DbArc::isInside(const Geometry::AABB& rect) const {
-    // 圆弧完全在矩形内：使用圆弧自身的包围盒检查
-    Geometry::AABB bbox = boundingBox();
-    return rect.contains(bbox.min) && rect.contains(bbox.max);
-}
-
-// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
-bool DbArc::intersects(const Geometry::AABB& rect) const {
-    // 1. 快速排斥：包围盒不相交
-    if (!boundingBox().intersects(rect)) {
-        return false;
-    }
-    
-    // 2. 快速排斥：矩形完全在圆外（圆心到矩形最近距离 > 半径）
-    double cx = m_arc.center.x;
-    double cy = m_arc.center.y;
-    double r = m_arc.radius;
-    double closestX = std::clamp(cx, rect.min.x, rect.max.x);
-    double closestY = std::clamp(cy, rect.min.y, rect.max.y);
-    double dx = cx - closestX;
-    double dy = cy - closestY;
-    if (dx * dx + dy * dy > r * r) {
-        return false;
-    }
-    
-    // 3. 特殊情况：半径极小，视为点
-    if (r <= Geometry::Tolerance::Default.absolute) {
-        Geometry::Point arcPoint(cx + r * std::cos(m_arc.startAngle),
-                                 cy + r * std::sin(m_arc.startAngle),
-                                 m_arc.center.z);
-        return rect.contains(arcPoint);
-    }
-    
-    // 4. 将弧按弦高误差自适应离散为线段序列，逐段测试
-    double start = Geometry::normalizeAngle(m_arc.startAngle);
-    double end   = Geometry::normalizeAngle(m_arc.endAngle);
-    double sweep = end - start;
-    if (sweep < 0) { sweep += 2.0 * Geometry::PI; }  // 保证逆时针正角度
-
-    double maxStep = 2.0 * std::acos(1.0 - Geometry::Tolerance::Selection.absolute / r);  // 弦高误差控制步长
-    int steps = std::max(1, static_cast<int>(std::ceil(sweep / maxStep)));
-    double thetaStep = sweep / steps;
-    
-    // 生成端点的 lambda
-    auto pointAtAngle = [cx, cy, r, z = m_arc.center.z](double angle) -> Geometry::Point {
-        return Geometry::Point(cx + r * std::cos(angle),
-                               cy + r * std::sin(angle),
-                               z);
-    };
-    
-    Geometry::Point prev = pointAtAngle(start);
-    for (int i = 1; i <= steps; ++i) {
-        Geometry::Point curr = pointAtAngle(start + i * thetaStep);
-        if (rect.intersectsSegment(prev, curr)) {
-            return true;
-        }
-        prev = curr;
-    }
-    return false;
-}
-
 std::unique_ptr<DbObject> DbArc::clone() const {
     return std::make_unique<DbArc>(*this);
 }

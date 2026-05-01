@@ -23,6 +23,14 @@ void DbRay::setDirection(const Geometry::Vector& d) {
     notifyModified();
 }
 
+// 重写包围盒计算，同样实现缓存机制，但不使用图形缓存顶点
+Geometry::AABB DbRay::boundingBox() const {
+    if (!m_bboxDirty) { return m_cachedBBox; }
+    m_cachedBBox = computeBoundingBox();
+    m_bboxDirty = false;
+    return m_cachedBBox;
+}
+
 Geometry::AABB DbRay::computeBoundingBox() const {
     const Geometry::Point& o = m_ray.origin;
     constexpr double inf = Geometry::INF;

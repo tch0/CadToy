@@ -36,6 +36,9 @@ public:
     
     const Geometry::Line& line() const { return m_line; }
     
+    // 重写包围盒计算，同样实现缓存机制，但不使用图形缓存顶点
+    Geometry::AABB boundingBox() const override;
+    
     Geometry::AABB computeBoundingBox() const override;
     
     // 实体是否完全位于给定的轴对齐包围盒内

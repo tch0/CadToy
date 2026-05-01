@@ -28,6 +28,7 @@ void DbEntity::setLayerId(ObjectId id) {
     }
 }
 
+// 包围盒默认使用缓存顶点计算，但无限实体XLine/Ray不适用，需要派生重写
 Geometry::AABB DbEntity::boundingBox() const {
     if (!m_bboxDirty) { return m_cachedBBox; }
 
@@ -59,6 +60,42 @@ void DbEntity::notifyModified() {
     if (m_pDb && m_id != 0) {
         m_pDb->onEntityModified(m_id);
     }
+}
+
+// 实体是否完全位于给定的轴对齐包围盒内
+// 默认通用实现使用图形缓存顶点判定，派生类中可以覆写为更简单的解析判定
+// 基类判定中完全通用，且默认处理线型，后续如果实现了线型又影响选择的话那么删掉相关子类的覆写接口即可
+bool DbEntity::intersects(const Geometry::AABB& rect) const {
+    if (!m_pDb) { return false; }
+    auto* pCache = m_pDb->getGraphicsDataCache();
+    if (!pCache) { return false; }
+
+    const auto& cacheData = pCache->getEntityCacheData(m_id);
+    const auto& verts = cacheData.vertices;
+    if (verts.empty()) { return false; }
+
+    for (size_t i = 0; i + 1 < verts.size(); ++i) {
+        if (rect.intersectsSegment(verts[i].position, verts[i + 1].position)) { return true; }
+    }
+    return false;
+}
+
+// 实体是否与给定轴对齐包围盒相交
+// 默认通用实现使用图形缓存顶点判定，派生类可以覆写为更简单的解析判定
+// 基类判定中完全通用，且默认处理线型，后续如果实现了线型又影响选择的话那么删掉相关子类的覆写接口即可
+bool DbEntity::isInside(const Geometry::AABB& rect) const {
+    if (!m_pDb) { return false; }
+    auto* pCache = m_pDb->getGraphicsDataCache();
+    if (!pCache) { return false; }
+
+    const auto& cacheData = pCache->getEntityCacheData(m_id);
+    const auto& verts = cacheData.vertices;
+    if (verts.empty()) { return false; }
+
+    for (const auto& v : verts) {
+        if (!rect.contains(v.position)) { return false; }
+    }
+    return true;
 }
 
 void DbEntity::setColor(const DbColor& color) {
