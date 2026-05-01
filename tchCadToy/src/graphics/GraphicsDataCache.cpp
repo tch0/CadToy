@@ -8,7 +8,8 @@
 // 项目头文件
 #include "IGraphicsDataCache.h"
 #include "GraphicsEngine.h"
-
+#include "Database.h"
+#include "DbEntity.h"
 
 namespace tch {
 
@@ -62,6 +63,60 @@ void GraphicsDataCache::clearAllCacheData() {
     m_selectedCacheData.clear();
 }
 
+// 判断某实体顶点缓存是否脏
+bool GraphicsDataCache::isCacheDirty(ObjectId id) const {
+    if (id == 0) { return false; }
+    // 如果实体在脏集合中，或者缓存中不存在该实体，则认为缓存是脏的
+    if (m_dirtyEntities.find(id) != m_dirtyEntities.end()) { return true; }
+    return m_cacheData.find(id) == m_cacheData.end();
+}
+
+// ============================================================================
+// 无限实体相关接口：视口更新与获取、无限实体的生成
+// 无限实体随视口变化而重生成，比较特殊，所以需要单独处理
+// ============================================================================
+
+void GraphicsDataCache::updateViewport(const Geometry::AABB& newViewport) {
+    m_lastViewportAABB = m_currentViewportAABB;
+    m_currentViewportAABB = newViewport;
+}
+
+// 无限实体生成接口：由数据缓存负责组装无限实体数据，做帧间状态保持（现在相关状态），几何数据则还是由图形引擎来做
+void GraphicsDataCache::generateInfiniteEntities() {
+    if (!m_pDatabase) {
+        return;
+    }
+
+    bool viewportChanged = (m_lastViewportAABB != m_currentViewportAABB);
+
+    // 生成所有需要重生成的无限实体
+    for (ObjectId id : m_infiniteEntityIds) {
+        // 只有视口变化或实体为脏时才生成
+        if (!viewportChanged && !isCacheDirty(id)) {
+            continue;
+        }
+
+        // 获取上一帧的预选/选中状态
+        bool bPreSelected = false;
+        bool bSelected = false;
+        auto it = m_cacheData.find(id);
+        if (it != m_cacheData.end()) {
+            bPreSelected = it->second.bPreSelected;
+            bSelected = it->second.bSelected;
+        }
+
+        // 调用图形引擎生成缓存
+        GraphicsEngine::getInstance().generateForEntity(this, id);
+
+        // 获取生成后的缓存数据，设置选择状态
+        auto cacheIt = m_cacheData.find(id);
+        if (cacheIt != m_cacheData.end()) {
+            cacheIt->second.bPreSelected = bPreSelected;
+            cacheIt->second.bSelected = bSelected;
+        }
+    }
+}
+
 // ============================================================================
 // 通知接口
 // ============================================================================
@@ -72,6 +127,15 @@ void GraphicsDataCache::onEntityAdded(ObjectId id) {
     }
     
     m_dirtyEntities.insert(id);
+
+    // 检查是否为无限实体（射线、构造线）
+    if (m_pDatabase) {
+        if (auto* pEnt = m_pDatabase->getEntity(id)) {
+            if (pEnt->isInfinite()) {
+                m_infiniteEntityIds.insert(id);
+            }
+        }
+    }
 }
 
 void GraphicsDataCache::onEntityModified(ObjectId id) {
@@ -95,6 +159,7 @@ void GraphicsDataCache::onEntityRemoved(ObjectId id) {
 
     m_cacheData.erase(id);
     m_dirtyEntities.erase(id);
+    m_infiniteEntityIds.erase(id);  // 从无限实体集合移除
 
     // 同步清除预选缓存数据
     m_preSelectedCacheData.erase(id);
@@ -169,10 +234,15 @@ const EntityGraphicsCacheData& GraphicsDataCache::getPreSelectedEntityCacheData(
         return kEmptyCacheData;
     }
 
-    // 检查预选数据是否已存在
-    auto it = m_preSelectedCacheData.find(id);
-    if (it != m_preSelectedCacheData.end()) {
-        return it->second;
+    // 检查是否为无限实体（XLine/Ray）
+    bool isInfinite = m_infiniteEntityIds.find(id) != m_infiniteEntityIds.end();
+
+    // 普通实体：检查预选数据是否已存在，存在则直接返回
+    if (!isInfinite) {
+        auto it = m_preSelectedCacheData.find(id);
+        if (it != m_preSelectedCacheData.end()) {
+            return it->second;
+        }
     }
 
     // 懒生成：从正常数据拷贝并设置预选标记
@@ -185,8 +255,8 @@ const EntityGraphicsCacheData& GraphicsDataCache::getPreSelectedEntityCacheData(
         vertex.flags |= DataCacheVertex::kFlagPreSelected;
     }
 
-    // 插入到预选缓存
-    auto result = m_preSelectedCacheData.emplace(id, std::move(preSelectedData));
+    // 无限实体每帧都重新插入/更新，普通实体首次插入
+    auto result = m_preSelectedCacheData.insert_or_assign(id, std::move(preSelectedData));
     return result.first->second;
 }
 
@@ -237,10 +307,15 @@ const EntityGraphicsCacheData& GraphicsDataCache::getSelectedEntityCacheData(Obj
         return kEmptyCacheData;
     }
 
-    // 检查选中数据是否已存在
-    auto it = m_selectedCacheData.find(id);
-    if (it != m_selectedCacheData.end()) {
-        return it->second;
+    // 检查是否为无限实体（XLine/Ray）
+    bool isInfinite = m_infiniteEntityIds.find(id) != m_infiniteEntityIds.end();
+
+    // 普通实体：检查选中数据是否已存在，存在则直接返回
+    if (!isInfinite) {
+        auto it = m_selectedCacheData.find(id);
+        if (it != m_selectedCacheData.end()) {
+            return it->second;
+        }
     }
 
     // 懒生成：从正常数据拷贝并设置选中标记
@@ -252,8 +327,8 @@ const EntityGraphicsCacheData& GraphicsDataCache::getSelectedEntityCacheData(Obj
         vertex.flags |= DataCacheVertex::kFlagSelected;
     }
 
-    // 插入到选中缓存
-    auto result = m_selectedCacheData.emplace(id, std::move(selectedData));
+    // 无限实体每帧都重新插入/更新，普通实体首次插入
+    auto result = m_selectedCacheData.insert_or_assign(id, std::move(selectedData));
     return result.first->second;
 }
 

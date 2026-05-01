@@ -47,6 +47,9 @@ public:
     // 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
     bool intersects(const Geometry::AABB& rect) const override;
     
+    // 构造线是无限实体
+    bool isInfinite() const override { return true; }
+    
     std::unique_ptr<DbObject> clone() const override;
     
 protected:

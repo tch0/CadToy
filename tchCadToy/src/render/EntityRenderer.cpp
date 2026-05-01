@@ -15,6 +15,7 @@
 #include "GLFuncs.h"
 #include "Database.h"
 #include "GraphicsEngine.h"
+#include "Geometry.h"
 
 
 namespace tch {
@@ -643,6 +644,14 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
         return;
     }
     
+    // 更新视口信息（将屏幕视口转换为世界坐标AABB）
+    auto& transformManager = doc.getTransformManager();
+    int vpLeft, vpTop, vpRight, vpBottom;
+    transformManager.getViewport().getViewport(vpLeft, vpTop, vpRight, vpBottom);
+    glm::dvec3 worldMin = transformManager.screenToWorld(glm::vec2(vpLeft, vpBottom));
+    glm::dvec3 worldMax = transformManager.screenToWorld(glm::vec2(vpRight, vpTop));
+    pDataCache->updateViewport({worldMin, worldMax});
+
     // 生成图形数据（为脏实体生成缓存）
     GraphicsEngine::getInstance().generate(pDataCache);
     

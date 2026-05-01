@@ -65,6 +65,9 @@ public:
     // 实体是否与给定轴对齐包围盒相交（默认通用实现使用图形缓存顶点判定，派生类可以覆写为更简单的解析判定）
     virtual bool intersects(const Geometry::AABB& rect) const;
     
+    // 是否为无限实体（射线、构造线等），默认 false
+    virtual bool isInfinite() const { return false; }
+    
     std::unique_ptr<DbObject> clone() const override = 0;
     
     // 通知数据库实体被修改

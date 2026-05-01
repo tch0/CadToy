@@ -56,15 +56,15 @@ private:
     // ========================================================================
     
     // 为单个实体生成缓存数据
-    EntityGraphicsCacheData generateEntityCache(const DbEntity* pEntity, Database* pDb) const;
+    EntityGraphicsCacheData generateEntityCache(const DbEntity* pEntity, Database* pDb, const Geometry::AABB& viewport) const;
     
     // 各种实体类型的生成方法（flags由generateEntityCache统一计算传入）
     EntityGraphicsCacheData generateLineCache(const DbLine* pLine, Database* pDb, uint32_t flags) const;
     EntityGraphicsCacheData generateCircleCache(const DbCircle* pCircle, Database* pDb, uint32_t flags) const;
     EntityGraphicsCacheData generateArcCache(const DbArc* pArc, Database* pDb, uint32_t flags) const;
     EntityGraphicsCacheData generateEllipseCache(const DbEllipse* pEllipse, Database* pDb, uint32_t flags) const;
-    EntityGraphicsCacheData generateXLineCache(const DbXLine* pXLine, Database* pDb, uint32_t flags) const;
-    EntityGraphicsCacheData generateRayCache(const DbRay* pRay, Database* pDb, uint32_t flags) const;
+    EntityGraphicsCacheData generateXLineCache(const DbXLine* pXLine, Database* pDb, uint32_t flags, const Geometry::AABB& viewport) const;
+    EntityGraphicsCacheData generateRayCache(const DbRay* pRay, Database* pDb, uint32_t flags, const Geometry::AABB& viewport) const;
     
     // ========================================================================
     // 工具方法
@@ -80,8 +80,8 @@ private:
     EntityGraphicsCacheData::Type determineCacheType(float lineWidth, bool visible) const;
 
     // 圆/圆弧细分参数
-    static constexpr int kCircleSegments = 128;     // 完整圆细分数
-    static constexpr int kMinArcSegments = 32;      // 圆弧最少细分数
+    static constexpr int kCircleSegments = 64;      // 完整圆细分数
+    static constexpr int kMinArcSegments = 16;      // 圆弧最少细分数
     static constexpr float kMaxLineWidthPixels = 100.0f;  // 最大线宽像素值
     static constexpr float kDefaultLineWidthPixels = 1.0f; // 默认线宽像素值
 };

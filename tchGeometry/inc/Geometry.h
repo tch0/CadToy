@@ -397,6 +397,14 @@ struct AABB {
     bool intersectsSegment(const Point& p1, const Point& p2) const;  ///< 是否与线段相交
     Point center() const { return (min + max) * 0.5; }  ///< 中心点
     Vector size() const { return max - min; }            ///< 尺寸
+    
+    /// 判等操作符
+    bool operator==(const AABB& other) const {
+        return isCoincident(min, other.min) && isCoincident(max, other.max);
+    }
+    bool operator!=(const AABB& other) const {
+        return !(*this == other);
+    }
 };
 
 // ============================================================================

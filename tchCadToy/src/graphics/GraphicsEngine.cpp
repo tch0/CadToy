@@ -48,6 +48,9 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
         return;
     }
     
+    // 获取当前视口
+    const Geometry::AABB& viewport = pDataCache->getCurrentViewport();
+    
     // 检查是否需要全量重新生成
     if (pDataCache->needsRegenAll()) {
         // 清除所有旧缓存数据
@@ -60,7 +63,7 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
             }
             
             ObjectId id = pEntity->id();
-            EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb);
+            EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb, viewport);
             pDataCache->setEntityCacheData(id, std::move(cacheData));
         });
         
@@ -69,24 +72,19 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
         return;
     }
     
-    // 部分重生成
-    // 获取脏实体列表
-    std::vector<ObjectId> dirtyEntities = pDataCache->getDirtyEntities();
-    if (dirtyEntities.empty()) {
-        return;
-    }
-    
-    // 为每个脏实体生成缓存数据
-    for (ObjectId id : dirtyEntities) {
+    // 生成无限实体，内部调用图形引擎接口生成几何数据后，由数据缓存内部处理状态保持
+    pDataCache->generateInfiniteEntities();
+
+    // 生成其他普通脏实体
+    for (ObjectId id : pDataCache->getDirtyEntities()) {
         // 获取实体
         DbEntity* pEntity = pDb->getEntity(id);
         if (!pEntity) {
-            // 实体不存在，跳过
             continue;
         }
         
         // 生成缓存数据
-        EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb);
+        EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb, viewport);
         
         // 存储缓存数据
         pDataCache->setEntityCacheData(id, std::move(cacheData));
@@ -102,18 +100,27 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
 
 // 单独为指定实体生成图形缓存数据
 void GraphicsEngine::generateForEntity(IGraphicsDataCache* pDataCache, ObjectId id) const {
-    if (!pDataCache || id == 0) { return; }
+    if (!pDataCache || id == 0) {
+        return;
+    }
 
     // 获取数据库
     Database* pDb = pDataCache->getDatabase();
-    if (!pDb) { return; }
+    if (!pDb) {
+        return;
+    }
 
     // 获取实体
     DbEntity* pEntity = pDb->getEntity(id);
-    if (!pEntity) { return; }
+    if (!pEntity) {
+        return;
+    }
+
+    // 获取当前视口
+    const Geometry::AABB& viewport = pDataCache->getCurrentViewport();
 
     // 生成缓存数据
-    EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb);
+    EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb, viewport);
 
     // 存储缓存数据
     pDataCache->setEntityCacheData(id, std::move(cacheData));
@@ -126,17 +133,17 @@ void GraphicsEngine::generateForEntity(IGraphicsDataCache* pDataCache, ObjectId 
 // 实体生成分发
 // ============================================================================
 
-EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEntity, Database* pDb) const {
+EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEntity, Database* pDb, const Geometry::AABB& viewport) const {
     static const EntityGraphicsCacheData emptyData {false, false, EntityGraphicsCacheData::kInvisibleEntity, {}};
     if (!pEntity || !pDb) {
         return emptyData;
     }
-    
+
     // 检查实体自身可见性
     if (!pEntity->isVisible()) {
         return emptyData;
     }
-    
+
     // 检查图层状态（冻结或锁定）
     uint32_t flags = 0;
     ObjectId layerId = pEntity->layerId();
@@ -153,7 +160,7 @@ EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEnt
             }
         }
     }
-    
+
     // 根据实体类型分发到对应的生成方法，传入已计算的flags
     switch (pEntity->type()) {
         case DbObject::kLine:
@@ -165,9 +172,9 @@ EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEnt
         case DbObject::kEllipse:
             return generateEllipseCache(pEntity->as<DbEllipse>(), pDb, flags);
         case DbObject::kXLine:
-            return generateXLineCache(pEntity->as<DbXLine>(), pDb, flags);
+            return generateXLineCache(pEntity->as<DbXLine>(), pDb, flags, viewport);
         case DbObject::kRay:
-            return generateRayCache(pEntity->as<DbRay>(), pDb, flags);
+            return generateRayCache(pEntity->as<DbRay>(), pDb, flags, viewport);
         default:
             return emptyData;
     }
@@ -336,43 +343,6 @@ EntityGraphicsCacheData GraphicsEngine::generateArcCache(const DbArc* pArc, Data
     return cacheData;
 }
 
-EntityGraphicsCacheData GraphicsEngine::generateXLineCache(const DbXLine* pXLine, Database* pDb, uint32_t flags) const {
-    EntityGraphicsCacheData cacheData;
-    
-    if (!pXLine || !pDb) {
-        cacheData.type = EntityGraphicsCacheData::kInvisibleEntity;
-        return cacheData;
-    }
-    
-    // 获取颜色和线宽
-    glm::vec3 color = resolveEntityColor(pXLine, pDb);
-    float lineWidth = resolveEntityLineWidth(pXLine, pDb);
-    
-    // 确定缓存类型
-    cacheData.type = determineCacheType(lineWidth, true);
-    
-    // 如果不可见，直接返回
-    if (cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
-        return cacheData;
-    }
-    
-    // 获取构造线参数
-    const Geometry::Point& origin = pXLine->origin();
-    const Geometry::Vector& direction = pXLine->direction();
-    
-    // 对于无限构造线，我们生成两个远离原点的点来表示
-    // 实际渲染时需要在视图范围内裁剪
-    double extent = 1e6;  // 很大的范围
-    
-    Geometry::Point start = origin - direction * extent;
-    Geometry::Point end = origin + direction * extent;
-    
-    cacheData.vertices.push_back({start, color, flags, lineWidth});
-    cacheData.vertices.push_back({end, color, flags, lineWidth});
-    
-    return cacheData;
-}
-
 EntityGraphicsCacheData GraphicsEngine::generateEllipseCache(const DbEllipse* pEllipse, Database* pDb, uint32_t flags) const {
     EntityGraphicsCacheData cacheData;
     
@@ -457,36 +427,130 @@ EntityGraphicsCacheData GraphicsEngine::generateEllipseCache(const DbEllipse* pE
     return cacheData;
 }
 
-EntityGraphicsCacheData GraphicsEngine::generateRayCache(const DbRay* pRay, Database* pDb, uint32_t flags) const {
+EntityGraphicsCacheData GraphicsEngine::generateXLineCache(const DbXLine* pXLine, Database* pDb, uint32_t flags, const Geometry::AABB& viewport) const {
     EntityGraphicsCacheData cacheData;
-    
-    if (!pRay || !pDb) {
+
+    if (!pXLine || !pDb) {
         cacheData.type = EntityGraphicsCacheData::kInvisibleEntity;
         return cacheData;
     }
-    
+
     // 获取颜色和线宽
-    glm::vec3 color = resolveEntityColor(pRay, pDb);
-    float lineWidth = resolveEntityLineWidth(pRay, pDb);
-    
+    glm::vec3 color = resolveEntityColor(pXLine, pDb);
+    float lineWidth = resolveEntityLineWidth(pXLine, pDb);
+
     // 确定缓存类型
     cacheData.type = determineCacheType(lineWidth, true);
-    
+
     // 如果不可见，直接返回
     if (cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
         return cacheData;
     }
+
+    // 获取构造线参数
+    const Geometry::Point& origin = pXLine->origin();
+    const Geometry::Point& direction = pXLine->direction();
     
+    // 使用 Slab 方法计算构造线与视口的交点
+    const double tol = Geometry::Tolerance::Default.absolute;
+    double tMin = -Geometry::INF, tMax = Geometry::INF;
+
+    auto clip = [&](double p, double q) -> bool {
+        if (std::abs(p) < tol) { return q >= 0; }
+        double r = q / p;
+        if (p < 0) {
+            if (r > tMax) { return false; }
+            if (r > tMin) { tMin = r; }
+        } else {
+            if (r < tMin) { return false; }
+            if (r < tMax) { tMax = r; }
+        }
+        return true;
+    };
+
+    // X/Y/Z 维度裁剪
+    if (!clip(-direction.x, origin.x - viewport.min.x)) { return cacheData; }
+    if (!clip(direction.x, viewport.max.x - origin.x)) { return cacheData; }
+    if (!clip(-direction.y, origin.y - viewport.min.y)) { return cacheData; }
+    if (!clip(direction.y, viewport.max.y - origin.y)) { return cacheData; }
+    if (!clip(-direction.z, origin.z - viewport.min.z)) { return cacheData; }
+    if (!clip(direction.z, viewport.max.z - origin.z)) { return cacheData; }
+
+    // 检查是否有有效相交区间
+    if (tMin > tMax) {
+        cacheData.type = EntityGraphicsCacheData::kInvisibleEntity;
+        return cacheData;
+    }
+    // 计算裁剪后的起点和终点（tMin/tMax 已由 Slab 算法限制在视口范围内）
+    Geometry::Point start = origin + direction * tMin;
+    Geometry::Point end = origin + direction * tMax;
+    
+    cacheData.vertices.push_back({start, color, flags, lineWidth});
+    cacheData.vertices.push_back({end, color, flags, lineWidth});
+    
+    return cacheData;
+}
+
+EntityGraphicsCacheData GraphicsEngine::generateRayCache(const DbRay* pRay, Database* pDb, uint32_t flags, const Geometry::AABB& viewport) const {
+    EntityGraphicsCacheData cacheData;
+
+    if (!pRay || !pDb) {
+        cacheData.type = EntityGraphicsCacheData::kInvisibleEntity;
+        return cacheData;
+    }
+
+    // 获取颜色和线宽
+    glm::vec3 color = resolveEntityColor(pRay, pDb);
+    float lineWidth = resolveEntityLineWidth(pRay, pDb);
+
+    // 确定缓存类型
+    cacheData.type = determineCacheType(lineWidth, true);
+
+    // 如果不可见，直接返回
+    if (cacheData.type == EntityGraphicsCacheData::kInvisibleEntity) {
+        return cacheData;
+    }
+
     // 获取射线参数
     const Geometry::Point& origin = pRay->origin();
-    const Geometry::Vector& direction = pRay->direction();
+    const Geometry::Point& direction = pRay->direction();
+
+    // 使用 Slab 方法计算射线与视口的交点 (t 范围 [0, ∞))
+    const double tol = Geometry::Tolerance::Default.absolute;
+    double tMin = 0.0, tMax = Geometry::INF;
+
+    auto clip = [&](double p, double q) -> bool {
+        if (std::abs(p) < tol) { return q >= 0; }
+        double r = q / p;
+        if (p < 0) {
+            if (r > tMax) { return false; }
+            if (r > tMin) { tMin = r; }
+        } else {
+            if (r < tMin) { return false; }
+            if (r < tMax) { tMax = r; }
+        }
+        return true;
+    };
+
+    // X/Y/Z 维度裁剪
+    if (!clip(-direction.x, origin.x - viewport.min.x)) { return cacheData; }
+    if (!clip(direction.x, viewport.max.x - origin.x)) { return cacheData; }
+    if (!clip(-direction.y, origin.y - viewport.min.y)) { return cacheData; }
+    if (!clip(direction.y, viewport.max.y - origin.y)) { return cacheData; }
+    if (!clip(-direction.z, origin.z - viewport.min.z)) { return cacheData; }
+    if (!clip(direction.z, viewport.max.z - origin.z)) { return cacheData; }
+
+    // 检查是否有有效相交区间
+    if (tMin > tMax) {
+        cacheData.type = EntityGraphicsCacheData::kInvisibleEntity;
+        return cacheData;
+    }
     
-    // 对于射线，从原点向方向延伸
-    double extent = 1e6;  // 很大的范围
-    
-    Geometry::Point end = origin + direction * extent;
-    
-    cacheData.vertices.push_back({origin, color, flags, lineWidth});
+    // 计算裁剪后的起点和终点（tMin/tMax 已由 Slab 算法限制在视口范围内）
+    Geometry::Point start = origin + direction * tMin;
+    Geometry::Point end = origin + direction * tMax;
+
+    cacheData.vertices.push_back({start, color, flags, lineWidth});
     cacheData.vertices.push_back({end, color, flags, lineWidth});
     
     return cacheData;

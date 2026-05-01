@@ -61,10 +61,26 @@ public:
     
     // 清除所有缓存数据（全量重新生成前调用）
     void clearAllCacheData() override;
+    
+    // 判断某实体顶点缓存是否脏
+    bool isCacheDirty(ObjectId id) const override;
 
     // ========================================================================
-    // 通知接口（由数据库调用，响应实体变化）
+    // 视口管理接口（用于无限实体视口裁剪）
     // ========================================================================
+    
+    // 更新当前视口
+    void updateViewport(const Geometry::AABB& newViewport) override;
+    
+    // 获取当前视口
+    const Geometry::AABB& getCurrentViewport() const override { return m_currentViewportAABB; }
+    
+    // 无限实体生成接口：由数据缓存负责组装无限实体数据，做帧间状态保持（现在相关状态），几何数据生成则还是由图形引擎来做
+    void generateInfiniteEntities() override;
+
+    // ============================================================================
+    // 通知接口（由数据库调用，响应实体变化）
+    // ============================================================================
     
     // 实体已添加，数据库添加实体后调用，将该实体标记为脏以便生成缓存
     void onEntityAdded(ObjectId id) override;
@@ -75,9 +91,9 @@ public:
     // 实体已删除，数据库删除实体后调用，清理该实体的缓存数据
     void onEntityRemoved(ObjectId id) override;
 
-    // ========================================================================
+    // ============================================================================
     // 缓存数据查询接口（供渲染器使用）
-    // ========================================================================
+    // ============================================================================
     
     // 获取所有实体ID，渲染器遍历使用
     std::vector<ObjectId> getAllEntityIds() const override;
@@ -125,6 +141,11 @@ private:
 
     // 选中实体相关数据
     mutable std::unordered_map<ObjectId, EntityGraphicsCacheData> m_selectedCacheData;     // 选中实体缓存数据（懒生成）
+
+    // 无限实体管理（射线、构造线）
+    std::unordered_set<ObjectId> m_infiniteEntityIds;             // 无限实体ID集合
+    Geometry::AABB m_lastViewportAABB;                            // 上一帧视口
+    Geometry::AABB m_currentViewportAABB;                         // 当前帧视口
 };
 
 } // namespace tch
