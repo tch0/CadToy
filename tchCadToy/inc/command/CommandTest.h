@@ -25,6 +25,7 @@ private:
         kTest1,                     // 测试程序 1：创建500个正方形
         kTest2,                     // 测试程序 2：创建10000个圆
         kTest3,                     // 测试程序 3：清除所有实体
+        kTest4,                     // 测试程序 4：创建多样化测试实体
         kDisplayHelp,               // 显示帮助信息
         kCompleted                  // 完成
     };
@@ -41,6 +42,8 @@ private:
     TestState runTest2();
     // 运行测试程序 3：清除所有实体
     TestState runTest3();
+    // 运行测试程序 4：创建多样化测试实体
+    TestState runTest4();
 };
 
 } // namespace tch

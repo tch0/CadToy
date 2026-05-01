@@ -19,17 +19,23 @@
 #include "DbEntity.h"
 #include "DbLine.h"
 #include "DbCircle.h"
+#include "DbXLine.h"
+#include "DbRay.h"
+#include "DbArc.h"
+#include "DbEllipse.h"
 #include "UndoManager.h"
 #include "SelectionSet.h"
+#include "Geometry.h"
 
 namespace tch {
 
 // 测试程序列表
 static const std::vector<std::pair<int, const char*>> s_programInfos = {
-    {0, "实体选择测试 - 调用 waitForSelection 进行选择"},
-    {1, "压力测试1 - 创建2500个正方形（边长2到5000），1万个实体，2万个顶点"},
-    {2, "压力测试2 - 创建1000个圆（半径1到1000），1000个实体，12万8000个顶点"},
-    {3, "压力测试3 - 清除数据库中所有实体"},
+    {0, "测试0 - 实体选择测试，调用 waitForSelection 进行选择"},
+    {1, "测试1 - 性能测试，创建2500个正方形（边长2到5000），1万个实体，2万个顶点"},
+    {2, "测试2 - 性能测试，创建1000个圆（半径1到1000），1000个实体，12万8000个顶点"},
+    {3, "测试3 - 清除数据库中所有实体"},
+    {4, "测试4 - 创建多样化测试实体（XLine/Ray/Circle/Arc/Ellipse）"},
 };
 
 CommandTest::CommandTest()
@@ -107,6 +113,12 @@ void CommandTest::onUpdate() {
             break;
         }
 
+        case kTest4: {
+            // 执行测试程序 4：创建多样化测试实体
+            m_state = runTest4();
+            break;
+        }
+
         case kDisplayHelp:
             // 打印所有测试程序用途
             Utils::cmdLinePrint("测试程序编号与说明:");
@@ -144,6 +156,9 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
         case 3:
             // 测试程序 3：清除所有实体
             return kTest3;
+        case 4:
+            // 测试程序 4：创建多样化测试实体
+            return kTest4;
         default:
             // 无效的测试程序编号
             Utils::cmdLinePrint("无效的测试程序编号");
@@ -286,6 +301,164 @@ CommandTest::TestState CommandTest::runTest3() {
     }
 
     Utils::cmdLinePrint(std::format("测试程序3完成：清除了{}个实体", count));
+    return kCompleted;
+}
+
+CommandTest::TestState CommandTest::runTest4() {
+    // 测试程序4：创建多样化测试实体
+    auto* pDb = DocManager::getCurrentDocument().getDatabase();
+    if (!pDb) {
+        Utils::cmdLinePrint("数据库不可用");
+        return kCompleted;
+    }
+
+    std::vector<ObjectId> allIds;
+    
+    // ========== XLine (构造线) 参数定义 ==========
+    struct XLineParam {
+        glm::dvec3 origin;
+        glm::dvec3 direction;
+    };
+    const XLineParam xlineParams[] = {
+        {{0, 50, 0}, {1, 0, 0}},      // 第一象限 - 水平向右
+        {{50, 0, 0}, {0, 1, 0}},      // 第一象限 - 垂直向上
+        {{0, 0, 0}, {1, 1, 0}},       // 第一象限 - 45度斜向
+        {{0, 200, 0}, {1, 0, 0}},     // 外围区域 - 水平
+        {{200, 0, 0}, {0, 1, 0}},     // 外围区域 - 垂直
+    };
+    
+    // ========== Ray (射线) 参数定义 ==========
+    struct RayParam {
+        glm::dvec3 origin;
+        double angleDeg;  // 角度（度）
+    };
+    const RayParam rayParams[] = {
+        {{20, 80, 0}, 0.0},           // 第一象限 - 水平向右
+        {{80, 20, 0}, 90.0},          // 第一象限 - 垂直向上
+        {{30, 30, 0}, -30.0},         // 第一象限 - -30度斜向
+        {{250, 50, 0}, 120.0},        // 外围区域 - 120度方向
+        {{50, 250, 0}, 60.0},         // 外围区域 - 60度方向
+    };
+    
+    // ========== Circle (圆) 参数定义 ==========
+    struct CircleParam {
+        glm::dvec3 center;
+        double radius;
+    };
+    const CircleParam circleParams[] = {
+        {{-50, 50, 0}, 30.0},         // 第二象限
+        {{-100, 100, 0}, 50.0},       // 第二象限
+        {{-30, 120, 0}, 20.0},        // 第二象限
+        {{200, 200, 0}, 40.0},        // 外围区域
+        {{-200, -200, 0}, 60.0},      // 外围区域
+        {{200, -200, 0}, 35.0},       // 外围区域
+        {{-200, 200, 0}, 45.0},       // 外围区域
+    };
+    
+    // ========== Arc (圆弧) 参数定义 ==========
+    struct ArcParam {
+        glm::dvec3 center;
+        double radius;
+        double startAngle;  // 弧度
+        double endAngle;    // 弧度
+    };
+    const ArcParam arcParams[] = {
+        {{-50, -50, 0}, 40.0, 0.0, Geometry::HALF_PI},                    // 第三象限 - 0~90度
+        {{-100, -80, 0}, 35.0, Geometry::PI, 3.0 * Geometry::HALF_PI},    // 第三象限 - 180~270度
+        {{-30, -120, 0}, 25.0, -Geometry::PI / 4.0, Geometry::PI / 4.0},  // 第三象限 - -45~45度(跨0度)
+        {{-120, -30, 0}, 45.0, 3.0 * Geometry::PI / 4.0, 5.0 * Geometry::PI / 4.0}, // 第三象限 - 135~225度(跨180度)
+        {{200, -200, 0}, 50.0, Geometry::PI / 4.0, 3.0 * Geometry::PI / 4.0},       // 外围区域
+        {{-200, 200, 0}, 40.0, 0.0, Geometry::PI},                        // 外围区域
+    };
+    
+    // ========== Ellipse (完整椭圆) 参数定义 ==========
+    struct EllipseParam {
+        glm::dvec3 center;
+        double radiusX;
+        double radiusY;
+        double rotation;  // 弧度
+    };
+    const EllipseParam ellipseParams[] = {
+        {{80, -80, 0}, 50.0, 30.0, 0.0},              // 第四象限 - 长轴水平
+        {{120, -120, 0}, 40.0, 20.0, Geometry::HALF_PI}, // 第四象限 - 长轴垂直
+        {{50, -150, 0}, 35.0, 17.5, Geometry::PI / 4.0}, // 第四象限 - 长轴倾斜45度
+        {{250, 250, 0}, 45.0, 22.5, 0.0},             // 外围区域
+        {{-250, -250, 0}, 40.0, 20.0, Geometry::HALF_PI}, // 外围区域
+    };
+    
+    // ========== EllipseArc (椭圆弧) 参数定义 ==========
+    struct EllipseArcParam {
+        glm::dvec3 center;
+        double radiusX;
+        double radiusY;
+        double rotation;   // 弧度
+        double startParam; // 弧度
+        double endParam;   // 弧度
+    };
+    const EllipseArcParam ellipseArcParams[] = {
+        {{0, 0, 0}, 30.0, 15.0, 0.0, 0.0, Geometry::PI},                          // 中心区域 - 长轴水平 0~180度
+        {{0, 0, 0}, 25.0, 12.5, Geometry::HALF_PI, Geometry::HALF_PI, 3.0 * Geometry::HALF_PI}, // 中心区域 - 长轴垂直 90~270度
+        {{0, 0, 0}, 20.0, 10.0, Geometry::PI / 6.0, -Geometry::PI / 3.0, Geometry::PI / 3.0},  // 中心区域 - 长轴倾斜30度 -60~60度
+    };
+    
+    // ========== 创建 XLine ==========
+    for (const auto& param : xlineParams) {
+        auto xline = std::make_unique<DbXLine>(param.origin, param.direction);
+        xline->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(xline)));
+    }
+    
+    // ========== 创建 Ray ==========
+    for (const auto& param : rayParams) {
+        double angle = param.angleDeg * Geometry::PI / 180.0;
+        glm::dvec3 dir(cos(angle), sin(angle), 0);
+        auto ray = std::make_unique<DbRay>(param.origin, dir);
+        ray->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(ray)));
+    }
+    
+    // ========== 创建 Circle ==========
+    for (const auto& param : circleParams) {
+        auto circle = std::make_unique<DbCircle>(param.center, param.radius);
+        circle->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(circle)));
+    }
+    
+    // ========== 创建 Arc ==========
+    for (const auto& param : arcParams) {
+        auto arc = std::make_unique<DbArc>(param.center, param.radius, param.startAngle, param.endAngle);
+        arc->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(arc)));
+    }
+    
+    // ========== 创建 Ellipse (完整椭圆) ==========
+    for (const auto& param : ellipseParams) {
+        auto ellipse = std::make_unique<DbEllipse>(param.center, param.radiusX, param.radiusY, param.rotation);
+        ellipse->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(ellipse)));
+    }
+    
+    // ========== 创建 EllipseArc (椭圆弧) ==========
+    for (const auto& param : ellipseArcParams) {
+        auto ellipseArc = std::make_unique<DbEllipse>(param.center, param.radiusX, param.radiusY, 
+                                                       param.rotation, param.startParam, param.endParam);
+        ellipseArc->setPropertiesFromDb();
+        allIds.push_back(pDb->addObject(std::move(ellipseArc)));
+    }
+    
+    // 统一记录undo
+    for (ObjectId id : allIds) {
+        UndoManager::getInstance().recordAdd(id);
+    }
+    
+    size_t count = allIds.size();
+    Utils::cmdLinePrint(std::format("测试程序4完成：创建了{}个多样化测试实体", count));
+    Utils::cmdLinePrint(std::format("  - XLine: {}个 (水平、垂直、斜向)", std::size(xlineParams)));
+    Utils::cmdLinePrint(std::format("  - Ray: {}个 (不同方向)", std::size(rayParams)));
+    Utils::cmdLinePrint(std::format("  - Circle: {}个 (不同位置)", std::size(circleParams)));
+    Utils::cmdLinePrint(std::format("  - Arc: {}个 (不同角度范围，包含跨0度和跨180度)", std::size(arcParams)));
+    Utils::cmdLinePrint(std::format("  - Ellipse: {}个 (长轴水平/垂直/倾斜)", std::size(ellipseParams)));
+    Utils::cmdLinePrint(std::format("  - EllipseArc: {}个 (不同参数范围)", std::size(ellipseArcParams)));
     return kCompleted;
 }
 
