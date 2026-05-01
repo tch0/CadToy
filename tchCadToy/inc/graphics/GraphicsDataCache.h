@@ -95,11 +95,11 @@ public:
     // 根据ID查询预选实体的预选缓存数据
     const EntityGraphicsCacheData& getPreSelectedEntityCacheData(ObjectId id) const override;
     
-    // 通知实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
-    void notifyEntityPreSelected(ObjectId id) override;
+    // 实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
+    void onEntityPreSelected(ObjectId id) override;
     
-    // 通知实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-    void notifyEntityUnPreSelected(ObjectId id) override;
+    // 实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    void onEntityUnPreSelected(ObjectId id) override;
 
     // ============================================================================
     // 选中实体缓存数据相关接口
@@ -108,11 +108,11 @@ public:
     // 根据ID查询选中实体的选中缓存数据
     const EntityGraphicsCacheData& getSelectedEntityCacheData(ObjectId id) const override;
     
-    // 通知实体被选中，通知后需要设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
-    void notifyEntitySelected(ObjectId id) override;
+    // 实体被选中，通知后需要设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
+    void onEntitySelected(ObjectId id) override;
     
-    // 通知实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-    void notifyEntityUnSelected(ObjectId id) override;
+    // 实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    void onEntityUnSelected(ObjectId id) override;
 
 private:
     Database* m_pDatabase = nullptr;                                    // 关联的数据库指针

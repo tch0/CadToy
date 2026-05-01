@@ -210,9 +210,6 @@ public:
     // 获取备份数量
     size_t backupCount() const { return m_backupObjects.size(); }
 
-    // 查询与轴对齐包围盒发生指定关系的所有实体 ID，支持窗交(窗口交叉 crossing=true)与圈围(窗口包围crossing=false)
-    std::vector<ObjectId> queryWindow(const Geometry::AABB& rect, bool crossing) const;
-
     // =======================================================================================
     // 序列化
     // =======================================================================================
@@ -249,6 +246,13 @@ public:
 
     // 图层被修改
     void onLayerModified(ObjectId id);
+    
+    // =======================================================================================
+    // 选择查询接口，会排除冻结图层实体与不可见实体
+    // =======================================================================================
+    
+    // 查询与轴对齐包围盒发生指定关系的所有实体 ID，支持窗交(窗口交叉 crossing=true)与圈围(窗口包围crossing=false)
+    std::vector<ObjectId> queryWindow(const Geometry::AABB& rect, bool crossing) const;
 
 private:
     // 对象存储

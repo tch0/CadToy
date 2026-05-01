@@ -24,11 +24,11 @@ namespace tch {
 //      当前只实现了线框渲染，可以传入任何线段类型进行渲染，足以应对绝大部分情况，三角面渲染则还未实现（有宽度的多段线、某些实体填充等）
 //      无线宽版本线框渲染
 //          用于绘制所有宽度为1个像素的线框
-//          支持选中、暗显，因为预选高亮是加宽2个像素，所以不支持预选，预选实体需要使用有线宽版本进行绘制
+//          支持选中、暗显，因为预选高亮是加宽像素，所以不支持预选，预选实体总是使用有线宽版本进行绘制
 //      有线宽版本线框渲染
 //          用于绘制所有宽度大于1个像素的线框
 //          完整支持了选中、暗显、预选高亮，支持绘制有线宽实体
-//      多种状态：选中实体绘制为虚线、预选高亮则加宽2个像素、暗显则是显示为一个更暗的颜色
+//      多种状态：选中实体绘制为虚线、预选高亮则加宽像素、暗显则是显示为一个更暗的颜色
 //          这些状态可以随意组合，当然无线宽版本中组合预选高亮也没有效果，有线宽版本可以随意组合
 //          实际中只有暗显+选中状态是合理有效的组合状态，其他状态组合并不应该实际发生（锁定图层实体暗显但不会预选高亮、选中实体也不会再预选高亮）
 //      
@@ -185,7 +185,7 @@ void main() {
 // 线框渲染: 有线宽版本几何着色器
 // 功能: 
 //   1. 将线段扩展为带宽度的四边形 (屏幕空间固定像素宽度)
-//   2. 预选高亮时线宽增加2像素
+//   2. 预选高亮时线宽增加4~10像素
 //   3. 传递暗显标志 (flat) 和中间区域标志 (flat) 以及纹理坐标
 //   4. 生成沿线段方向的归一化坐标和屏幕空间纹理坐标 (用于虚线周期)
 // ============================================================================
@@ -218,8 +218,8 @@ void main() {
     float baseWidth = (vLineWidth[0] + vLineWidth[1]) * 0.5;
     float lineWidth = baseWidth;
     if (isPreHighlight) {
-        float increment = max(2.0, baseWidth * 0.3); // 预选最小加粗2像素
-        increment = min(increment, 10.0);            // 也可加宽至线宽的30%, 最大10像素
+        float increment = max(4.0, baseWidth * 0.4); // 预选最小加粗4像素
+        increment = min(increment, 10.0);            // 也可加宽至线宽的40%, 最大10像素
         lineWidth = baseWidth + increment;
     }
 
@@ -275,8 +275,7 @@ void main() {
 // 线框渲染: 有线宽版本片段着色器
 // 功能: 
 //   1. 根据暗显标志降低颜色亮度
-//   2. 在预选或选中实体的中间区域 (30%~70%) 绘制反色虚线
-//   3. 虚线周期屏幕固定像素
+//   2. 虚线周期屏幕固定像素
 // ============================================================================
 static const char* WIREFRAME_FRAGMENT_SHADER_WITH_LW = R"(
 #version 330 core
@@ -663,14 +662,14 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
             return;
         }
 
-        // 检查是否被预选或选中，预选优先于选中
+        // 检查是否被预选或选中，选中优先于预选
         const EntityGraphicsCacheData* pRenderData = &cacheData;
-        if (cacheData.bPreSelected) {
-            // 预选优先
-            pRenderData = &pDataCache->getPreSelectedEntityCacheData(id);
-        } else if (cacheData.bSelected) {
-            // 选中次之
+        if (cacheData.bSelected) {
+            // 选中优先
             pRenderData = &pDataCache->getSelectedEntityCacheData(id);
+        } else if (cacheData.bPreSelected) {
+            // 预选次之
+            pRenderData = &pDataCache->getPreSelectedEntityCacheData(id);
         }
         
         // 根据缓存类型分发到不同批次

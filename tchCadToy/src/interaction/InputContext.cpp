@@ -15,6 +15,7 @@
 #include "LocalizationManager.h"
 #include "StringUtils.h"
 #include "DocManager.h"
+#include "IGraphicsDataCache.h"
 
 namespace tch {
 
@@ -38,7 +39,6 @@ InputContext::InputContext() :
     m_inputString(""),
     m_inputKeyword(""),
     m_keywordOptions(),
-    m_selectedEntities(),
     m_lastSpecialKeyEvent(SpecialKeyEventType::kNone),
     m_inputContextInfoVisible(false),
     m_selectionTask() {
@@ -118,7 +118,9 @@ void InputContext::resetStatusExceptInteractionData() {
     m_inputString = "";
     m_inputKeyword = "";
     m_keywordOptions.clear();
-    m_selectedEntities.clear();
+    m_selectionResult.clear();
+    // 注意: 先选选择集(m_priorSelectionSet)需要跨任务单独维护
+    // 通过 clearPriorSelectionSet() 接口单独管理（包括取消高亮）
 }
 
 // 清除所有交互状态，包括交互数据
@@ -258,18 +260,11 @@ bool InputContext::getKeyword(std::string& keyword) {
     return false;
 }
 
-// 实体选择相关
-void InputContext::setSelectedEntities(const std::vector<void*>& entities) {
-    // 只有在允许实体选择输入时才设置状态
-    if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
-        m_selectedEntities = entities;
-        m_currentStatus = InputStatus::kEntitySelection;
-    }
-}
-
-bool InputContext::getSelectedEntities(std::vector<void*>& entities) {
+// 选择集相关
+bool InputContext::getSelectionSet(SelectionSet& selectionSet) {
     if (m_currentStatus == InputStatus::kEntitySelection) {
-        entities = m_selectedEntities;
+        // 通过move将选择结果移交给命令层，避免拷贝
+        selectionSet = std::move(m_selectionResult);
         m_currentStatus = InputStatus::kNone;
         return true;
     }
@@ -457,11 +452,6 @@ void InputContext::parseInput(const std::string& input) {
     return;
 }
 
-// 预览功能（暂时空实现）
-void InputContext::drawRubberBand(const glm::dvec3& startPoint) {
-    // 暂时空实现
-}
-
 // 处理Enter/Space输入
 void InputContext::handleEnterSpace(const std::string& input) {
     // 选择或者命令执行中，解析输入
@@ -493,7 +483,9 @@ void InputContext::handleEscape(const std::string& input) {
         Utils::cmdLinePrint(cancelPrompt);
     }
     else {
-        // 没有命令执行时按下Esc，键入的字符串也会被输出到命令历史
+        // 没有命令执行、没有选择任务时按下Esc，清空先选选择集
+        clearPriorSelectionSet();
+        // 键入的字符串也会被输出到命令历史
         auto& loc = LocalizationManager::getInstance();
         std::string promptStr = loc.get("commandLine.prompt.command") + " " + input + loc.get("commandLine.prompt.cancel");
         Utils::cmdLinePrint(promptStr);
@@ -536,8 +528,10 @@ void InputContext::waitForPoint(const std::string& prompt, const glm::dvec3& bas
         m_interactionData.updateRubberBand(basePoint, basePoint);
     }
     
-    // 设置光标模式为十字光标
-    m_interactionData.cursorMode = CursorMode::kCrosshair;
+    // 选择模式下由选择任务指定光标，不为点输入单独设置光标，除此之外点输入都设置为十字光标
+    if (!m_selectionTask.isSelecting()) {
+        m_interactionData.cursorMode = CursorMode::kCrosshair;
+    }
 }
 
 // 等待点输入（无基点）
@@ -556,8 +550,10 @@ void InputContext::waitForPoint(const std::string& prompt, const std::vector<std
     // 没有基点
     m_bHasBasePoint = false;
     
-    // 设置光标模式为十字光标
-    m_interactionData.cursorMode = CursorMode::kCrosshair;
+    // 选择模式下由选择任务指定光标，不为点输入单独设置光标，除此之外点输入都设置为十字光标
+    if (!m_selectionTask.isSelecting()) {
+        m_interactionData.cursorMode = CursorMode::kCrosshair;
+    }
 }
 
 // 等待数值输入
@@ -692,8 +688,8 @@ void InputContext::waitForEnter(const std::string& prompt) {
     m_interactionData.cursorMode = CursorMode::kCrosshair;
 }
 
-// 等待实体选择输入
-void InputContext::waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities, const std::vector<std::string>& keywords) {
+// 等待选择交互
+void InputContext::waitForSelection(const std::string& prompt, const std::vector<std::string>& keywords) {
     setPrompt(prompt);
     setKeywordOptions(keywords);
     if (!keywords.empty()) {
@@ -705,7 +701,9 @@ void InputContext::waitForEntity(const std::string& prompt, const std::vector<vo
     // 设置错误提示 - 从本地化资源加载
     auto& loc = LocalizationManager::getInstance();
     m_errorPrompt = loc.get("inputContext.generalErrorPrompt.invalidSelection"); // *无效选择*
-    // 可以在这里使用existingEntities进行一些操作
+    
+    // 设置光标模式为拾取框
+    m_interactionData.cursorMode = CursorMode::kPickbox;
 }
 
 // 绘制输入上下文信息窗口
@@ -1002,7 +1000,7 @@ glm::dvec3 InputContext::getLastPoint() const {
 
 // 更新输入上下文
 void InputContext::onUpdate() {
-    // 如果调用了waitForEntity来选择实体
+    // 如果调用了waitForSelection来选择实体
     if (std::find(m_allowedTypes.begin(), m_allowedTypes.end(), InputType::kEntitySelection) != m_allowedTypes.end()) {
         // 且选择任务还没有启动，那么此处启动选择任务
         if (!m_selectionTask.isSelecting()) {
@@ -1014,22 +1012,24 @@ void InputContext::onUpdate() {
     if (m_selectionTask.isSelecting()) {
         m_selectionTask.onUpdate();
         if (m_selectionTask.isCompleted()) {
-            // 选择任务结束后，重置输入上下文状态
-            resetStatus();
-            
-            // TODO: 选择任务完成，处理选择结果
-            std::vector<void*> selectedEntities;
-            // 实际的实体选择逻辑需要在后续实现
-            // 根据Shift状态决定是加选还是减选
-            setSelectedEntities(selectedEntities);
-            
-            // 如果在命令执行中则需要获取选择返回的状态，以提供给命令来处理
-            // 比如选择中Esc，命令可能直接结束
-            if (m_bInCommandExecution)
-            {
-                m_currentStatus = m_selectionTask.getInputStatus();
+            // 获取选择结果
+            SelectionSet result = m_selectionTask.getSelectionResult();
+            // 如果在命令执行中
+            if (m_bInCommandExecution) {
+                // 保存选择结果，命令层通过getSelectionSet来获取时移交给命令层
+                m_selectionResult = std::move(result);
+                // 如果任务返回了取消状态
+                if (m_selectionTask.getInputStatus() == InputStatus::kCanceled) {
+                    m_currentStatus = InputStatus::kCanceled;
+                    m_selectionResult.clear();
+                } else {
+                    m_currentStatus = InputStatus::kEntitySelection;
+                }
             }
-            
+            // 非命令执行中，选到了实体，则合并到先选选择集中
+            else if (m_selectionTask.getInputStatus() == InputStatus::kEntitySelection) {
+                addToPriorSelectionSet(result);
+            }
             // 重置选择任务
             m_selectionTask.reset();
         }
@@ -1061,6 +1061,75 @@ void InputContext::activateSelectionTask(SelectionMode mode) {
     // 设置选择模式
     m_interactionData.selectionMode = mode;
     m_interactionData.isSelectionActive = true;
+}
+
+// ============================================================================
+// 选择集相关接口
+// ============================================================================
+
+// 获取当前文档的图形缓存
+static IGraphicsDataCache* getCurrentGraphicsCache() {
+    return DocManager::getCurrentDocument().getGraphicsDataCache();
+}
+
+// 设置先选选择集并更新高亮
+void InputContext::setPriorSelectionSet(const SelectionSet& selectionSet) {
+    // 取消旧的高亮
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : m_priorSelectionSet) {
+            pCache->onEntityUnSelected(id);
+        }
+    }
+    // 设置新的选择集
+    m_priorSelectionSet = selectionSet;
+    // 高亮新的选择集
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : m_priorSelectionSet) {
+            pCache->onEntitySelected(id);
+        }
+    }
+}
+
+// 添加到先选选择集并高亮新增
+void InputContext::addToPriorSelectionSet(const SelectionSet& selectionSet) {
+    // 只高亮新增的实体
+    SelectionSet newIds = selectionSet - m_priorSelectionSet;
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : newIds) {
+            pCache->onEntitySelected(id);
+        }
+    }
+    // 合并到先选选择集
+    m_priorSelectionSet += selectionSet;
+}
+
+// 清空先选选择集并取消高亮
+void InputContext::clearPriorSelectionSet() {
+    // 取消高亮
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : m_priorSelectionSet) {
+            pCache->onEntityUnSelected(id);
+        }
+    }
+    m_priorSelectionSet.clear();
+}
+
+// 选中高亮选择集中的所有实体（提供给命令层调用）
+void InputContext::highlightSelectionSet(const SelectionSet& selectionSet) {
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : selectionSet) {
+            pCache->onEntitySelected(id);
+        }
+    }
+}
+
+// 取消选择集中所有实体的选中高亮（提供给命令层调用）
+void InputContext::unhighlightSelectionSet(const SelectionSet& selectionSet) {
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : selectionSet) {
+            pCache->onEntityUnSelected(id);
+        }
+    }
 }
 
 } // namespace tch

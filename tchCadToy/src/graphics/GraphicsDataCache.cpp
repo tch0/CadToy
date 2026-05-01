@@ -183,8 +183,8 @@ const EntityGraphicsCacheData& GraphicsDataCache::getPreSelectedEntityCacheData(
     return result.first->second;
 }
 
-// 通知实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
-void GraphicsDataCache::notifyEntityPreSelected(ObjectId id) {
+// 实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
+void GraphicsDataCache::onEntityPreSelected(ObjectId id) {
     if (id == 0) {
         return;
     }
@@ -196,8 +196,8 @@ void GraphicsDataCache::notifyEntityPreSelected(ObjectId id) {
     }
 }
 
-// 通知实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-void GraphicsDataCache::notifyEntityUnPreSelected(ObjectId id) {
+// 实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+void GraphicsDataCache::onEntityUnPreSelected(ObjectId id) {
     if (id == 0) {
         return;
     }
@@ -250,7 +250,7 @@ const EntityGraphicsCacheData& GraphicsDataCache::getSelectedEntityCacheData(Obj
     return result.first->second;
 }
 
-void GraphicsDataCache::notifyEntitySelected(ObjectId id) {
+void GraphicsDataCache::onEntitySelected(ObjectId id) {
     if (id == 0) {
         return;
     }
@@ -262,7 +262,7 @@ void GraphicsDataCache::notifyEntitySelected(ObjectId id) {
     }
 }
 
-void GraphicsDataCache::notifyEntityUnSelected(ObjectId id) {
+void GraphicsDataCache::onEntityUnSelected(ObjectId id) {
     if (id == 0) {
         return;
     }

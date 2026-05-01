@@ -12,8 +12,16 @@
 #include "Renderer.h"
 #include "GlobalUtils.h"
 #include "LocalizationManager.h"
+#include "SelectionManager.h"
 
 namespace tch {
+
+// 静态工具方法：判断鼠标是否移动超过阈值，X+Y之和超过0.9像素，规避浮点误差，又确保移动了
+bool SelectionTask::mouseMoved(const glm::vec2& current, const glm::vec2& last) {
+    float dx = std::abs(current.x - last.x);
+    float dy = std::abs(current.y - last.y);
+    return (dx + dy) > 0.9f;
+}
 
 SelectionTask::SelectionTask()
     : m_state(SelectionState::kIdle),
@@ -52,6 +60,7 @@ void SelectionTask::start(bool isCommandActive, bool isSingleSelect) {
     
     m_completed = false;
     m_inputStatus = InputStatus::kNone;
+    m_lastPreSelectScreenPos = glm::vec2(0.0f, 0.0f);
 }
 
 void SelectionTask::onUpdate() {
@@ -124,6 +133,12 @@ void SelectionTask::onUpdate() {
             break;
         }
         case SelectionState::kSingleSelectionQuery: {
+            // 鼠标移动时更新预选高亮（单选模式下实时预选）
+            if (mouseMoved(m_previewPointScreen, m_lastPreSelectScreenPos)) {
+                SelectionManager::getInstance().preSelectPick(m_previewPointWorld);
+                m_lastPreSelectScreenPos = m_previewPointScreen;
+            }
+
             // 检查输入状态
             InputStatus status = InputContext::getInstance().getCurrentStatus();
             // 点输入
@@ -133,17 +148,15 @@ void SelectionTask::onUpdate() {
                 glm::dvec3 pickedPoint;
                 InputContext::getInstance().getPickedPoint(pickedPoint);
                 m_initialPointWorld = pickedPoint;
-                
-                // TODO: 检查点击位置是否有实体
-                bool hasEntity = false; // 假设没有实体
-                
-                if (hasEntity) {
+
+                // 使用选择管理器确认点选
+                m_selectionResult = SelectionManager::getInstance().commitPick(m_initialPointWorld);
+                if (!m_selectionResult.empty()) {
                     // 有实体，完成选择
                     m_selectionPointsWorld.push_back(m_initialPointWorld);
                     finishSelection();
                     m_inputStatus = InputStatus::kEntitySelection;
-                }
-                else {
+                } else {
                     // 没有实体，进入框选流程
                     m_state = SelectionState::kBoxSelectionEntry;
                     m_selectionMode = SelectionMode::kWindow;
@@ -194,7 +207,18 @@ void SelectionTask::onUpdate() {
         case SelectionState::kBoxLassoSelectionChoice: {
             // 更新框选预览
             updateBoxSelection();
-            
+
+            // 鼠标移动时更新预选高亮（框选模式下实时预选）
+            if (mouseMoved(m_previewPointScreen, m_lastPreSelectScreenPos)) {
+                Geometry::AABB selectRect(m_initialPointWorld, m_previewPointWorld);
+                if (m_selectionMode == SelectionMode::kWindow) {
+                    SelectionManager::getInstance().preSelectWindow(selectRect);
+                } else {
+                    SelectionManager::getInstance().preSelectCrossing(selectRect);
+                }
+                m_lastPreSelectScreenPos = m_previewPointScreen;
+            }
+
             // 处理框选到套索选择的切换
             if (InputHandler::isLeftMouseButtonPressed()) {
                 float distance = glm::distance(m_previewPointScreen, m_initialPointScreen);
@@ -236,6 +260,18 @@ void SelectionTask::onUpdate() {
         case SelectionState::kBoxSelectionQuery: {
             // 更新框选预览
             updateBoxSelection();
+            
+            // 鼠标移动时更新预选高亮（框选模式下实时预选）
+            if (mouseMoved(m_previewPointScreen, m_lastPreSelectScreenPos)) {
+                Geometry::AABB selectRect(m_initialPointWorld, m_previewPointWorld);
+                if (m_selectionMode == SelectionMode::kWindow) {
+                    SelectionManager::getInstance().preSelectWindow(selectRect);
+                } else {
+                    SelectionManager::getInstance().preSelectCrossing(selectRect);
+                }
+                m_lastPreSelectScreenPos = m_previewPointScreen;
+            }
+            
             // 处理框选输入
             handleBoxSelection();
             break;
@@ -522,6 +558,7 @@ void SelectionTask::reset() {
     m_currentPrompt = "";
     m_isCommandActive = false;
     m_inputStatus = InputStatus::kNone;
+    m_selectionResult.clear();
 }
 
 bool SelectionTask::isSelecting() const {
@@ -560,6 +597,13 @@ void SelectionTask::handleBoxSelection()
     if (status == InputStatus::kPointInput) {
         glm::dvec3 secondPoint;
         if (InputContext::getInstance().getPickedPoint(secondPoint)) {
+            // 使用选择管理器确认框选
+            Geometry::AABB selectRect(m_initialPointWorld, secondPoint);
+            if (m_selectionMode == SelectionMode::kWindow) {
+                m_selectionResult = SelectionManager::getInstance().commitWindow(selectRect);
+            } else {
+                m_selectionResult = SelectionManager::getInstance().commitCrossing(selectRect);
+            }
             // 完成框选
             finishSelection();
             m_inputStatus = InputStatus::kEntitySelection;
@@ -629,11 +673,10 @@ void SelectionTask::updateLassoSelection() {
 }
 
 
-// TODO: 其中处理所有实体选择逻辑
+// 结束选择，确认选择结果
 void SelectionTask::finishSelection() {
-    // TODO: 拿着点坐标和选择模式去空间索引中查询实体并处理选择集
-    // 还需要处理Shift状态、加选到选择集还是从选择集删除
-    // 选择集实现后才来实现
+    // 清除预选状态
+    SelectionManager::getInstance().clearPreSelect();
     
     // 管理任务状态
     m_state = SelectionState::kCompleted;
@@ -645,6 +688,12 @@ void SelectionTask::finishSelection() {
 
 // 取消选择，清理状态与数据
 void SelectionTask::cancelSelection() {
+    // 清除预选状态
+    SelectionManager::getInstance().clearPreSelect();
+    
+    // 清空选择结果
+    m_selectionResult.clear();
+    
     // 管理任务状态
     m_state = SelectionState::kCompleted;
     m_completed = true;

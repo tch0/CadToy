@@ -6,7 +6,7 @@
 // 第三方库
 
 // 项目头文件
-
+#include "Geometry.h"
 
 namespace tch {
 
@@ -43,14 +43,37 @@ bool DbCircle::isInside(const Geometry::AABB& rect) const {
            rect.contains(Geometry::Point(m_circle.center.x, m_circle.center.y + m_circle.radius, m_circle.center.z));
 }
 
-// 实体是否与给定轴对齐包围盒相交（包括完全包含在内）
+// 实体是否与给定轴对齐包围盒相交（圆周与矩形相交）
+// 注意：检测的是圆周（边界），不是圆盘（填充区域）
+// 使用包围盒内最近点和最远点距圆心距离检测
 bool DbCircle::intersects(const Geometry::AABB& rect) const {
-    // 圆与矩形相交：找到矩形上距离圆心最近的点，检查是否小于等于半径
-    double closestX = std::max(rect.min.x, std::min(m_circle.center.x, rect.max.x));
-    double closestY = std::max(rect.min.y, std::min(m_circle.center.y, rect.max.y));
-    double dx = m_circle.center.x - closestX;
-    double dy = m_circle.center.y - closestY;
-    return (dx * dx + dy * dy) <= (m_circle.radius * m_circle.radius);
+    double cx = m_circle.center.x;
+    double cy = m_circle.center.y;
+    double r = m_circle.radius;
+    double tol = Geometry::Tolerance::Default.absolute;
+
+    // 最近点（矩形内到圆心距离最小）
+    double closestX = std::clamp(cx, rect.min.x, rect.max.x);
+    double closestY = std::clamp(cy, rect.min.y, rect.max.y);
+    double dxMin = cx - closestX;
+    double dyMin = cy - closestY;
+    double dMinSq = dxMin * dxMin + dyMin * dyMin;
+
+    // 最远点（必定是四个角点之一）
+    double dMaxSq = 0.0;
+    auto updateMax = [&](double px, double py) {
+        double dx = px - cx;
+        double dy = py - cy;
+        dMaxSq = std::max(dMaxSq, dx * dx + dy * dy);
+    };
+    updateMax(rect.min.x, rect.min.y);
+    updateMax(rect.min.x, rect.max.y);
+    updateMax(rect.max.x, rect.min.y);
+    updateMax(rect.max.x, rect.max.y);
+
+    double rSq = r * r;
+    // 相交条件：最近点距离 <= r（有交点或圆心在矩形内）且最远点距离 >= r（圆周穿过矩形）
+    return (dMinSq <= rSq + tol) && (dMaxSq >= rSq - tol);
 }
 
 std::unique_ptr<DbObject> DbCircle::clone() const {

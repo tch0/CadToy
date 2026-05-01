@@ -629,42 +629,6 @@ void Database::forEachEntity(const std::function<void(DbEntity*)>& callback) con
     }
 }
 
-// 查询与轴对齐包围盒发生指定关系的所有实体 ID
-// crossing = true  -> intersects  （窗交/拾取框，实体与包围盒有交叉）
-// crossing = false -> isInside    （圈围，实体完全在包围盒内部）
-std::vector<ObjectId> Database::queryWindow(const Geometry::AABB& rect, bool crossing) const {
-    std::vector<ObjectId> result;
-    for (const auto& [id, pObj] : m_objects) {
-        // 只处理实体对象
-        if (!pObj || !pObj->isType(DbObject::kEntity)) {
-            continue;
-        }
-        DbEntity* pEntity = pObj->as<DbEntity>();
-        if (!pEntity) {
-            continue;
-        }
-
-        // 第一层：包围盒粗筛
-        if (!pEntity->boundingBox().intersects(rect)) {
-            continue;
-        }
-
-        // 第二层：精确几何判定
-        if (crossing) {
-            // 交叉窗口：实体与矩形相交即可
-            if (pEntity->intersects(rect)) {
-                result.push_back(id);
-            }
-        } else {
-            // 窗选：实体必须完全在矩形内
-            if (pEntity->isInside(rect)) {
-                result.push_back(id);
-            }
-        }
-    }
-    return result;
-}
-
 // 遍历所有图层
 void Database::forEachLayer(const std::function<void(DbLayer*)>& callback) const {
     for (ObjectId layerId : m_layerIds) {
@@ -965,6 +929,62 @@ void Database::onLayerModified(ObjectId id) {
             m_pGraphicsCache->onEntityModified(entityId);
         }
     }
+}
+
+// =======================================================================================
+// 选择查询接口
+// =======================================================================================
+
+// 查询与轴对齐包围盒发生指定关系的所有实体 ID
+// crossing = true  -> intersects  （窗口交叉/拾取框，实体与包围盒有交叉）
+// crossing = false -> isInside    （窗口选择，实体完全在包围盒内部）
+std::vector<ObjectId> Database::queryWindow(const Geometry::AABB& rect, bool crossing) const {
+    std::vector<ObjectId> result;
+    for (const auto& [id, pObj] : m_objects) {
+        // 只处理实体对象
+        if (!pObj || !pObj->isType(DbObject::kEntity)) {
+            continue;
+        }
+        DbEntity* pEntity = pObj->as<DbEntity>();
+        if (!pEntity) {
+            continue;
+        }
+
+        // 检查实体自身可见性
+        if (!pEntity->isVisible()) {
+            continue;
+        }
+
+        // 检查图层状态（冻结图层上的实体不可见也不能被选择）
+        ObjectId layerId = pEntity->layerId();
+        // 实体必然在一个图层上，layerId==0说明有问题，排除
+        if (layerId == 0) {
+            continue;
+        }
+        DbLayer* pLayer = getLayer(layerId);
+        if (!pLayer || pLayer->isFrozen()) {
+            continue;
+        }
+
+        // 第一层：包围盒粗筛
+        if (!pEntity->boundingBox().intersects(rect)) {
+            continue;
+        }
+
+        // 第二层：精确几何判定
+        if (crossing) {
+            // 交叉窗口：实体与矩形相交即可
+            if (pEntity->intersects(rect)) {
+                result.push_back(id);
+            }
+        } else {
+            // 窗选：实体必须完全在矩形内
+            if (pEntity->isInside(rect)) {
+                result.push_back(id);
+            }
+        }
+    }
+    return result;
 }
 
 // ======================================================================================================

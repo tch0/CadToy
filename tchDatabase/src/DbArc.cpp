@@ -91,9 +91,11 @@ bool DbArc::intersects(const Geometry::AABB& rect) const {
     }
     
     // 2. 快速排斥：矩形完全在圆外（圆心到矩形最近距离 > 半径）
-    double cx = m_arc.center.x, cy = m_arc.center.y, r = m_arc.radius;
-    double closestX = std::max(rect.min.x, std::min(cx, rect.max.x));
-    double closestY = std::max(rect.min.y, std::min(cy, rect.max.y));
+    double cx = m_arc.center.x;
+    double cy = m_arc.center.y;
+    double r = m_arc.radius;
+    double closestX = std::clamp(cx, rect.min.x, rect.max.x);
+    double closestY = std::clamp(cy, rect.min.y, rect.max.y);
     double dx = cx - closestX;
     double dy = cy - closestY;
     if (dx * dx + dy * dy > r * r) {

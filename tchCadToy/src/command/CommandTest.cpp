@@ -20,12 +20,13 @@
 #include "DbLine.h"
 #include "DbCircle.h"
 #include "UndoManager.h"
+#include "SelectionSet.h"
 
 namespace tch {
 
 // 测试程序列表
 static const std::vector<std::pair<int, const char*>> s_programInfos = {
-    {0, "实体选择测试 - 调用 waitForEntity 进行选择"},
+    {0, "实体选择测试 - 调用 waitForSelection 进行选择"},
     {1, "压力测试1 - 创建2500个正方形（边长2到5000），1万个实体，2万个顶点"},
     {2, "压力测试2 - 创建1000个圆（半径1到1000），1000个实体，12万8000个顶点"},
     {3, "压力测试3 - 清除数据库中所有实体"},
@@ -132,7 +133,7 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
     switch (testNumber) {
         case 0:
             // 测试程序 0：实体选择
-            inputContext.waitForEntity("选择对象:");
+            inputContext.waitForSelection("选择对象:");
             return kTest0;
         case 1:
             // 测试程序 1：创建2500个正方形
@@ -153,14 +154,30 @@ CommandTest::TestState CommandTest::executeTestProgram(int testNumber) {
 CommandTest::TestState CommandTest::runTest0() {
     InputContext& inputContext = InputContext::getInstance();
     InputStatus status = inputContext.getCurrentStatus();
-    
+
     // 实体选择完成
     if (status == InputStatus::kEntitySelection) {
         Utils::cmdLinePrint("实体选择完成，继续选择");
-        // kEntitySelection状态时必选调用getSelectedEntities获取选择集并重置状态
-        std::vector<void*> entities;
-        inputContext.getSelectedEntities(entities);
-        inputContext.waitForEntity("选择对象:");
+        // kEntitySelection状态时必选调用getSelectionSet获取选择集并重置状态
+        SelectionSet selectionSet;
+        inputContext.getSelectionSet(selectionSet);
+        Utils::cmdLinePrint(std::format("选择了 {} 个实体", selectionSet.size()));
+
+        // 输出所有选中实体的ID和类型
+        Database* db = DocManager::getCurrentDocument().getDatabase();
+        if (db) {
+            for (ObjectId id : selectionSet) {
+                DbEntity* entity = db->getEntity(id);
+                if (entity) {
+                    std::string typeName = entity->typeName();
+                    Utils::cmdLinePrint(std::format("  ID: {}, 类型: {}", id, typeName));
+                } else {
+                    Utils::cmdLinePrint(std::format("  ID: {}, 类型: <无效实体>", id));
+                }
+            }
+        }
+
+        inputContext.waitForSelection("选择对象:");
         return kTest0;
     }
     // Enter/Space 结束选择

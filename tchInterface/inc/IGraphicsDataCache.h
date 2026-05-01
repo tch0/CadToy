@@ -106,19 +106,19 @@ public:
     // 预选实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
     // 根据ID查询预选实体的预选缓存数据
     virtual const EntityGraphicsCacheData& getPreSelectedEntityCacheData(ObjectId id) const = 0;
-    // 通知实体被预选中，通知后需要设置数据预选标记，获取时懒生成即可（没有就生成，有就读取），由选择任务负责通知
-    virtual void notifyEntityPreSelected(ObjectId id) = 0;
-    // 通知实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-    virtual void notifyEntityUnPreSelected(ObjectId id) = 0;
+    // 实体被预选中，通知后需要设置数据预选标记，获取时懒生成即可（没有就生成，有就读取），由选择任务负责通知
+    virtual void onEntityPreSelected(ObjectId id) = 0;
+    // 实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    virtual void onEntityUnPreSelected(ObjectId id) = 0;
 
     // ============================================================================
     // 选中实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
     // 根据ID查询选中实体的选中缓存数据
     virtual const EntityGraphicsCacheData& getSelectedEntityCacheData(ObjectId id) const = 0;
-    // 通知实体被选中，通知后需要设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
-    virtual void notifyEntitySelected(ObjectId id) = 0;
-    // 通知实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-    virtual void notifyEntityUnSelected(ObjectId id) = 0;
+    // 实体被选中，设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
+    virtual void onEntitySelected(ObjectId id) = 0;
+    // 实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
+    virtual void onEntityUnSelected(ObjectId id) = 0;
 };
 
 } // namespace tch

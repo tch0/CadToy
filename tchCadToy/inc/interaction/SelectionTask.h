@@ -9,6 +9,7 @@
 // 项目头文件
 #include "CommonTypes.h"
 #include "Task.h"
+#include "SelectionSet.h"
 
 namespace tch {
 
@@ -31,6 +32,9 @@ public:
     // 获取输入状态，返回给InputContext处理
     InputStatus getInputStatus() const;
     
+    // 获取选择结果
+    const SelectionSet& getSelectionResult() const { return m_selectionResult; }
+
 private:
     // 选择状态
     enum class SelectionState {
@@ -67,11 +71,13 @@ private:
     glm::vec2 m_initialPointScreen;             // 初始点（屏幕坐标）
     glm::vec2 m_previewPointScreen;             // 预览点（屏幕坐标）
     glm::vec2 m_lastLassoPointScreen;           // 上一次套索的最后一点（屏幕坐标）
+    glm::vec2 m_lastPreSelectScreenPos;         // 上次预选查询的屏幕坐标（用于预选查询优化，鼠标未移动则不会进行预选查询，初始值0,0）
     bool m_completed;                           // 任务是否完成
     LassoModeCycle m_lassoModeCycle;            // 套索模式循环状态
     std::string m_currentPrompt;                // 当前提示信息
     bool m_isCommandActive;                     // 是否在命令中执行
     InputStatus m_inputStatus;                  // 保存输入状态
+    SelectionSet m_selectionResult;             // 选择结果
     
     // 内部方法
     void updateBoxSelection();          // 更新框选预览数据
@@ -79,6 +85,9 @@ private:
     void updateLassoSelection();        // 处理套索选择
     void finishSelection();             // 结束选择
     void cancelSelection();             // 取消选择
+    
+    // 静态工具方法
+    static bool mouseMoved(const glm::vec2& current, const glm::vec2& last); // 判断两帧之间鼠标是否移动，用于优化
 };
 
 } // namespace tch

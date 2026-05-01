@@ -10,9 +10,9 @@
 // 项目头文件
 #include "CommonTypes.h"
 #include "SelectionTask.h"
+#include "SelectionSet.h"
 
 namespace tch {
-
 
 
 // 允许输入类型枚举
@@ -76,14 +76,15 @@ private:
     // 输入的字符串
     std::string m_inputString;
     
-    // 输入的关键字
-    std::string m_inputKeyword;
+    // 关键字相关
+    std::string m_inputKeyword; // 输入的关键字
+    std::vector<std::string> m_keywordOptions; // 关键字选项列表
     
-    // 关键字选项列表
-    std::vector<std::string> m_keywordOptions;
+    // 选择结果（命令中调用选择的选择结果，移交给命令层）
+    SelectionSet m_selectionResult;
     
-    // 选择的实体
-    std::vector<void*> m_selectedEntities;
+    // 先选选择集（没有命令活跃时的选择集，由输入上下文亲自管理）
+    SelectionSet m_priorSelectionSet;
     
     // 最后一次特殊按键事件
     SpecialKeyEventType m_lastSpecialKeyEvent;
@@ -96,6 +97,7 @@ private:
     
     // 选择任务
     SelectionTask m_selectionTask;
+    
 public:
     // 获取单例实例
     static InputContext& getInstance();
@@ -143,16 +145,11 @@ public:
     const std::vector<std::string>& getKeywordOptions() const;
     bool getKeyword(std::string& keyword);
     
-    // 实体选择相关
-    // TODO: 暂时占位，实体具体细节还未实现
-    void setSelectedEntities(const std::vector<void*>& entities);
-    bool getSelectedEntities(std::vector<void*>& entities);
+    // 获取选择结果
+    bool getSelectionSet(SelectionSet& selectionSet);
     
     // 输入解析
     void parseInput(const std::string& input);
-    
-    // 预览功能（暂时空实现）
-    void drawRubberBand(const glm::dvec3& startPoint);
     
     // 特殊按键事件管理，Enter/Space/Esc
     void setSpecialKeyEvent(SpecialKeyEventType event);
@@ -189,9 +186,8 @@ public:
     // 等待回车输入
     void waitForEnter(const std::string& prompt);
     
-    // 等待实体选择输入
-    void waitForEntity(const std::string& prompt, const std::vector<void*>& existingEntities = {},
-        const std::vector<std::string>& keywords = {});
+    // 等待选择交互
+    void waitForSelection(const std::string& prompt, const std::vector<std::string>& keywords = {});
     
     // 输入上下文信息窗口相关
     void drawInfoWindow();
@@ -212,6 +208,28 @@ public:
 
     // 更新输入上下文
     void onUpdate();
+    
+    // ============================================================================
+    // 选择集相关接口: 先选选择集与实体批量高亮
+    // ============================================================================
+
+    // 获取先选选择集（没有命令活跃时的选择集）
+    const SelectionSet& getPriorSelectionSet() const { return m_priorSelectionSet; }
+
+    // 设置先选选择集并更新高亮（取消旧高亮，高亮新选择集）
+    void setPriorSelectionSet(const SelectionSet& selectionSet);
+
+    // 添加到先选选择集并高亮新增实体
+    void addToPriorSelectionSet(const SelectionSet& selectionSet);
+
+    // 清空先选选择集并取消高亮
+    void clearPriorSelectionSet();
+
+    // 选中高亮选择集中的所有实体（提供给命令层调用）
+    void highlightSelectionSet(const SelectionSet& selectionSet);
+
+    // 取消选择集中所有实体的选中高亮（提供给命令层调用）
+    void unhighlightSelectionSet(const SelectionSet& selectionSet);
     
 private:
     // 激活选择任务
