@@ -156,7 +156,7 @@ void main() {
         color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.6);
     } else if (isTempDimmed) {
         // 临时暗显：系数 0.4(更暗)
-        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.2);
+        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.4);
     }
 
     // 虚线处理 (仅当 gTexCoord >= 0 时表示选中实体)
@@ -282,7 +282,7 @@ void main() {
         if (isLockedLayerDimmed) {
             gDimmedFactor = 0.6;
         } else if (isTempDimmed) {
-            gDimmedFactor = 0.2;
+            gDimmedFactor = 0.4;
         } else {
             gDimmedFactor = 0.0;
         }
