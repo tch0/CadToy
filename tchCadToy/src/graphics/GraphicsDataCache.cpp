@@ -71,8 +71,11 @@ void GraphicsDataCache::onEntityAdded(ObjectId id) {
     if (id == 0) {
         return;
     }
-    
-    // 新实体标记为脏，需要生成缓存
+
+    // 确保 CachedEntityData 条目存在（默认构造，activeStates=0, modulatedDirty=true）
+    auto& _ = m_cacheData[id];
+
+    // 新实体标记为脏，需要生成基础几何数据
     m_dirtyEntities.insert(id);
     
     // 检查是否为无限实体
@@ -254,6 +257,12 @@ void GraphicsDataCache::applyModifiers(ObjectId id) {
     }
     
     auto& cached = it->second;
+    
+    // 如果没有临时状态，不需要生成修饰数据，直接返回
+    if (cached.activeStates == 0) {
+        cached.modulatedDirty = false;
+        return;
+    }
     
     // 拷贝基础数据到修饰数据
     cached.modulatedData = cached.baseData;
