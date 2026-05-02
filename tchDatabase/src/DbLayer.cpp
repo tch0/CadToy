@@ -21,6 +21,63 @@ void DbLayer::notifyModified() {
     }
 }
 
+void DbLayer::setFrozen(bool frozen) {
+    if (m_frozen != frozen) {
+        m_frozen = frozen;
+        notifyModified();
+    }
+}
+
+void DbLayer::setLocked(bool locked) {
+    if (m_locked != locked) {
+        m_locked = locked;
+        notifyModified();
+    }
+}
+
+void DbLayer::setColor(const DbColor& color) {
+    if (m_color != color) {
+        m_color = color;
+        notifyModified();
+    }
+}
+
+void DbLayer::setLinetype(const DbLinetypeRef& linetype) {
+    if (m_linetype != linetype) {
+        m_linetype = linetype;
+        notifyModified();
+    }
+}
+
+void DbLayer::setLineWeight(DbLineWeight lw) {
+    if (m_lineWeight != lw) {
+        m_lineWeight = lw;
+        notifyModified();
+    }
+}
+
+void DbLayer::setTransparency(float t) {
+    float clamped = std::max(0.0f, std::min(1.0f, t));
+    if (m_transparency != clamped) {
+        m_transparency = clamped;
+        notifyModified();
+    }
+}
+
+void DbLayer::setName(const std::string& name) {
+    if (m_name != name) {
+        m_name = name;
+        notifyModified();
+    }
+}
+
+void DbLayer::setDescription(const std::string& desc) {
+    if (m_description != desc) {
+        m_description = desc;
+        notifyModified();
+    }
+}
+
 void DbLayer::writeFields(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer) const {
     DbObject::writeFields(writer);
     

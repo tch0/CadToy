@@ -30,32 +30,32 @@ public:
     
     // 名称
     const std::string& name() const { return m_name; }
-    void setName(const std::string& name) { m_name = name; }
+    void setName(const std::string& name);
     
     // 状态
     bool isFrozen() const { return m_frozen; }
-    void setFrozen(bool frozen) { m_frozen = frozen; }
-    
+    void setFrozen(bool frozen);
+
     bool isLocked() const { return m_locked; }
-    void setLocked(bool locked) { m_locked = locked; }
+    void setLocked(bool locked);
     
     // 默认属性
     const DbColor& color() const { return m_color; }
-    void setColor(const DbColor& color) { m_color = color; }
-    
+    void setColor(const DbColor& color);
+
     const DbLinetypeRef& linetype() const { return m_linetype; }
-    void setLinetype(const DbLinetypeRef& linetype) { m_linetype = linetype; }
-    
+    void setLinetype(const DbLinetypeRef& linetype);
+
     DbLineWeight lineWeight() const { return m_lineWeight; }
-    void setLineWeight(DbLineWeight lw) { m_lineWeight = lw; }
-    
+    void setLineWeight(DbLineWeight lw);
+
     // 透明度 0.0~1.0，默认0.0（不透明）
     float transparency() const { return m_transparency; }
-    void setTransparency(float t) { m_transparency = std::max(0.0f, std::min(1.0f, t)); }
-    
+    void setTransparency(float t);
+
     // 说明
     const std::string& description() const { return m_description; }
-    void setDescription(const std::string& desc) { m_description = desc; }
+    void setDescription(const std::string& desc);
     
     // 克隆
     std::unique_ptr<DbObject> clone() const override;
