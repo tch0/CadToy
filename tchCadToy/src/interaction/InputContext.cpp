@@ -1132,4 +1132,22 @@ void InputContext::unhighlightSelectionSet(const SelectionSet& selectionSet) {
     }
 }
 
+// 暗显选择集中的所有实体（命令层临时暗显，如 Move 命令激活时暗显源实体）
+void InputContext::dimSelectionSet(const SelectionSet& selectionSet) {
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : selectionSet) {
+            pCache->onEntityTempDimmed(id);
+        }
+    }
+}
+
+// 取消选择集中所有实体的暗显（提供给命令层调用）
+void InputContext::undimSelectionSet(const SelectionSet& selectionSet) {
+    if (auto* pCache = getCurrentGraphicsCache()) {
+        for (ObjectId id : selectionSet) {
+            pCache->onEntityUnTempDimmed(id);
+        }
+    }
+}
+
 } // namespace tch

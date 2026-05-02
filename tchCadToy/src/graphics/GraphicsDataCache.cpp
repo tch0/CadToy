@@ -1,15 +1,8 @@
-// 对应头文件
-#include "GraphicsDataCache.h"
-
-// C++ 标准库
-
-// 第三方库
-
 // 项目头文件
-#include "IGraphicsDataCache.h"
-#include "GraphicsEngine.h"
+#include "GraphicsDataCache.h"
 #include "Database.h"
 #include "DbEntity.h"
+#include "GraphicsEngine.h"
 
 namespace tch {
 
@@ -22,97 +15,50 @@ std::vector<ObjectId> GraphicsDataCache::getDirtyEntities() const {
 }
 
 void GraphicsDataCache::setEntityCacheData(ObjectId id, EntityGraphicsCacheData&& cacheData) {
-    if (id == 0) {
-        return;
-    }
+    // 获取或创建 CachedEntityData 条目
+    auto& cached = m_cacheData[id];
     
-    m_cacheData[id] = std::move(cacheData);
+    // 将传入的缓存数据移动赋值给 baseData
+    cached.baseData = std::move(cacheData);
+    
+    // 保留原有的 activeStates（若为新实体则为0）
+    // 标记修饰数据需要重建
+    cached.modulatedDirty = true;
 }
 
 void GraphicsDataCache::removeEntityCacheData(ObjectId id) {
-    if (id == 0) {
-        return;
-    }
-    
     m_cacheData.erase(id);
     m_dirtyEntities.erase(id);
-    
-    // 同步清除预选缓存数据
-    m_preSelectedCacheData.erase(id);
-    
-    // 同步清除选中缓存数据
-    m_selectedCacheData.erase(id);
+    m_infiniteEntityIds.erase(id);
 }
 
 void GraphicsDataCache::clearDirty(ObjectId id) {
-    if (id == 0) {
-        return;
-    }
-    
     m_dirtyEntities.erase(id);
 }
 
 void GraphicsDataCache::clearAllCacheData() {
     m_cacheData.clear();
     m_dirtyEntities.clear();
-    
-    // 同步清除所有预选缓存数据
-    m_preSelectedCacheData.clear();
-    
-    // 同步清除所有选中缓存数据
-    m_selectedCacheData.clear();
+    m_infiniteEntityIds.clear();
 }
 
-// 判断某实体顶点缓存是否脏
 bool GraphicsDataCache::isCacheDirty(ObjectId id) const {
-    if (id == 0) { return false; }
-    // 如果实体在脏集合中，或者缓存中不存在该实体，则认为缓存是脏的
-    if (m_dirtyEntities.find(id) != m_dirtyEntities.end()) { return true; }
-    return m_cacheData.find(id) == m_cacheData.end();
+    return m_dirtyEntities.find(id) != m_dirtyEntities.end();
 }
 
 // ============================================================================
-// 无限实体相关接口：视口更新与获取、无限实体的生成
-// 无限实体随视口变化而重生成，比较特殊，所以需要单独处理
+// 视口管理
 // ============================================================================
 
 void GraphicsDataCache::updateViewport(const Geometry::AABB& newViewport) {
-    m_lastViewportAABB = m_currentViewportAABB;
-    m_currentViewportAABB = newViewport;
-}
-
-// 无限实体生成接口：由数据缓存负责组装无限实体数据，做帧间状态保持（现在相关状态），几何数据则还是由图形引擎来做
-void GraphicsDataCache::generateInfiniteEntities() {
-    if (!m_pDatabase) {
-        return;
-    }
-
-    bool viewportChanged = (m_lastViewportAABB != m_currentViewportAABB);
-
-    // 生成所有需要重生成的无限实体
-    for (ObjectId id : m_infiniteEntityIds) {
-        // 只有视口变化或实体为脏时才生成
-        if (!viewportChanged && !isCacheDirty(id)) {
-            continue;
-        }
-
-        // 获取上一帧的预选/选中状态
-        bool bPreSelected = false;
-        bool bSelected = false;
-        auto it = m_cacheData.find(id);
-        if (it != m_cacheData.end()) {
-            bPreSelected = it->second.bPreSelected;
-            bSelected = it->second.bSelected;
-        }
-
-        // 调用图形引擎生成缓存
-        GraphicsEngine::getInstance().generateForEntity(this, id);
-
-        // 获取生成后的缓存数据，设置选择状态
-        auto cacheIt = m_cacheData.find(id);
-        if (cacheIt != m_cacheData.end()) {
-            cacheIt->second.bPreSelected = bPreSelected;
-            cacheIt->second.bSelected = bSelected;
+    // 比较视口是否变化（使用容差）
+    if (m_currentViewportAABB != newViewport) {
+        m_lastViewportAABB = m_currentViewportAABB;
+        m_currentViewportAABB = newViewport;
+        
+        // 视口变化，将所有无限实体标记为脏
+        for (ObjectId id : m_infiniteEntityIds) {
+            m_dirtyEntities.insert(id);
         }
     }
 }
@@ -126,14 +72,14 @@ void GraphicsDataCache::onEntityAdded(ObjectId id) {
         return;
     }
     
+    // 新实体标记为脏，需要生成缓存
     m_dirtyEntities.insert(id);
-
-    // 检查是否为无限实体（射线、构造线）
+    
+    // 检查是否为无限实体
     if (m_pDatabase) {
-        if (auto* pEnt = m_pDatabase->getEntity(id)) {
-            if (pEnt->isInfinite()) {
-                m_infiniteEntityIds.insert(id);
-            }
+        DbEntity* pEntity = m_pDatabase->getEntity(id);
+        if (pEntity && pEntity->isInfinite()) {
+            m_infiniteEntityIds.insert(id);
         }
     }
 }
@@ -142,221 +88,192 @@ void GraphicsDataCache::onEntityModified(ObjectId id) {
     if (id == 0) {
         return;
     }
-
+    // 修改的实体标记为脏
     m_dirtyEntities.insert(id);
-
-    // 实体修改时清除预选缓存数据，下次获取时重新生成
-    m_preSelectedCacheData.erase(id);
-
-    // 实体修改时清除选中缓存数据，下次获取时重新生成
-    m_selectedCacheData.erase(id);
 }
 
 void GraphicsDataCache::onEntityRemoved(ObjectId id) {
     if (id == 0) {
         return;
     }
-
-    m_cacheData.erase(id);
-    m_dirtyEntities.erase(id);
-    m_infiniteEntityIds.erase(id);  // 从无限实体集合移除
-
-    // 同步清除预选缓存数据
-    m_preSelectedCacheData.erase(id);
-
-    // 同步清除选中缓存数据
-    m_selectedCacheData.erase(id);
+    // 移除实体时清理缓存
+    removeEntityCacheData(id);
 }
 
 // ============================================================================
-// 缓存数据查询接口
+// 缓存数据查询接口（返回修饰后的最终数据）
 // ============================================================================
 
 std::vector<ObjectId> GraphicsDataCache::getAllEntityIds() const {
     std::vector<ObjectId> ids;
     ids.reserve(m_cacheData.size());
-    
-    for (const auto& [id, _] : m_cacheData) {
-        ids.push_back(id);
+    for (const auto& pair : m_cacheData) {
+        ids.push_back(pair.first);
     }
-    
     return ids;
 }
 
 const EntityGraphicsCacheData& GraphicsDataCache::getEntityCacheData(ObjectId id) {
-    // 局部静态空缓存数据，用于返回无效ID的引用
     static const EntityGraphicsCacheData kEmptyCacheData;
-
-    if (id == 0) { return kEmptyCacheData; }
-
-    // 检查是否需要重生成（脏标记或缓存不存在）
-    // 如果实体在脏集合中，或者缓存中不存在该实体，则需要重生成
-    bool needRegen = (m_dirtyEntities.find(id) != m_dirtyEntities.end()) || (m_cacheData.find(id) == m_cacheData.end());
-    if (needRegen) {
-        // 直接调用图形引擎生成单个实体的缓存
+    
+    if (id == 0) {
+        return kEmptyCacheData;
+    }
+    
+    // 如果实体在脏集合中，调用引擎生成该实体（按需生成）
+    if (isCacheDirty(id)) {
         GraphicsEngine::getInstance().generateForEntity(this, id);
     }
     
+    // 获取缓存数据
     auto it = m_cacheData.find(id);
-    if (it != m_cacheData.end()) {
-        return it->second;
+    if (it == m_cacheData.end()) {
+        return kEmptyCacheData;
     }
     
-    return kEmptyCacheData;
+    auto& cached = it->second;
+    
+    // 如果修饰数据需要重建，调用 applyModifiers
+    if (cached.modulatedDirty) {
+        applyModifiers(id);
+    }
+    
+    // 返回修饰后的数据（如果有临时状态）或基础数据
+    return (cached.activeStates != 0) ? cached.modulatedData : cached.baseData;
 }
 
-void GraphicsDataCache::iterateAllCacheData(
-    const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) {
+void GraphicsDataCache::iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) {
     if (!func) {
         return;
     }
     
-    for (const auto& [id, cacheData] : m_cacheData) {
-        func(id, cacheData);
-    }
-}
-
-// ============================================================================
-// 预选实体缓存数据相关接口
-// ============================================================================
-// 根据ID查询预选实体的预选缓存数据
-const EntityGraphicsCacheData& GraphicsDataCache::getPreSelectedEntityCacheData(ObjectId id) const {
-    // 局部静态空缓存数据，用于返回无效ID的引用
-    static const EntityGraphicsCacheData kEmptyCacheData;
-
-    if (id == 0) {
-        return kEmptyCacheData;
-    }
-
-    // 检查正常数据中的预选标记
-    auto normalIt = m_cacheData.find(id);
-    if (normalIt == m_cacheData.end() || !normalIt->second.bPreSelected) {
-        return kEmptyCacheData;
-    }
-
-    // 检查是否为无限实体（XLine/Ray）
-    bool isInfinite = m_infiniteEntityIds.find(id) != m_infiniteEntityIds.end();
-
-    // 普通实体：检查预选数据是否已存在，存在则直接返回
-    if (!isInfinite) {
-        auto it = m_preSelectedCacheData.find(id);
-        if (it != m_preSelectedCacheData.end()) {
-            return it->second;
+    for (auto& pair : m_cacheData) {
+        // 通过 getEntityCacheData 获取（会自动处理修饰）
+        const auto& cacheData = getEntityCacheData(pair.first);
+        if (cacheData.type != EntityGraphicsCacheData::kInvalidEmptyData) {
+            func(pair.first, cacheData);
         }
     }
-
-    // 懒生成：从正常数据拷贝并设置预选标记
-    EntityGraphicsCacheData preSelectedData = normalIt->second;  // 拷贝
-    preSelectedData.bPreSelected = true;  // 设置预选标记
-    preSelectedData.type = EntityGraphicsCacheData::kAlwaysShowLineWidth;  // 预选高亮总是显示线宽
-
-    // 设置顶点预选标记
-    for (auto& vertex : preSelectedData.vertices) {
-        vertex.flags |= DataCacheVertex::kFlagPreSelected;
-    }
-
-    // 无限实体每帧都重新插入/更新，普通实体首次插入
-    auto result = m_preSelectedCacheData.insert_or_assign(id, std::move(preSelectedData));
-    return result.first->second;
 }
 
-// 实体被预选中，通知后需要设置数据预选标记，标记为脏，获取时懒生成即可（没有就生成，有就读取）
+// ============================================================================
+// 临时状态通知接口
+// ============================================================================
+
 void GraphicsDataCache::onEntityPreSelected(ObjectId id) {
-    if (id == 0) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
         return;
     }
-
-    // 设置正常数据的预选标记
-    auto it = m_cacheData.find(id);
-    if (it != m_cacheData.end()) {
-        it->second.bPreSelected = true;
-    }
+    it->second.activeStates |= DataCacheVertex::kFlagPreSelected;
+    it->second.modulatedDirty = true;
 }
 
-// 实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
 void GraphicsDataCache::onEntityUnPreSelected(ObjectId id) {
-    if (id == 0) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
         return;
     }
-
-    // 清除正常数据的预选标记
-    auto it = m_cacheData.find(id);
-    if (it != m_cacheData.end()) {
-        it->second.bPreSelected = false;
-    }
-
-    // 注意：不清除预选缓存数据，因为预选状态可能随着鼠标移动多次进入/退出
-    // 预选数据会在几何重生成（onEntityModified）或实体移除时清除
-}
-
-// ============================================================================
-// 选中实体缓存数据相关接口
-// ============================================================================
-
-const EntityGraphicsCacheData& GraphicsDataCache::getSelectedEntityCacheData(ObjectId id) const {
-    // 局部静态空缓存数据，用于返回无效ID的引用
-    static const EntityGraphicsCacheData kEmptyCacheData;
-
-    if (id == 0) {
-        return kEmptyCacheData;
-    }
-
-    // 检查正常数据中的选中标记
-    auto normalIt = m_cacheData.find(id);
-    if (normalIt == m_cacheData.end() || !normalIt->second.bSelected) {
-        return kEmptyCacheData;
-    }
-
-    // 检查是否为无限实体（XLine/Ray）
-    bool isInfinite = m_infiniteEntityIds.find(id) != m_infiniteEntityIds.end();
-
-    // 普通实体：检查选中数据是否已存在，存在则直接返回
-    if (!isInfinite) {
-        auto it = m_selectedCacheData.find(id);
-        if (it != m_selectedCacheData.end()) {
-            return it->second;
-        }
-    }
-
-    // 懒生成：从正常数据拷贝并设置选中标记
-    EntityGraphicsCacheData selectedData = normalIt->second;  // 拷贝
-    selectedData.bSelected = true;  // 设置选中标记
-
-    // 设置顶点选中标记
-    for (auto& vertex : selectedData.vertices) {
-        vertex.flags |= DataCacheVertex::kFlagSelected;
-    }
-
-    // 无限实体每帧都重新插入/更新，普通实体首次插入
-    auto result = m_selectedCacheData.insert_or_assign(id, std::move(selectedData));
-    return result.first->second;
+    it->second.activeStates &= ~DataCacheVertex::kFlagPreSelected;
+    it->second.modulatedDirty = true;
 }
 
 void GraphicsDataCache::onEntitySelected(ObjectId id) {
-    if (id == 0) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
         return;
     }
-
-    // 设置正常数据的选中标记
-    auto it = m_cacheData.find(id);
-    if (it != m_cacheData.end()) {
-        it->second.bSelected = true;
-    }
+    it->second.activeStates |= DataCacheVertex::kFlagSelected;
+    it->second.modulatedDirty = true;
 }
 
 void GraphicsDataCache::onEntityUnSelected(ObjectId id) {
-    if (id == 0) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
         return;
     }
+    it->second.activeStates &= ~DataCacheVertex::kFlagSelected;
+    it->second.modulatedDirty = true;
+}
 
-    // 清除正常数据的选中标记
+void GraphicsDataCache::onEntityTempDimmed(ObjectId id) {
     auto it = m_cacheData.find(id);
-    if (it != m_cacheData.end()) {
-        it->second.bSelected = false;
+    if (it == m_cacheData.end()) {
+        return;
+    }
+    it->second.activeStates |= DataCacheVertex::kFlagTempDimmed;
+    it->second.modulatedDirty = true;
+}
+
+void GraphicsDataCache::onEntityUnTempDimmed(ObjectId id) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
+        return;
+    }
+    it->second.activeStates &= ~DataCacheVertex::kFlagTempDimmed;
+    it->second.modulatedDirty = true;
+}
+
+// ============================================================================
+// 全量重生成与状态管理
+// ============================================================================
+
+void GraphicsDataCache::prepareForRegenAll() {
+    // 遍历所有缓存数据，清空基础几何但保留 activeStates
+    for (auto& [id, cached] : m_cacheData) {
+        cached.baseData.type = EntityGraphicsCacheData::kInvalidEmptyData;
+        cached.baseData.vertices.clear();
+        cached.modulatedDirty = true;
+
+        // 标记为脏
+        m_dirtyEntities.insert(id);
     }
 
-    // 注意：不清除选中缓存数据，因为选中状态可能多次进入/退出
-    // 选中数据会在几何重生成（onEntityModified）或实体移除时清除
+    // 如果没有缓存数据，标记全量重生成
+    if (m_cacheData.empty()) {
+        m_regenAll = true;
+    }
+}
+
+void GraphicsDataCache::resetAllStates() {
+    // 遍历所有缓存数据，清空所有临时状态
+    for (auto& [_, cached] : m_cacheData) {
+        cached.activeStates = 0;
+        cached.modulatedDirty = true;
+    }
+}
+
+// ============================================================================
+// 私有方法：根据 activeStates 重建 modulatedData
+// ============================================================================
+
+void GraphicsDataCache::applyModifiers(ObjectId id) {
+    auto it = m_cacheData.find(id);
+    if (it == m_cacheData.end()) {
+        return;
+    }
+    
+    auto& cached = it->second;
+    
+    // 拷贝基础数据到修饰数据
+    cached.modulatedData = cached.baseData;
+    
+    // 根据状态调整类型（例如预选强制线宽）
+    if (cached.activeStates & DataCacheVertex::kFlagPreSelected) {
+        cached.modulatedData.type = EntityGraphicsCacheData::kAlwaysShowLineWidth;
+    }
+
+    // 遍历顶点，清除所有临时标志后重新设置
+    for (auto& v : cached.modulatedData.vertices) {
+        // 清除临时状态标志（保留图层锁定暗显）
+        v.flags &= ~DataCacheVertex::kAllTempFlags;
+        
+        // 根据 activeStates 设置标志（标志位与 DataCacheVertex 一致，可直接设置）
+        v.flags |= cached.activeStates;
+        // 注意：kFlagLockedLayerDimmed 已在 baseData 中，经拷贝保留，不会被清除，不由缓存负责管理
+    }
+    
+    cached.modulatedDirty = false;
 }
 
 } // namespace tch

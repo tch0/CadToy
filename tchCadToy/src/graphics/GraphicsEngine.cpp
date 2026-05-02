@@ -41,54 +41,52 @@ void GraphicsEngine::generate(IGraphicsDataCache* pDataCache) const {
     if (!pDataCache) {
         return;
     }
-    
+
     // 获取数据库
     Database* pDb = pDataCache->getDatabase();
     if (!pDb) {
         return;
     }
-    
+
     // 获取当前视口
     const Geometry::AABB& viewport = pDataCache->getCurrentViewport();
-    
+
     // 检查是否需要全量重新生成
     if (pDataCache->needsRegenAll()) {
-        // 清除所有旧缓存数据
-        pDataCache->clearAllCacheData();
-        
+        // 准备全量重生成（清空基础几何，保留状态，标记全部脏）
+        pDataCache->prepareForRegenAll();
+
         // 遍历数据库所有实体生成缓存
         pDb->forEachEntity([&](DbEntity* pEntity) {
             if (!pEntity) {
                 return;
             }
-            
+
             ObjectId id = pEntity->id();
             EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb, viewport);
             pDataCache->setEntityCacheData(id, std::move(cacheData));
         });
-        
+
         // 清除全量重新生成标记
         pDataCache->clearAllDirty();
         return;
     }
-    
-    // 生成无限实体，内部调用图形引擎接口生成几何数据后，由数据缓存内部处理状态保持
-    pDataCache->generateInfiniteEntities();
 
-    // 生成其他普通脏实体
+    // 生成所有脏实体（包括无限实体和普通实体）
+    // 无限实体已在 updateViewport 中被标记为脏
     for (ObjectId id : pDataCache->getDirtyEntities()) {
         // 获取实体
         DbEntity* pEntity = pDb->getEntity(id);
         if (!pEntity) {
             continue;
         }
-        
-        // 生成缓存数据
+
+        // 生成缓存数据（引擎只负责基础几何，状态由缓存管理）
         EntityGraphicsCacheData cacheData = generateEntityCache(pEntity, pDb, viewport);
-        
+
         // 存储缓存数据
         pDataCache->setEntityCacheData(id, std::move(cacheData));
-        
+
         // 清除脏标记
         pDataCache->clearDirty(id);
     }
@@ -134,7 +132,7 @@ void GraphicsEngine::generateForEntity(IGraphicsDataCache* pDataCache, ObjectId 
 // ============================================================================
 
 EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEntity, Database* pDb, const Geometry::AABB& viewport) const {
-    static const EntityGraphicsCacheData emptyData {false, false, EntityGraphicsCacheData::kInvisibleEntity, {}};
+    static const EntityGraphicsCacheData emptyData;
     if (!pEntity || !pDb) {
         return emptyData;
     }
@@ -156,7 +154,7 @@ EntityGraphicsCacheData GraphicsEngine::generateEntityCache(const DbEntity* pEnt
             }
             // 图层锁定，实体需要暗显
             if (pLayer->isLocked()) {
-                flags = DataCacheVertex::kFlagDimmed;
+                flags = DataCacheVertex::kFlagLockedLayerDimmed;
             }
         }
     }

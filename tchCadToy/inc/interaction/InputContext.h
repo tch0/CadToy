@@ -210,7 +210,7 @@ public:
     void onUpdate();
     
     // ============================================================================
-    // 选择集相关接口: 先选选择集与实体批量高亮
+    // 选择集相关接口: 先选选择集与实体批量高亮、暗显
     // ============================================================================
 
     // 获取先选选择集（没有命令活跃时的选择集）
@@ -230,7 +230,13 @@ public:
 
     // 取消选择集中所有实体的选中高亮（提供给命令层调用）
     void unhighlightSelectionSet(const SelectionSet& selectionSet);
-    
+
+    // 暗显选择集中的所有实体（命令层临时暗显，如 Move 命令激活时暗显源实体）
+    void dimSelectionSet(const SelectionSet& selectionSet);
+
+    // 取消选择集中所有实体的暗显（提供给命令层调用）
+    void undimSelectionSet(const SelectionSet& selectionSet);
+
 private:
     // 激活选择任务
     void activateSelectionTask(SelectionMode mode);

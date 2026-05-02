@@ -25,15 +25,20 @@ struct DataCacheVertex {
     float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
 
     // 标志位定义
-    static constexpr uint32_t kFlagPreSelected = 1 << 0;    // bit0: 预选高亮
-    static constexpr uint32_t kFlagSelected = 1 << 1;       // bit1: 选中高亮
-    static constexpr uint32_t kFlagDimmed = 1 << 2;         // bit2: 暗显，如锁定图层
+    static constexpr uint32_t kFlagPreSelected   = 1 << 0;      // bit0: 预选高亮，临时状态，缓存负责处理
+    static constexpr uint32_t kFlagSelected      = 1 << 1;      // bit1: 选中高亮，临时状态，缓存负责处理
+    static constexpr uint32_t kFlagTempDimmed    = 1 << 2;      // bit2: 命令层临时暗显，临时状态，缓存负责处理
+    static constexpr uint32_t kFlagLockedLayerDimmed = 1 << 3;  // bit3: 图层锁定暗显，实体基础显示属性，图形引擎负责处理
+
+    // 所有临时标志的掩码，用于清除操作（不包含持久的图层锁定标志）
+    static constexpr uint32_t kAllTempFlags = kFlagPreSelected | kFlagSelected | kFlagTempDimmed;
 };
 
 
 // ================================================================================================
 // 实体的图形缓存数据
-// 包括数据类型（是否有线宽，据此来选择渲染器），以及顶点数组，后续可以在这里添加其他需要的数据
+// 包括数据类型（指示如何显示线宽，据此来选择渲染器），以及顶点数组，后续可以在这里添加其他需要的数据
+// 注意：不再包含是否预选中、选中等临时状态字段，临时状态由缓存统一管理
 // ================================================================================================
 struct EntityGraphicsCacheData {
     enum Type {
@@ -43,8 +48,6 @@ struct EntityGraphicsCacheData {
         kAlwaysShowLineWidth,           // 总是显示为有线宽的图元，比如预选高亮就一定有宽度，总是调用有线宽版本渲染器
         kInvisibleEntity,               // 不可见实体，渲染时将直接跳过
     };
-    bool bPreSelected = false;          // 是否预选中，预选触发会很频繁，所以不修改正常顶点数据而是单独创建独立预选顶点缓存数据，上传顶点数据时根据此标记用预选顶点数据替换正常顶点以实现高效高性能的预选高亮
-    bool bSelected = false;             // 是否选中，有标记时单独建立选中顶点缓存，上传时根据标记来替换
     Type type = kInvalidEmptyData;      // 实体渲染类型
     std::vector<DataCacheVertex> vertices;  // 顶点
 };
@@ -53,7 +56,7 @@ struct EntityGraphicsCacheData {
 
 // 前置声明
 class Database;
-// 实体ID类型（可根据实际定义调整）
+// 实体ID类型，多处都有定义，必须保持一致
 using ObjectId = uint64_t;
 
 // ================================================================================================
@@ -89,55 +92,40 @@ public:
     virtual bool isCacheDirty(ObjectId id) const = 0;
 
     // ============================================================================
-    // 无限实体相关接口：视口更新与获取、无限实体的生成
-    // 无限实体随视口变化而重生成，比较特殊，所以需要单独处理帧间状态保持
+    // 视口管理（无限实体会在 updateViewport 中被标记为脏）
     // ============================================================================
-    // 更新当前视口
     virtual void updateViewport(const Geometry::AABB& newViewport) = 0;
-    // 获取当前视口
     virtual const Geometry::AABB& getCurrentViewport() const = 0;
-    // 无限实体生成接口：由数据缓存负责组装无限实体数据，做帧间状态保持（选择相关状态），几何数据生成则还是由图形引擎来做
-    virtual void generateInfiniteEntities() = 0;
-    
+
     // ============================================================================
     // 通知接口：提供给数据库通知实体变化情况，其中会标记实体为脏，以实现部分重生成机制
     // ============================================================================
-    // 实体已添加，需要为实体添加并生成缓存数据
     virtual void onEntityAdded(ObjectId id) = 0;
-    // 实体已修改，几何或属性变化，需重新生成缓存数据
     virtual void onEntityModified(ObjectId id) = 0;
-    // 实体已删除，清理该实体的缓存数据
     virtual void onEntityRemoved(ObjectId id) = 0;
-    
-    // ============================================================================
-    // 缓存数据查询接口：提供给渲染器渲染
-    // ============================================================================
-    // 获取所有实体ID
-    virtual std::vector<ObjectId> getAllEntityIds() const = 0;
-    // 通过ID查询读取实体缓存数据
-    virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) = 0;
-    // 提供更通用的遍历接口，方便渲染器渲染，相比查询ID再根据ID去依次查询性能会更好，回调参数为实体id和实体缓存数据
-    virtual void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) = 0;
-    
-    // ============================================================================
-    // 预选实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
-    // ============================================================================
-    // 根据ID查询预选实体的预选缓存数据
-    virtual const EntityGraphicsCacheData& getPreSelectedEntityCacheData(ObjectId id) const = 0;
-    // 实体被预选中，通知后需要设置数据预选标记，获取时懒生成即可（没有就生成，有就读取），由选择任务负责通知
-    virtual void onEntityPreSelected(ObjectId id) = 0;
-    // 实体从预选状态移除，清除预选标记，预选数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
-    virtual void onEntityUnPreSelected(ObjectId id) = 0;
 
     // ============================================================================
-    // 选中实体缓存数据相关接口，图形引擎对此不需要知情，完全缓存数据内部处理
+    // 缓存数据查询接口：提供给渲染器渲染（返回修饰后的最终数据）
     // ============================================================================
-    // 根据ID查询选中实体的选中缓存数据
-    virtual const EntityGraphicsCacheData& getSelectedEntityCacheData(ObjectId id) const = 0;
-    // 实体被选中，设置数据选中标记，获取时懒生成即可（没有就生成，有就读取），由选择集负责通知
+    virtual std::vector<ObjectId> getAllEntityIds() const = 0;
+    virtual const EntityGraphicsCacheData& getEntityCacheData(ObjectId id) = 0;
+    virtual void iterateAllCacheData(const std::function<void(ObjectId id, const EntityGraphicsCacheData& cacheData)>& func) = 0;
+
+    // ============================================================================
+    // 临时状态通知接口（统一操作 activeStates）
+    // ============================================================================
+    virtual void onEntityPreSelected(ObjectId id) = 0;
+    virtual void onEntityUnPreSelected(ObjectId id) = 0;
     virtual void onEntitySelected(ObjectId id) = 0;
-    // 实体从选中状态移除，清除选中标记，选中数据不需要同时清除，几何重生成时才需要重新生成或者直接移除
     virtual void onEntityUnSelected(ObjectId id) = 0;
+    virtual void onEntityTempDimmed(ObjectId id) = 0;      // 实体临时暗显
+    virtual void onEntityUnTempDimmed(ObjectId id) = 0;    // 取消实体临时暗显
+
+    // ============================================================================
+    // 全量重生成与状态管理
+    // ============================================================================
+    virtual void prepareForRegenAll() = 0;   // 清空基础几何，保留 activeStates，标记全部脏
+    virtual void resetAllStates() = 0;       // 彻底清空所有临时状态（如新建文档）
 };
 
 } // namespace tch

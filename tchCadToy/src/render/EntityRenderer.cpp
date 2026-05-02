@@ -29,9 +29,14 @@ namespace tch {
 //      有线宽版本线框渲染
 //          用于绘制所有宽度大于1个像素的线框
 //          完整支持了选中、暗显、预选高亮，支持绘制有线宽实体
-//      多种状态：选中实体绘制为虚线、预选高亮则加宽像素、暗显则是显示为一个更暗的颜色
+//      多种状态：选中实体绘制为虚线、预选高亮则加宽像素、暗显则是显示为一个更暗的颜色（分命令层临时暗显与锁定图层暗显，暗度不同）
+//          锁定图层暗显是实体持久状态，其他的属于交互临时状态
 //          这些状态可以随意组合，当然无线宽版本中组合预选高亮也没有效果，有线宽版本可以随意组合
-//          实际中只有暗显+选中状态是合理有效的组合状态，其他状态组合并不应该实际发生（锁定图层实体暗显但不会预选高亮、选中实体也不会再预选高亮）
+//          实际中只有锁定图层暗显+选中状态是合理有效的组合状态，其他状态组合从交互逻辑上来说并不应该实际发生
+//              锁定图层实体暗显但不会预选高亮
+//              选中实体也不会再预选高亮
+//              锁定图层实体也不一般在命令执行时排除，不再参与临时暗显
+//              临时暗显一般也和预选互斥(trim中选择预览时临时暗显替代预选高亮)也不再选中高亮(选中后操作时才暗显的比如move)
 //      
 // ============================================================================
 // 线框渲染: 无线宽版本顶点着色器
@@ -42,7 +47,7 @@ static const char* WIREFRAME_VERTEX_SHADER_NO_LW = R"(
 
 layout (location = 0) in vec3 aPos;       // 世界坐标位置
 layout (location = 1) in vec3 aColor;     // 基础颜色 (RGB)
-layout (location = 2) in uint aFlags;     // 状态标志 (bit0=预选, bit1=选中, bit2=暗显)
+layout (location = 2) in uint aFlags;     // 状态标志 (bit0=预选, bit1=选中, bit2=命令层临时暗显, bit3=锁定图层暗显)
 // layout (location = 3) in float aLineWidth; // 线宽（本版本忽略）
 
 uniform mat4 uMVP;                        // 模型-视图-投影矩阵
@@ -140,11 +145,18 @@ uniform float uDashRatio = 0.5;               // 实线比例 (0.5 = 一半实�
 void main() {
     vec4 color = gColor;
 
-    // 暗显处理 (根据 flags bit2)
-    bool isDimmed = ((gFlags >> 2) & 1u) == 1u;
-    if (isDimmed) {
-        // 混合暗色 (强度固定为0.6，也可通过 uniform 调节)
+    // 暗显处理：区分临时暗显(bit2)和锁定图层暗显(bit3)
+    // 临时暗显系数 0.4(更暗)，锁定图层暗显系数 0.6(稍亮)
+    // 两者不会同时发生，都有时优先使用锁定图层(0.6)
+    bool isTempDimmed = ((gFlags >> 2) & 1u) == 1u;         // kFlagTempDimmed
+    bool isLockedLayerDimmed = ((gFlags >> 3) & 1u) == 1u;  // kFlagLockedLayerDimmed
+    
+    if (isLockedLayerDimmed) {
+        // 锁定图层暗显：系数 0.6(稍亮)
         color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.6);
+    } else if (isTempDimmed) {
+        // 临时暗显：系数 0.4(更暗)
+        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.2);
     }
 
     // 虚线处理 (仅当 gTexCoord >= 0 时表示选中实体)
@@ -166,7 +178,7 @@ static const char* WIREFRAME_VERTEX_SHADER_WITH_LW = R"(
 
 layout (location = 0) in vec3 aPos;          // 世界坐标位置
 layout (location = 1) in vec3 aColor;        // 基础颜色 (RGB)
-layout (location = 2) in uint aFlags;        // 状态标志: bit0=预选, bit1=选中, bit2=暗显
+layout (location = 2) in uint aFlags;        // 状态标志 (bit0=预选, bit1=选中, bit2=命令层临时暗显, bit3=锁定图层暗显)
 layout (location = 3) in float aLineWidth;   // 线宽 (屏幕像素基础值)
 
 uniform mat4 uMVP;                           // 模型-视图-投影矩阵
@@ -207,13 +219,14 @@ in float vLineWidth[];
 out vec4 gColor;                 // 颜色 (插值)
 out float gTexCoord;             // 屏幕空间纹理坐标 (范围 0 ~ len/period) (插值)
 flat out int gIsSelected;        // 是否选中 (1=选中, 0=未选中)
-flat out float gDimmed;          // 暗显标志 (1.0=暗显)
+flat out float gDimmedFactor;    // 暗显系数 (0.0=正常, 0.4=临时暗显, 0.6=锁定图层暗显)
 
 void main() {
     uint flags0 = vFlags[0];
     bool isPreHighlight = ((flags0 >> 0) & 1u) == 1u;
     bool isSelected     = ((flags0 >> 1) & 1u) == 1u;
-    bool isDimmed       = ((flags0 >> 2) & 1u) == 1u;
+    bool isTempDimmed   = ((flags0 >> 2) & 1u) == 1u;      // kFlagTempDimmed
+    bool isLockedLayerDimmed = ((flags0 >> 3) & 1u) == 1u; // kFlagLockedLayerDimmed
 
     // 计算最终线宽 (屏幕像素)
     float baseWidth = (vLineWidth[0] + vLineWidth[1]) * 0.5;
@@ -264,7 +277,15 @@ void main() {
 
         gTexCoord = texCoord[i];
         gIsSelected = isSelected ? 1 : 0;
-        gDimmed = isDimmed ? 1.0 : 0.0;
+        // 暗显系数：锁定图层 0.6(稍亮)，临时暗显 0.4(更暗)，正常 0.0
+        // 两者不会同时发生，都有时优先使用锁定图层(0.6)
+        if (isLockedLayerDimmed) {
+            gDimmedFactor = 0.6;
+        } else if (isTempDimmed) {
+            gDimmedFactor = 0.2;
+        } else {
+            gDimmedFactor = 0.0;
+        }
 
         EmitVertex();
     }
@@ -284,7 +305,7 @@ static const char* WIREFRAME_FRAGMENT_SHADER_WITH_LW = R"(
 in vec4 gColor;
 in float gTexCoord;
 flat in int gIsSelected;
-flat in float gDimmed;
+flat in float gDimmedFactor;      // 暗显系数 (0.0=正常, 0.4=临时暗显, 0.6=锁定图层暗显)
 out vec4 FragColor;
 
 uniform float uDashRatio = 0.5;       // 实线比例 (0~1)
@@ -292,12 +313,13 @@ uniform float uDashRatio = 0.5;       // 实线比例 (0~1)
 void main() {
     vec4 color = gColor;
 
-    // 暗显处理
-    if (gDimmed > 0.5) {
-        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), 0.6);
+    // 暗显处理：使用传递的暗显系数
+    // 临时暗显 0.4(更暗)，锁定图层暗显 0.6(稍亮)
+    if (gDimmedFactor > 0.0) {
+        color.rgb = mix(color.rgb, vec3(0.3, 0.3, 0.3), gDimmedFactor);
     }
 
-    // 选中时整条线显示为虚线（原色，不反色）
+    // 选中时整条线显示为虚线(原色，不反色)
     if (gIsSelected == 1) {
         float t = fract(gTexCoord);
         if (t > uDashRatio) discard;
@@ -664,6 +686,7 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
     m_withLWVertices.clear();
     
     // 遍历所有缓存数据，根据类型分发到不同批次
+    // 注意：getEntityCacheData 已经返回修饰后的最终数据（包含临时状态）
     pDataCache->iterateAllCacheData([&](ObjectId id, const EntityGraphicsCacheData& cacheData) {
         // 跳过无效数据与不可见实体
         if (cacheData.type == EntityGraphicsCacheData::kInvalidEmptyData ||
@@ -671,15 +694,8 @@ void EntityRenderer::renderGeometry(const glm::mat4& mvp) {
             return;
         }
 
-        // 检查是否被预选或选中，选中优先于预选
+        // 直接使用缓存数据（已经包含预选/选中等临时状态）
         const EntityGraphicsCacheData* pRenderData = &cacheData;
-        if (cacheData.bSelected) {
-            // 选中优先
-            pRenderData = &pDataCache->getSelectedEntityCacheData(id);
-        } else if (cacheData.bPreSelected) {
-            // 预选次之
-            pRenderData = &pDataCache->getPreSelectedEntityCacheData(id);
-        }
         
         // 根据缓存类型分发到不同批次
         switch (pRenderData->type) {

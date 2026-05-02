@@ -552,15 +552,24 @@ UndoManager::getInstance().endGroup();
 |------|------|----------|
 | 位置 | 几何数据（世界坐标） | 实体几何变化时 |
 | 颜色 | 实体基础颜色 | 实体属性变化时 |
-| 状态标志位 | 高亮/选中/暗显等状态 | 鼠标移动、选中、编辑状态变化时 |
+| 状态标志位 | 高亮/选中/暗显等状态 | 状态变化时（懒生成修饰数据） |
 | 线宽值 | 实体的线宽 | 实体线宽属性变化时 |
 
 ```C++
-struct Vertex {
+struct DataCacheVertex {
     glm::vec3 position;     // 位置（世界坐标）
     glm::vec3 color;        // 基础颜色 (RGB)
-    uint32_t flags;         // 状态标志位：bit0=预选高亮(加宽2个像素), bit1=选中高亮(绘制为虚线), bit2=暗显(颜色变浅)
-    float lineWidth;        // 线宽值（屏幕像素为单位），线宽LineWeight应该需要经过换算才能得到这个像素线宽
+    uint32_t flags;         // 状态标志位
+    float lineWidth;        // 线宽值（屏幕像素为单位）
+
+    // 状态标志位定义
+    static constexpr uint32_t kFlagPreSelected   = 1 << 0;  // 预选高亮
+    static constexpr uint32_t kFlagSelected      = 1 << 1;  // 选中高亮
+    static constexpr uint32_t kFlagTempDimmed    = 1 << 2;  // 命令层临时暗显
+    static constexpr uint32_t kFlagLockedLayerDimmed = 1 << 3;  // 图层锁定暗显（引擎设置）
+    
+    // 所有临时标志的掩码，用于清除操作
+    static constexpr uint32_t kAllTempFlags = kFlagPreSelected | kFlagSelected | kFlagTempDimmed;
 };
 ```
 
@@ -577,24 +586,30 @@ struct Vertex {
 
 **重生成触发条件汇总**：
 
-| 操作 | 重生成主缓存 | 重生成预览缓存 | 说明 |
+| 操作 | 重生成基础几何 | 重生成修饰数据 | 说明 |
 |------|:------------|:--------------|------|
-| 新增实体（命令提交后） | ✅ | ❌ | 全量或增量/部分重生成 |
-| 删除实体（命令提交后） | ✅ | ❌ | 全量或增量/部分重生成 |
-| 实体属性修改（提交后） | ✅ | ❌ | 重新生成该实体顶点 |
-| 实体移动/复制（提交后） | ✅ | ❌ | 重新生成该实体顶点 |
-| 选中实体（高亮） | ✅ | ❌ | 重新生成该实体顶点（更新状态标志位） |
-| 鼠标移动（预选高亮） | ✅ | ❌ | 重新生成该实体顶点（更新状态标志位） |
-| 图层锁定/解锁（暗显） | ✅ | ❌ | 重新生成该实体顶点（更新状态标志位） |
-| 实体线宽修改 | ✅ | ❌ | 重新生成该实体顶点（更新线宽值） |
-| Move 命令（激活时） | ✅ | ❌ | 重新生成源实体顶点（更新状态标志位为暗显） |
-| Move 命令（拖拽过程中） | ❌ | ✅（每帧） | 预览缓存每帧重生成 |
-| Move 命令（提交后） | ✅ | ❌ | 重新生成主缓存 |
-| 夹点编辑（选择实体后） | ✅ | ❌ | 重新生成源实体顶点（更新状态标志位为选中） |
-| 夹点编辑（拖拽过程中） | ❌ | ✅（每帧） | 预览缓存每帧重生成 |
-| 夹点编辑（提交后） | ✅ | ❌ | 重新生成主缓存 |
+| 新增实体（命令提交后） | ✅ | ❌ | 生成基础几何，状态由缓存管理 |
+| 删除实体（命令提交后） | ✅ | ❌ | 清除缓存数据 |
+| 实体属性修改（提交后） | ✅ | ❌ | 重新生成基础几何 |
+| 实体移动/复制（提交后） | ✅ | ❌ | 重新生成基础几何 |
+| 选中实体（高亮） | ❌ | ✅ | 更新 activeStates，懒生成修饰数据 |
+| 鼠标移动（预选高亮） | ❌ | ✅ | 更新 activeStates，懒生成修饰数据 |
+| 图层锁定/解锁（暗显） | ✅ | ❌ | 重新生成基础几何（引擎设置图层锁定标志） |
+| 实体线宽修改 | ✅ | ❌ | 重新生成基础几何 |
+| 视口变化（无限实体） | ✅ | ❌ | 无限实体在视口变化时标记为脏，重新生成 |
+| Move 命令（激活时） | ❌ | ✅ | 更新 activeStates 为临时暗显 |
+| Move 命令（拖拽过程中） | ❌ | ✅（预览） | 预览缓存每帧重生成 |
+| Move 命令（提交后） | ✅ | ❌ | 重新生成基础几何 |
+| 夹点编辑（选择实体后） | ❌ | ✅ | 更新 activeStates 为选中状态 |
+| 夹点编辑（拖拽过程中） | ❌ | ✅（预览） | 预览缓存每帧重生成 |
+| 夹点编辑（提交后） | ✅ | ❌ | 重新生成基础几何 |
 | 视图平移/缩放 | ❌ | ❌ | 仅更新 MVP 矩阵 |
 | 显示设置（线宽开关） | ❌ | ❌ | 根据开关值在渲染时切换着色器 |
+
+**状态管理说明**：
+- **基础几何**：由图形引擎生成，包含位置、颜色、图层锁定暗显等持久状态
+- **修饰数据**：由图形数据缓存懒生成，将 `activeStates` 中的临时状态（预选、选中、临时暗显）应用到顶点标志位
+- **懒生成机制**：`getEntityCacheData` 时检查 `modulatedDirty`，若为真则调用 `applyModifiers` 重建修饰数据
 
 ---
 
@@ -620,16 +635,37 @@ struct Vertex {
 
 ### 图形数据缓存
 
-由图形引擎生成：
-- 世界坐标下的所有图元都在图形缓存中，由`EntityRenderer`负责绘制，分为主缓存和预览缓存。
-- **主缓存**：数据库中所有实体，涉及到实体数据更改的时候，比如添加实体、删除实体、修改实体属性等情况适时部分或全部重生成主缓存。或者手动调用regen时。
-- **预览缓存**：橡皮线、预览实体、临时图元等，拖拽预览过程中每一帧重生成需要的临时实体和图元。
-- 预览结束后（典型操作是结束拖拽操作后）预览缓存会清空，如果后续又进入拖拽则会重新生成预览缓存，只涉及临时图元，可以包含临时实体（比如预览实体）。
+图形数据缓存负责管理实体顶点数据，采用**双层缓存**设计：
 
-交互相关图形：
-- 选择、捕捉、追踪等信息，由选择任务、捕捉追踪引擎负责处理后每一帧更新到交互数据中。
-- 然后由`CanvasRenderer`负责每一帧读取后进行绘制。
-- 可能是屏幕坐标下(光标)或者世界坐标下(除光标外的几乎所有图形)的数据，但显示都是屏幕坐标下固定像素大小的图元。
+**缓存结构**：
+```C++
+struct CachedEntityData {
+    EntityGraphicsCacheData baseData;        // 引擎生成的基础数据
+    EntityGraphicsCacheData modulatedData;   // 修饰后数据（懒生成）
+    uint32_t activeStates = 0;               // 临时状态掩码
+    bool modulatedDirty = true;              // 是否需要重建修饰数据
+};
+```
+
+**职责划分**：
+- **图形引擎**：无状态工具类，只负责生成基础几何数据（位置、颜色、图层锁定暗显等持久状态）
+- **图形数据缓存**：管理临时状态（预选、选中、临时暗显），懒生成修饰数据
+
+**状态标志位**（统一在 `DataCacheVertex` 中定义）：
+- `kFlagPreSelected`：预选高亮
+- `kFlagSelected`：选中高亮  
+- `kFlagTempDimmed`：命令层临时暗显
+- `kFlagLockedLayerDimmed`：图层锁定暗显（由引擎设置）
+- `kAllTempFlags`：所有临时标志的掩码
+
+**无限实体处理**：
+- 无限实体（XLine、Ray）在 `updateViewport` 时自动标记为脏
+- 视口变化后统一生成，无需特殊处理逻辑
+- 状态通过 `activeStates` 保持，与有限实体一致
+
+**预览缓存**：
+- 橡皮线、预览实体、临时图元等，拖拽预览过程中每一帧重生成
+- 预览结束后清空，重新进入拖拽时重新生成
 
 ---
 ### 初期设计决策
@@ -654,80 +690,104 @@ struct Vertex {
 ### 具体设计细节
 
 生成流程中涉及到的接口和类：
-|类|细节|
+
+| 类 | 职责 |
 |:-|:-
-|`IGraphicsDataCache`| 图形数据缓存接口类，数据库和实体依赖它。
-|`IGraphicsEngine`| 图形引擎接口类，依赖图形数据缓存接口，定义生成相关接口，操作图形数据缓存。
-|`Document`| 文档，持有数据库、图形数据缓存与视图信息，文档创建时初始化数据库、图形缓存和视图信息。
-|`Database`| 数据库，保存一个对应的`IGraphicsDataCache`指针，不为空则表明当前数据库位于实体生成上下文中（数据库也可以只用于读写数据，此时这个指针可以为空，即数据库没有位于生成上下文中）。数据库中所有修改都会通过这个图形数据缓存接口通知到缓存去调用图形引擎重生成相关脏实体。数据库中每个对象（比如图层）和实体（比如具体的Line实体）也会保存这个指针，数据库实体和对象的属性修改时同样通知缓存。在数据库添加对象或实体时会将该指针设置到对象或实体中。
-|`GraphicsDataCache`| 实现`IGraphicsDataCache`接口，实现图形数据缓存，唯一对应于一个数据库，数据库存在时图形数据缓存才会存在，数据库中所有可显示的实体都会生成图元数据存储在图形缓存中。数据库中的修改会通知缓存数据变脏需要重新生成，所有脏实体收集后会在每一帧的渲染之前去检测脏缓存数据并重新生成。
-|`GraphicsEngine`| 实现`IGrahicsEngine`，实现图形引擎。一个无状态的工具类，全局单例，所有状态数据都保存在图形缓存中，图形引擎则只负责读取数据库、读取各种状态、可能还需要读取视图信息（以支持LOD，暂时可以不用实现）来生成顶点数据。依赖数据库，因为需要读取各种实体生成对应的图元缓存数据。其中会进行光栅化、处理线型等操作。
+| `IGraphicsDataCache` | 图形数据缓存接口类，定义数据管理和状态通知接口 |
+| `IGraphicsEngine` | 图形引擎接口类，定义几何生成相关接口 |
+| `Document` | 文档，持有数据库、图形数据缓存与视图信息 |
+| `Database` | 数据库，保存`IGraphicsDataCache`指针，所有修改通过该指针通知缓存 |
+| `GraphicsDataCache` | 实现`IGraphicsDataCache`，管理`CachedEntityData`映射，负责临时状态管理和修饰数据懒生成 |
+| `GraphicsEngine` | 实现`IGraphicsEngine`，无状态工具类，负责基础几何生成 |
+
+**关键接口说明**：
+
+| 接口 | 说明 |
+|------|------|
+| `updateViewport` | 更新视口，自动标记无限实体为脏 |
+| `prepareForRegenAll` | 全量重生成准备，清空基础几何但保留临时状态 |
+| `resetAllStates` | 彻底清空所有临时状态 |
+| `onEntityPreSelected/onEntityUnPreSelected` | 预选状态通知 |
+| `onEntitySelected/onEntityUnSelected` | 选中状态通知 |
+| `onEntityTempDimmed/onEntityUnTempDimmed` | 临时暗显状态通知 |
+| `getEntityCacheData` | 获取最终渲染数据（自动处理修饰） |
+| `iterateAllCacheData` | 遍历所有实体（返回修饰后的数据） |
+
+**修饰数据懒生成流程**：
+1. 状态通知接口（如 `onEntitySelected`）更新 `activeStates`，设置 `modulatedDirty = true`
+2. `getEntityCacheData` 时检查 `modulatedDirty`
+3. 若为真，调用 `applyModifiers`：
+   - 拷贝 `baseData` 到 `modulatedData`
+   - 根据 `activeStates` 设置顶点标志位
+   - 设置 `modulatedDirty = false`
+4. 返回修饰后的数据（若 `activeStates != 0`）或基础数据
 
 ### 完整的生成与绘制流程设计
 
-1. 初始化
-- 创建全局图形引擎 `GraphicsEngine`（实现 `IGraphicsEngine`）。
-- 创建文档 `Document`，其中创建并初始化数据库 `Database`。
-- 创建图形缓存 `GraphicsDataCache`（实现 `IGraphicsDataCache`），并设置数据库指针：  
-  `pGraphicsDataCache->setDatabase(pDb)`。  
-  同时将缓存指针设置到数据库中：  
-  `pDb->setGraphicsDataCache(pGraphicsDataCache)`。
+1. **初始化**
+   - 创建全局图形引擎 `GraphicsEngine`（实现 `IGraphicsEngine`）。
+   - 创建文档 `Document`，其中创建并初始化数据库 `Database`。
+   - 创建图形缓存 `GraphicsDataCache`（实现 `IGraphicsDataCache`），并设置数据库指针：
+     `pGraphicsDataCache->setDatabase(pDb)`。
+     同时将缓存指针设置到数据库中：
+     `pDb->setGraphicsDataCache(pGraphicsDataCache)`。
 
-2. 用户添加实体
-- 用户调用命令或相关接口创建实体，添加实体到数据库：  
-  `pDb->addEntity(pEnt)`  
-  实体添加后会保存数据库指针：  
-  `pEnt->setDatabase(this)`
-- 数据库调用缓存的 `onEntityAdded(id)`，标记该实体为脏。
+2. **用户添加实体**
+   - 用户调用命令或相关接口创建实体，添加实体到数据库：
+     `pDb->addEntity(pEnt)`
+   - 数据库调用缓存的 `onEntityAdded(id)`，标记该实体为脏。
+   - 检查是否为无限实体，若是则加入无限实体集合。
 
-3. 首次生成顶点数据
-- 每一帧渲染之前，图形引擎检测到缓存中有脏实体，调用：  
-  `pEngine->generate(pGraphicsDataCache)`
-- 引擎内部执行：
-  - 调用 `pGraphicsDataCache->getDirtyEntities()` 获取脏实体ID列表。
-  - 对每个脏实体ID：
-    - 通过 `pGraphicsDataCache->getDatabase()->getEntity(id)` 获取实体指针。
-    - 根据实体类型和属性生成顶点数组和缓存类型（`EntityGraphicsCacheData`），包括：
-      - `type`：决定渲染器使用何种着色器程序（`kAlwaysNoLineWidth`、`kLineWidthDependsOnLwDisplay`、`kAlwaysShowLineWidth` 或 `kInvisibleEntity`）。
-      - `vertices`：存储 `DataCacheVertex` 数组（位置、颜色、状态标志、线宽）。
-    - 调用 `pGraphicsDataCache->setEntityCacheData(id, std::move(cacheData))` 存储缓存数据。
-    - 调用 `pGraphicsDataCache->clearDirty(id)` 清除脏标记。
+3. **首次生成顶点数据**
+   - 每一帧渲染之前，图形引擎检测到缓存中有脏实体，调用：
+     `pEngine->generate(pGraphicsDataCache)`
+   - 引擎内部执行：
+     - 若需要全量重生成，调用 `prepareForRegenAll()` 清空基础几何但保留临时状态。
+     - 调用 `getDirtyEntities()` 获取脏实体ID列表。
+     - 对每个脏实体ID，调用 `generateForEntity` 生成基础几何数据。
+     - 基础几何数据通过 `setEntityCacheData` 存储，保留原有 `activeStates`。
 
-4. 修改实体
-- 用户修改实体属性，例如移动一个顶点。
-- 实体内部调用 `m_pDb->onEntityModified(id)`（或直接调用 `notifyEntityModified`）。
-- 数据库接收到通知后调用 `pGraphicsDataCache->onEntityModified(id)`，标记该实体为脏。
-- 在**同一帧的渲染前**（因为命令循环在实体渲染流程前执行），引擎再次调用 `generate`，重复步骤3，用新的缓存数据覆盖旧数据。
+4. **状态变化（预选/选中/临时暗显）**
+   - 选择任务检测到预选实体，调用 `onEntityPreSelected(id)`。
+   - 选择集添加选中实体，调用 `onEntitySelected(id)`。
+   - 命令层需要暗显源实体，调用 `onEntityTempDimmed(id)`。
+   - 缓存内部更新 `activeStates`，设置 `modulatedDirty = true`。
+   - **不会重新生成几何数据**，而是标记修饰数据需要重建，渲染获取时懒生成。
 
-5. 删除实体
-- 调用 `pDb->removeEntity(id)`。
-- 数据库调用 `pGraphicsDataCache->onEntityRemoved(id)`。
-- 缓存内部清除该实体的缓存数据（`removeEntityCacheData`）。
+5. **渲染（懒生成修饰数据）**
+   - 实体渲染器 `EntityRenderer` 调用 `iterateAllCacheData` 遍历所有实体。
+   - 对于每个实体，缓存内部：
+     - 若 `modulatedDirty == true`，调用 `applyModifiers` 重建修饰数据。
+     - 拷贝 `baseData` 到 `modulatedData`。
+     - 根据 `activeStates` 设置顶点标志位。
+     - 设置 `modulatedDirty = false`。
+   - 返回修饰后的数据（若 `activeStates != 0`）或基础数据。
+   - 渲染器根据 `type` 将顶点收集到对应批次，上传GPU绘制。
 
-6. 全量重生成（REGEN）
-- 用户执行 `REGEN` 命令，调用 `pGraphicsDataCache->markAllDirty()`，标记所有实体为脏。
-- 随后渲染前自动调用引擎的 `generate` 重新生成所有实体的缓存数据（覆盖原有数据）。
+6. **视口变化（无限实体）**
+   - 渲染器在每次调用引擎生成前调用 `updateViewport(newViewport)` 更新视口。
+   - 缓存比较帧间视口是否变化，若变化则将无限实体集合中所有实体标记为脏。
+   - 这一帧渲染前，引擎重新生成这些无限实体的基础几何（视口裁剪）。
+   - 临时状态通过 `activeStates` 保持，无需特殊处理，有临时状态则同样懒生成。
 
-7. 渲染
-- 无论每一帧是否有全量或增量重生成，实体渲染器 `EntityRenderer` 都会从缓存中获取缓存数据进行绘制：
-  - 调用 `pGraphicsDataCache->iterateAllCacheData(callback)` 遍历所有实体。
-  - 回调参数为 `(ObjectId id, const EntityGraphicsCacheData& cacheData)`。
-  - 对于每个实体：
-    - 若 `cacheData.type == kInvisibleEntity`，跳过该实体。
-    - 否则，根据 `cacheData.type` 将顶点数据收集到对应批次（无线宽批次/有线宽批次）。
-  - 遍历完成后，将两个批次的顶点数据上传到 GPU 并执行绘制：
-    - 无线宽批次：使用 `m_noLWProgram` 着色器，一次 `glDrawArrays`。
-    - 有线宽批次：使用 `m_withLWProgram` 着色器，一次 `glDrawArrays`。
-  - **总计只有 2 次 draw call**，通过批次合并大幅减少 CPU-GPU 通信开销。
-  - 顶点数据从缓存到批次的收集涉及一次内存拷贝，但相比每实体一次 draw call 的开销，这种权衡显著提升了渲染性能。
+7. **全量重生成（REGEN）**
+   - 用户执行 `REGEN` 命令，标记所有实体为脏。
+   - 引擎生成时调用 `prepareForRegenAll()`，清空所有基础几何但保留 `activeStates`
+   - 随后渲染前引擎重新生成所有实体的基础几何。
+   - 临时状态自动保持，无需重新设置。
 
-**设计特点总结**:
-- 数据库不依赖文档/图形数据缓存，数据库可以单独存在，仅在需要图形反馈时关联缓存。
-- 图形引擎无状态：易于测试和复用。
-- 缓存独立于图形API：只管理CPU数据，可轻松更换渲染后端。
-- 增量更新高效：只有脏实体重新生成缓存。
-- 实体缓存数据包含类型标记（`EntityGraphicsCacheData::Type`），渲染器无需检查顶点即可快速决策。
-- 对无限实体进行了视口裁剪，避免出现float浮点精度导致的抖动问题，有限实体一般也不会有这个问题。如果有限实体出现了大坐标下抖动问题，则可能需要使用原点重定位技术，在着色器中处理。
+8. **删除实体**
+   - 调用 `pDb->removeEntity(id)`。
+   - 数据库调用 `onEntityRemoved(id)`。
+   - 缓存内部清除该实体的 `CachedEntityData`。
+
+**设计特点总结**：
+- **职责清晰**：引擎只负责基础几何，缓存管理临时状态。
+- **懒生成机制**：状态变化不立即重新生成，渲染时才构建修饰数据。
+- **状态保持**：全量重生成时 `activeStates` 保持，选中/预选状态不丢失。
+- **统一处理**：无限实体与普通实体统一流程，只是无限实体多了一步视口变化自动标记为脏。
+- **无状态引擎**：易于测试和复用，所有状态由缓存管理。
+- **高效渲染**：只有2次 draw call，修饰数据按需生成，避免不必要的拷贝。
 
 **TODO**: 
 - 目前尚未定义预览缓存相关接口，尚未确定方案。后续有可能抛弃预览缓存概念，通过在数据库层添加临时预览类实体来实现，复用实体渲染流程。
@@ -819,18 +879,24 @@ private:
 - 管理先选选择集，先选选择集是一个特殊选择集，在没有命令活跃时选择的实体进入该选择集，会显示夹点，方便夹点编辑时直接调用夹点编辑任务去执行。
 - 提供转调接口通知选择集中所有实体进入选中高亮状态。
 
-选中、预选的高亮逻辑：
-- 预选中则随着鼠标移动频繁触发，不适合重生成：
-    - 所以可以在图形数据缓存中添加合适接口通知预览高亮生成单独的预览缓存，并在实体缓存数据中添加预选标记。
-    - 渲染时根据预选标记决定使用普通缓存还是预选缓存。
-    - 普通缓存的预选标记在选择鼠标拖动预览过程动态通知添加与删除。
-    - 预选缓存数据懒生成，图形引擎不需要对此有认知，缓存内部管理，清理时普通缓存同时清理预选缓存。
-- 选中状态同样机制实现，图形数据缓存提供单独接口通知生成相关选中单独的选中状态的缓存数据。
-- 预选中高亮状态通知由选择管理器在预览过程中动态通知，内置的机制，不需要命令层介入。
-- 选中高亮状态由命令层需要时主动调用输入上下文的高亮选择集接口主动通知，更加灵活可控，命令层可以自行筛选选择集（比如过滤掉锁定图层实体）。
-- 选中与预选高亮的优先级：
-    - 目前预选逻辑中不筛选已经选中高亮的实体，因为选择集不负责任何状态，预选与选择过程也不需要负责筛选区分已选中实体，选中实体也会再次被选择所返回，由调用方负责去重筛选。
-    - 所以绘制时选中高亮优先于预选高亮，表现就是选中高亮的实体不会再被预选高亮。
+选中、预选的高亮逻辑（新设计）：
+- **状态统一管理**：缓存使用 `activeStates` 掩码统一管理预选、选中、临时暗显等临时状态
+- **懒生成机制**：状态变化时不立即重新生成几何，只更新 `activeStates` 并标记 `modulatedDirty = true`
+- **渲染时修饰**：`getEntityCacheData` 时检查 `modulatedDirty`，若为真则调用 `applyModifiers` 重建修饰数据
+- **职责划分**：
+    - 图形引擎：无状态，只生成基础几何（位置、颜色、图层锁定暗显）
+    - 图形数据缓存：管理临时状态，懒生成修饰数据，统一接口 `onEntityPreSelected/onEntityUnPreSelected` 等
+- **预选高亮**：
+    - 选择管理器在预览过程中调用 `onEntityPreSelected(id)` / `onEntityUnPreSelected(id)`
+    - 内置机制，不需要命令层介入
+    - 频繁触发但成本低（只更新标志位，不重新生成几何）
+- **选中高亮**：
+    - 命令层需要时调用 `onEntitySelected(id)` / `onEntityUnSelected(id)`
+    - 灵活可控，命令层可自行筛选选择集（比如过滤掉锁定图层实体）
+- **优先级处理**：
+    - 顶点标志位中同时存在选中与预选标志，Shader 中可同时处理
+    - 不再有优先级概念，可同时支持，但交互逻辑决定了其实一般不会有多种临时状态同时出现的情况
+- **无限实体**：与普通实体统一处理，视口变化时自动标记为脏，状态通过 `activeStates` 保持
 
 各种选择模式：
 - 目前仅处理窗口、窗口交叉、点选。
