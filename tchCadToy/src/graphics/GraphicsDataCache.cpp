@@ -15,7 +15,7 @@ std::vector<ObjectId> GraphicsDataCache::getDirtyEntities() const {
 }
 
 void GraphicsDataCache::setEntityCacheData(ObjectId id, EntityGraphicsCacheData&& cacheData) {
-    // 获取或创建 CachedEntityData 条目
+    // 获取或创建 CachedEntityData 条目，正常情况下这里都是获取，实体添加时缓存实体数据已经创建
     auto& cached = m_cacheData[id];
     
     // 将传入的缓存数据移动赋值给 baseData
@@ -72,8 +72,8 @@ void GraphicsDataCache::onEntityAdded(ObjectId id) {
         return;
     }
 
-    // 确保 CachedEntityData 条目存在（默认构造，activeStates=0, modulatedDirty=true）
-    auto& _ = m_cacheData[id];
+    // 插入默认构造的实体缓存数据
+    m_cacheData.emplace(id, CachedEntityData{});
 
     // 新实体标记为脏，需要生成基础几何数据
     m_dirtyEntities.insert(id);

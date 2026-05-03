@@ -46,8 +46,13 @@ public:
     */
     virtual void onUpdate() = 0;
     
-    // 是否跳过 undo 记录（undo/redo 类命令返回 true）
+    // 是否跳过 undo 记录（undo/redo 类命令不参与Undo记录，覆写返回 true）
     virtual bool skipUndoRecording() const { return false; }
+
+    // 是否在命令开始前清除先选选择集，默认清除
+    // 需要利用先选选择集的命令（如编辑类命令）覆写返回 false，则命令中获取先选选择集后由命令负责清空
+    // 不利用也不清除的，覆写返回false，什么都不做即可，比如regen
+    virtual bool clearPriorSelectionSetBeforeStart() const { return true; }
     
     // 命令是否完成
     bool isCompleted() const;

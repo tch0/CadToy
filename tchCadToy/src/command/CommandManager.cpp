@@ -211,6 +211,11 @@ void CommandManager::executeCommand(const std::string& command) {
         
         DocManager::getCurrentDocument().addToCommandExecutionHistory(cmdFullName);
         
+        // 根据命令配置决定是否清除先选选择集
+        if (m_activeCommand->clearPriorSelectionSetBeforeStart()) {
+            InputContext::getInstance().clearPriorSelectionSet();
+        }
+        
         // 只有不跳过 undo 记录的命令才创建 undo 组
         if (!m_activeCommand->skipUndoRecording()) {
             UndoManager::getInstance().beginGroup(cmdFullName);

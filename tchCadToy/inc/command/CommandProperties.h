@@ -16,6 +16,9 @@ class CommandProperties : public Command {
 public:
     CommandProperties();
     
+    // 不清除先选选择集
+    bool clearPriorSelectionSetBeforeStart() const override { return false; }
+    
     // 命令更新方法
     void onUpdate() override;
 };

@@ -69,9 +69,20 @@ public:
     }
     
     DbColor() = default; // 默认构造为ByLayer
+
+    // 判等和不等运算符
+    bool operator==(const DbColor& other) const {
+        if (m_type != other.m_type) { return false; }
+        if (m_type == kRGB) { return m_rgb == other.m_rgb; }
+        return true;
+    }
+    bool operator!=(const DbColor& other) const {
+        return !(*this == other);
+    }
+
 private:
     DbColor(Type t) : m_type(t) {}
-    
+
     Type m_type = kByLayer;
     uint32_t m_rgb = 0;
 };
@@ -138,6 +149,16 @@ public:
     bool isByLayer() const { return m_type == kByLayer; }
     bool isByBlock() const { return m_type == kByBlock; }
     bool isContinuous() const { return m_type == kContinuous; }
+
+    // 判等和不等运算符
+    bool operator==(const DbLinetypeRef& other) const {
+        if (m_type != other.m_type) { return false; }
+        if (m_type == kLinetypeId) { return m_linetypeId == other.m_linetypeId; }
+        return true;
+    }
+    bool operator!=(const DbLinetypeRef& other) const {
+        return !(*this == other);
+    }
     
 private:
     DbLinetypeRef(Type t) : m_type(t) {}
