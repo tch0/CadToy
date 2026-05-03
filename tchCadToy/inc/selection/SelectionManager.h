@@ -1,6 +1,7 @@
 #pragma once
 
 // C++ 标准库
+#include <unordered_map>
 
 // 第三方库
 #include <glm/glm.hpp>
@@ -58,7 +59,14 @@ public:
     
     // 确认交叉窗选
     SelectionSet commitCrossing(const Geometry::AABB& rect) const;
-
+    
+    // ================================================================================================
+    // 查询接口
+    // ================================================================================================
+    
+    // 查询当前是否为锁定单实体预览（用于光标显示锁定标记）
+    bool isPreSelectEntityOnLockedLayer() const { return m_isPreSelectEntOnLockedLayer; }
+    
 private:
     // 私有构造函数
     SelectionManager();
@@ -79,12 +87,34 @@ private:
     
     // 根据屏幕拾取框大小创建世界坐标包围盒
     Geometry::AABB createPickBoxAABB(const glm::dvec3& worldPos) const;
+    
+    // 查询实体是否在锁定图层上（带缓存）
+    bool isEntityLocked(ObjectId id) const;
+    
+    // 点选：从候选集中按策略选出一个实体
+    ObjectId pickOneFromRawSet(const SelectionSet& rawSet);
 
     // ================================================================================================
     // 成员变量
     // ================================================================================================
-    SelectionSet m_previousPreSelectIds;                    // 上一次的预选实体ID
-    SelectionSet m_currentPreSelectIds;                     // 本次的预选实体ID
+
+    // ----------所有模式的预选实体集合-------------------------
+    SelectionSet m_prevPreSelectSet;                        // 上一帧的预选实体集合（包含锁定图层实体）
+    SelectionSet m_currPreSelectSet;                        // 当前帧的预选实体集合（包含锁定图层实体）
+    
+    // ---------- 点选决策相关 -------------------------------
+    SelectionSet m_prevRawPickSet;                          // 上一帧点选拾取框内全部候选实体（包含锁定图层实体）
+    SelectionSet m_currRawPickSet;                          // 当前帧点选拾取框内全部候选实体（包含锁定图层实体）
+    ObjectId m_currPickPreSelectId = 0;                     // 当前帧点选的预选实体（可能是锁定图层实体），0表示无
+    ObjectId m_prevPickPreSelectId = 0;                     // 上一帧点选的预选实体（可能是锁定图层实体），0表示无
+    
+    // ---------- 实际预选高亮实体集合（过滤锁定图层实体后）-------
+    SelectionSet m_prevHighlightSet;                        // 上一帧实际高亮的实体（预选集合排除锁定图层实体的结果）
+    SelectionSet m_currHighlightSet;                        // 当前帧实际高亮的实体（预选集合排除锁定图层实体的结果）
+    
+    // ---------- 图层锁定缓存与锁定光标标记 -------------------
+    mutable std::unordered_map<ObjectId, bool> m_lockCache; // 实体锁定状态缓存
+    bool m_isPreSelectEntOnLockedLayer = false;             // 预选实体是否唯一且在锁定图层上，指示锁定光标标记的显示
 };
 
 } // namespace tch

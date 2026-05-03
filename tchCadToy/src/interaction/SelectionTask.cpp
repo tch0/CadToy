@@ -115,6 +115,10 @@ void SelectionTask::onUpdate() {
                 break;
         }
     }
+    // 预选实体唯一且在锁定图层上，则显示锁定图层标记，覆盖其他标记，最优先
+    if (SelectionManager::getInstance().isPreSelectEntityOnLockedLayer()) {
+        interactionData.cursorMarker = CursorMarker::kLocked;
+    }
     
     // 检查Shift状态，设置光标标记
     // TODO: 减选标记是位于实体上方才触发，Window和Crossing标记会覆盖加选减选标记

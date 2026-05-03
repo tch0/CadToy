@@ -23,6 +23,7 @@
 #include "DbRay.h"
 #include "DbArc.h"
 #include "DbEllipse.h"
+#include "DbLayer.h"
 #include "UndoManager.h"
 #include "SelectionSet.h"
 #include "Geometry.h"
@@ -401,6 +402,10 @@ CommandTest::TestState CommandTest::runTest4() {
         {{0, 0, 0}, 20.0, 10.0, Geometry::PI / 6.0, -Geometry::PI / 3.0, Geometry::PI / 3.0},  // 中心区域 - 长轴倾斜30度 -60~60度
     };
     
+    auto layerId = pDb->addLayer("1");
+    auto* pLayer = pDb->getLayer(layerId);
+    pLayer->setLocked(true);
+    
     // ========== 创建 XLine ==========
     for (const auto& param : xlineParams) {
         auto xline = std::make_unique<DbXLine>(param.origin, param.direction);
@@ -414,6 +419,7 @@ CommandTest::TestState CommandTest::runTest4() {
         glm::dvec3 dir(cos(angle), sin(angle), 0);
         auto ray = std::make_unique<DbRay>(param.origin, dir);
         ray->setPropertiesFromDb();
+        ray->setLayerId(layerId);
         allIds.push_back(pDb->addObject(std::move(ray)));
     }
     
@@ -421,6 +427,7 @@ CommandTest::TestState CommandTest::runTest4() {
     for (const auto& param : circleParams) {
         auto circle = std::make_unique<DbCircle>(param.center, param.radius);
         circle->setPropertiesFromDb();
+        circle->setLayerId(layerId);
         allIds.push_back(pDb->addObject(std::move(circle)));
     }
     

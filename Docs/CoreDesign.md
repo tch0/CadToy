@@ -838,37 +838,15 @@ struct CachedEntityData {
 - 纯粹容器类，不涉及数据库状态，提供排好序的实体ID列表，内部`std::set`实现。
 - 提供所有常规容器操作，添加、移除、清空、批量添加移除等，还有交并补这类集合操作（除函数外提供`^=/+=/-=/^/+/-`交并差集运算符），方便命令层直接使用。
 - 选择结果即是一个选择集。
+- 所有实体ID的集合操作都可以通过这个容器完成，并不是只能存储最终的选择结果。
 
 选择管理器：
 - 负责接收选择任务输出的选择模式与一系列选择点，去实时通知预选高亮，提供预选更新接口给选择任务调用。
 - 提供查询得到选择集的接口给选择任务调用。
 - 由选择任务来调用。
-```C++
-class SelectionManager {
-public:
-    SelectionManager() = default;
-    
-    // ============== 预选交互（每帧由 SelectionTask 调用，仅更新临时高亮）
-    void preSelectPick(const glm::dvec3& worldPos); // 拾取框预选（点选预览，内部自动获取拾取框大小）
-    void preSelectWindow(const Geometry::AABB& rect); // 窗选预选（实体必须完全在矩形内部）
-    void preSelectCrossing(const Geometry::AABB& rect); // 交叉窗选预选（实体与矩形相交即预选）
-    // ... 其他选择模式预览
-    void clearPreSelect(); // 清除所有预选状态（鼠标离开绘图区、任务结束时调用）
-    
-    // ============== 确认选择（生成干净的实体 ID 集合，不产生任何视觉变化）
-    SelectionSet commitPick(const glm::dvec3& worldPos) const;
-    SelectionSet commitWindow(const Geometry::AABB& rect) const;
-    SelectionSet commitCrossing(const Geometry::AABB& rect) const;
-    // ... 其他选择模式
-private:
-
-    // 预选状态帧间维护，鼠标位置发生变化才更新
-    void updatePreSelectState(const SelectionSet& newIds); // preSelectXXX函数调用
-
-    SelectionSet m_previousPreSelectIds; // 上一次的预选实体 ID，鼠标位置发生变化才更新
-    SelectionSet m_currentPreSelectIds; // 本次的预选实体 ID，鼠标位置发生变化才更新
-};
-```
+- 支持了单选仅预选和选中一个实体的决策逻辑。
+- 预选单个锁定图层上实体时显示锁定标记。
+- 目前完整支持了单选和框选（交叉、窗选），套索和多边形暂未实现。
 
 选择任务：
 - 前期已经实现，负责处理用户的输入交互，得到一系列点和选择模式，比如窗口交叉选择（也就是向左框选）加上两个点（或者一个包围盒）。

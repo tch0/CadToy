@@ -11,6 +11,8 @@
 #include "Renderer.h"
 #include "DocManager.h"
 #include "Document.h"
+#include "DbEntity.h"
+#include "DbLayer.h"
 
 namespace tch {
 
@@ -44,8 +46,7 @@ IGraphicsDataCache* SelectionManager::getGraphicsDataCache() const {
 
 void SelectionManager::preSelectPick(const glm::dvec3& worldPos) {
     Database* pDb = getDatabase();
-    IGraphicsDataCache* pCache = getGraphicsDataCache();
-    if (!pDb || !pCache) { return; }
+    if (!pDb) { return; }
 
     // 创建拾取框包围盒
     Geometry::AABB pickBox = createPickBoxAABB(worldPos);
@@ -53,11 +54,24 @@ void SelectionManager::preSelectPick(const glm::dvec3& worldPos) {
     // 查询与拾取框相交的实体（点选使用交叉模式）
     std::vector<ObjectId> ids = pDb->queryWindow(pickBox, true);
 
-    // 使用迭代器直接构造新的预选集
-    SelectionSet newPreSelectIds(ids.begin(), ids.end());
+    // 构造原始候选集（含锁定实体）
+    SelectionSet newRawSet(ids.begin(), ids.end());
 
-    // 更新预选状态
-    updatePreSelectState(newPreSelectIds);
+    // 更新点选原始候选集历史
+    m_prevRawPickSet = m_currRawPickSet;
+    m_currRawPickSet = newRawSet;
+
+    // 决策当前点选的预选实体
+    m_currPickPreSelectId = pickOneFromRawSet(newRawSet);
+
+    // 构造预选实体的集合（可能为空，或包含一个锁定/非锁定实体）
+    SelectionSet candidateSet;
+    if (m_currPickPreSelectId != 0) {
+        candidateSet.add(m_currPickPreSelectId);
+    }
+
+    // 交由统一预选处理（内部过滤锁定并更新高亮）
+    updatePreSelectState(candidateSet);
 }
 
 void SelectionManager::preSelectWindow(const Geometry::AABB& rect) {
@@ -92,33 +106,37 @@ void SelectionManager::preSelectCrossing(const Geometry::AABB& rect) {
 
 void SelectionManager::clearPreSelect() {
     IGraphicsDataCache* pCache = getGraphicsDataCache();
-    if (!pCache) { return; }
-    
-    // 清除所有预选标记
-    for (ObjectId id : m_currentPreSelectIds) {
-        pCache->onEntityUnPreSelected(id);
+    if (pCache) {
+        // 清除所有高亮预选标记
+        for (ObjectId id : m_currHighlightSet) {
+            pCache->onEntityUnPreSelected(id);
+        }
     }
-    
-    m_previousPreSelectIds.clear();
-    m_currentPreSelectIds.clear();
+
+    // 清理所有相关状态
+    m_prevPreSelectSet.clear();
+    m_currPreSelectSet.clear();
+    m_prevRawPickSet.clear();
+    m_currRawPickSet.clear();
+    m_currPickPreSelectId = 0;
+    m_prevPickPreSelectId = 0;
+    m_prevHighlightSet.clear();
+    m_currHighlightSet.clear();
+    m_lockCache.clear();
+    m_isPreSelectEntOnLockedLayer = false;
 }
 
 // ================================================================================================
 // 确认选择
 // ================================================================================================
 
-SelectionSet SelectionManager::commitPick(const glm::dvec3& worldPos) const {
-    Database* pDb = getDatabase();
-    if (!pDb) { return SelectionSet(); }
-
-    // 创建拾取框包围盒
-    Geometry::AABB pickBox = createPickBoxAABB(worldPos);
-
-    // 查询与拾取框相交的实体
-    std::vector<ObjectId> ids = pDb->queryWindow(pickBox, true);
-
-    // 使用迭代器直接构造选择集
-    return SelectionSet(ids.begin(), ids.end());
+SelectionSet SelectionManager::commitPick(const glm::dvec3&) const {
+    // 返回当前点选决策的候选实体
+    SelectionSet result;
+    if (m_currPickPreSelectId != 0) {
+        result.add(m_currPickPreSelectId);
+    }
+    return result;
 }
 
 SelectionSet SelectionManager::commitWindow(const Geometry::AABB& rect) const {
@@ -150,17 +168,29 @@ SelectionSet SelectionManager::commitCrossing(const Geometry::AABB& rect) const 
 void SelectionManager::updatePreSelectState(const SelectionSet& newIds) {
     IGraphicsDataCache* pCache = getGraphicsDataCache();
     if (!pCache) { return; }
-    
-    // 保存当前预选集为上一次
-    m_previousPreSelectIds = m_currentPreSelectIds;
-    m_currentPreSelectIds = newIds;
-    
+
+    // 保存当前预选集为上一次（用于窗选/交叉窗选）
+    m_prevPreSelectSet = m_currPreSelectSet;
+    m_currPreSelectSet = newIds;
+
+    // 过滤锁定实体，得到本帧应高亮的集合
+    SelectionSet filteredNew;
+    for (ObjectId id : newIds) {
+        if (!isEntityLocked(id)) {
+            filteredNew.add(id);
+        }
+    }
+
+    // 保存实际高亮集合的历史
+    m_prevHighlightSet = m_currHighlightSet;
+    m_currHighlightSet = filteredNew;
+
     // 计算需要添加预选标记的实体（在新集合中但不在旧集合中）
-    SelectionSet toAdd = m_currentPreSelectIds - m_previousPreSelectIds;
+    SelectionSet toAdd = m_currHighlightSet - m_prevHighlightSet;
 
     // 计算需要移除预选标记的实体（在旧集合中但不在新集合中）
-    SelectionSet toRemove = m_previousPreSelectIds - m_currentPreSelectIds;
-    
+    SelectionSet toRemove = m_prevHighlightSet - m_currHighlightSet;
+
     // 通知添加预选标记
     for (ObjectId id : toAdd) {
         pCache->onEntityPreSelected(id);
@@ -170,6 +200,9 @@ void SelectionManager::updatePreSelectState(const SelectionSet& newIds) {
     for (ObjectId id : toRemove) {
         pCache->onEntityUnPreSelected(id);
     }
+
+    // 锁定光标标记：预选实体集合中只有一个实体且该实体在锁定图层上（过滤后为空，原始集合有一个）
+    m_isPreSelectEntOnLockedLayer = (filteredNew.empty() && newIds.size() == 1);
 }
 
 Geometry::AABB SelectionManager::createPickBoxAABB(const glm::dvec3& worldPos) const {
@@ -189,6 +222,54 @@ Geometry::AABB SelectionManager::createPickBoxAABB(const glm::dvec3& worldPos) c
     glm::dvec3 maxWorld = Renderer::getTransformManager().screenToWorld(maxScreen);
     
     return Geometry::AABB(minWorld, maxWorld);
+}
+
+// ================================================================================================
+// 锁定查询与点选决策
+// ================================================================================================
+
+// 查询实体是否在锁定图层上，带缓存，存储本次选择交互所有预选到的实体，只在第一次查询，后续直接读取缓存
+bool SelectionManager::isEntityLocked(ObjectId id) const {
+    auto it = m_lockCache.find(id);
+    if (it != m_lockCache.end()) {
+        return it->second;
+    }
+
+    bool locked = false;
+    if (Database* pDb = getDatabase()) {
+        if (DbEntity* pEntity = pDb->getEntity(id)) {
+            if (ObjectId layerId = pEntity->layerId()) {
+                if (DbLayer* pLayer = pDb->getLayer(layerId)) {
+                    locked = pLayer->isLocked();
+                }
+            }
+        }
+    }
+    m_lockCache[id] = locked;
+    return locked;
+}
+
+ObjectId SelectionManager::pickOneFromRawSet(const SelectionSet& rawSet) {
+    if (rawSet.empty()) {
+        m_prevPickPreSelectId = 0;
+        return 0;
+    }
+
+    // 1. 有新增实体的话，找新增实体中 ID 最大的（使用差集，取最后一个）
+    SelectionSet newIds = rawSet - m_prevRawPickSet;
+    if (!newIds.empty()) {
+        m_prevPickPreSelectId = *newIds.rbegin();
+        return m_prevPickPreSelectId;
+    }
+
+    // 2. 无新增，检查上一帧选中的是否仍在集合中，在的话保持
+    if (m_prevPickPreSelectId != 0 && rawSet.contains(m_prevPickPreSelectId)) {
+        return m_prevPickPreSelectId;
+    }
+
+    // 3. 上一帧预选实体已经不在集合中，返回集合中 ID 最大的（最后一个）
+    m_prevPickPreSelectId = *rawSet.rbegin();
+    return m_prevPickPreSelectId;
 }
 
 } // namespace tch
