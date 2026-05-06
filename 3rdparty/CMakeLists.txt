@@ -7,12 +7,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON) # generate position independent code
 set(3RDPARTY_INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty-install)
 set(3RDPARTY_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty-src)
 
-# default install prefix for compiled libraries: gald/SOIL2
+# default install prefix for compiled libraries: gald
 set(CMAKE_INSTALL_PREFIX ${3RDPARTY_INSTALL_DIR})
 
 # add glfw target to CMakeLists.txt, not here.
 add_subdirectory(glad)
-add_subdirectory(SOIL2)
 
 # headers only libraries: install to 3rdparty-install
 # install glm headers manually

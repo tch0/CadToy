@@ -8,10 +8,8 @@
 // 第三方库
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
-#include <soil2/SOIL2.h>
 
 // 项目头文件
-#include "SysConfig.h"
 #include "Logger.h"
 #include "Global.h"
 
@@ -252,33 +250,3 @@ GLuint createShaderProgramFromSource(const std::string& vertexShader, const std:
     return shaderProgram;
 }
 
-// load texture to OpenGL texture object
-GLuint loadTexture(const std::string& textureImagePath, const std::source_location& loc)
-{
-    GLuint textureId;
-    textureId = SOIL_load_OGL_texture(textureImagePath.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_INVERT_Y);
-    if (textureId == 0)
-    {
-        globalLogger().warning(std::format("Could not find texture file {}!", textureImagePath), loc);
-    }
-    return textureId;
-}
-
-// load cube map texture to OpenGL texture object
-GLuint loadCubeMap(const std::string& rightImage, const std::string& leftImage,
-    const std::string& topImage, const std::string& bottomImage,
-    const std::string& frontImage, const std::string& backImage,
-    const std::source_location& loc)
-{
-    GLuint textureId;
-    textureId = SOIL_load_OGL_cubemap(rightImage.c_str(), leftImage.c_str(),
-        topImage.c_str(), bottomImage.c_str(),
-        frontImage.c_str(), backImage.c_str(),
-        SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, 0);
-    if (textureId == 0)
-    {
-        globalLogger().warning(std::format("Could not load cube map from {}/{}/{}/{}/{}/{}, please check it out!",
-            rightImage, leftImage, topImage, bottomImage, frontImage, backImage), loc);
-    }
-    return textureId;
-}

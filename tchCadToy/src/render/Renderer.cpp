@@ -26,6 +26,7 @@
 #include "LocalizationManager.h"
 #include "PropertyBarContent.h"
 #include "StringUtils.h"
+#include "IconManager.h"
 
 namespace tch {
 
@@ -125,7 +126,10 @@ void Renderer::initialize(GLFWwindow* window) {
     if (!s_entityRenderer.initialize()) {
         LOG_ERROR("Failed to initialize EntityRenderer");
     }
-    
+
+    // 初始化图标管理器
+    IconManager::getInstance().initialize();
+
     // 禁用抗锯齿，需要时再启用
     glDisable(GL_LINE_SMOOTH);
     glDisable(GL_POLYGON_SMOOTH);
@@ -134,15 +138,18 @@ void Renderer::initialize(GLFWwindow* window) {
 
 // 清理渲染器
 void Renderer::cleanup() {
+    // 清理图标管理器
+    IconManager::getInstance().cleanup();
+
     // 清理EntityRenderer
     s_entityRenderer.cleanup();
-    
+
     // 清理CanvasRenderer
     s_canvasRenderer.cleanup();
-    
+
     // 清理ImGui
     cleanupImGui();
-    
+
     s_initialized = false;
     s_window = nullptr;
 }

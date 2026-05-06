@@ -202,7 +202,7 @@ set (CMAKE_UNITY_BUILD_BATCH_SIZE 16)
 #            3rd party libraries
 #-------------------------------------------------------------------------------------#
 # 3rdparty libraries
-list(APPEND 3rdparty_libs glad glfw soil2 imgui)
+list(APPEND 3rdparty_libs stb glad glfw imgui)
 # header-only libraries: glm rapidjson magic_enum
 
 set(3rdparty_include_dir ${CMAKE_SOURCE_DIR}/3rdparty-install/include)
@@ -226,6 +226,24 @@ function(copy_dir_to_target_file_dir target dirname source)
     endif()
 endfunction()
 
+
+#-------------------------------------------------------------------------------------#
+#            从图标目录生成相关头文件
+#-------------------------------------------------------------------------------------#
+
+# 手动运行即可更新图标枚举定义，开发过程中手动调用，生成头文件参与版本管理，添加新图标时才需要重新生成
+# 用法: cmake --build . --target update_icon_defines
+find_package(Python3 QUIET)
+if(Python3_FOUND)
+    add_custom_target(update_icon_defines
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/res/scripts/generate_icon_enum.py"
+                --icon-dir "${CMAKE_SOURCE_DIR}/res/icons"
+                --output "${CMAKE_SOURCE_DIR}/tchCadToy/inc/ui/IconDefines.h"
+        COMMENT "更新图标枚举头文件 (IconDefines.h)"
+    )
+else()
+    message(WARNING "未找到 Python3, 无法执行 update_icon_defines 目标, 请手动运行脚本。")
+endif()
 
 #-------------------------------------------------------------------------------------#
 #            targets

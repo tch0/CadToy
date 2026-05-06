@@ -46,4 +46,4 @@ endif()
 #            copy resources to build directory
 #-------------------------------------------------------------------------------------#
 copy_dir_to_target_file_dir(tchCadToy fonts ${CMAKE_SOURCE_DIR}/fonts)
-copy_dir_to_target_file_dir(tchCadToy res/lang ${CMAKE_SOURCE_DIR}/res/lang)
+copy_dir_to_target_file_dir(tchCadToy res ${CMAKE_SOURCE_DIR}/res)

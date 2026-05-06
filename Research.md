@@ -104,20 +104,24 @@
 - 拦截窗口关闭按钮消息，改为执行quit命令，自定义关闭流程
 
 TODO：
+- 图标加载支持，状态栏图标（动态输入、正交、栅格、坐标轴等）、图层管理图标等
+- 图层窗口
+- 夹点编辑
+- 属性栏
+- Arc/Ellipse/Xline/ray命令
+- 实体层实现transformBy接口，矩阵变换，方便后续编辑相关命令的实现
+- 捕捉实现，先不使用空间索引树
+- 几何编辑框架与相关命令研究与实现
+- 空间索引树实现探索
 - 命令执行框架中加入对透明命令的支持
-- drag过程实现，以Line为例，需要先实现选择与夹点
 - 多文档渲染到多个FBO，目前看没有必要，
 - Imgui切换到Docking分支，支持将文档拖出
-- 参考line实现常见实体类型，常见创建命令实现：xline、pline、circle、arc、rect等
-- 捕捉实现、使用空间四叉树/R树来实现
-- 几何编辑框架与相关命令研究与实现
 - 快捷键：
     - F1帮助
     - F2打开新文本窗口
     - 命令栏输入可能会使用的快捷键需要区分单独处理，比如Ctrl+V/Ctrl+A，在命令输入栏进行命令输入时是粘贴字符串，全选已输入的所有字符，在绘图区是粘贴图形、全选所有实体
 - 命令历史使用InputMultiText实现，使命令历史可选中
 - UCS支持：待研究
-- 图标加载支持，状态栏图标（动态输入、正交、栅格、坐标轴等）、图层管理图标等。
 
 细节问题或者功能TODO：
 - 优先级特殊情况：框选模式下，erase命令框里面有实体会被选中时，优先显示erase标记，没有实体才显示框选标记
@@ -610,6 +614,78 @@ TODO:
 - 点输入：对象捕捉，`tk/from`，点过滤
 - 浮点数输入：通过两点获取
 - 动态输入
+
+## 图标加载
+
+两个典型方案：
+
+方案一：**图标字体**:
+- 将图标当做文字渲染，轻松地实现和普通文字混合排版。本质上是一个`.ttf .otf`文件，用特殊Unicode码点映射图标。
+- 初始化ImGui时，加载并合并字体：
+```C++
+// 1. 加载主字体 (例如微软雅黑，用于显示中文)
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("resources/fonts/msyh.ttc", 16.0f, nullptr,
+                              io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+
+// 2. 配置图标字体加载参数
+ImFontConfig config;
+config.MergeMode = true; // 关键：设置为合并模式
+config.GlyphMinAdvanceX = 16.0f; // 让图标有统一的水平宽度
+
+// 3. 设置图标字体的Unicode码点范围
+// 头文件里定义的 ICON_MIN_FA 和 ICON_MAX_FA 宏定义了图标字体的码点范围
+static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+
+// 4. 将图标字体合并到主字体集
+io.Fonts->AddFontFromFileTTF("resources/fonts/fa-solid-900.ttf", 16.0f, &config, icon_ranges);
+```
+- 加载完成后像普通字符一样使用图标：
+```C++
+// 一个带图标的按钮，图标后还跟着中文文本
+if (ImGui::Button(ICON_FA_FLOPPY_O " 保存文件")) {
+    // 处理保存逻辑...
+}
+```
+
+方案二：**纹理图片**
+- 使用stb库(或者SOIL2)加载图片纹理：
+```C++
+GLuint LoadTextureFromFile(const char* path) {
+    int width, height, channels;
+    unsigned char* data = stbi_load(path, &width, &height, &channels, 4);
+    if (!data) return 0;
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // ...（设置纹理参数）...
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    stbi_image_free(data);
+    return texture;
+}
+```
+- 然后直接使用纹理绘制图标。
+```C++
+ImGui::Image((void*)(intptr_t)texture_id, ImVec2(24, 24));
+```
+
+方案1细节：
+- 每个图标就是一个SVG文件，通过工具将UniCode码点映射到SVG文件，并将所有的图标使用工具打包到一个字体文件中。
+- 很多可能不需要手动制作，可以直接网站下载：[阿里巴巴矢量图标库](https://www.iconfont.cn/)，可挑选打包
+- 深度定制工作流:
+    - 安装[FontForge](https://github.com/fontforge/fontforge)
+    - 新建项目设置字体名，导入SVG文件，右键图标选Glyph Info，设置唯一UniCode码点（最好私有区域），最后导出ttf文件。
+- SVG图标设计：使用InkSpace，绘制后导出`.svg`文件。
+- 目前某些问题无法搞定，暂时搁置。
+
+方案2细节：
+- 图标规范化命名，大驼峰，表明用途（用在什么UI上还是通用）与含义，图标命名对应到C++中的图标枚举命名。
+- 提供脚本从图标目录读取所有图标名称生成对应的图标枚举、以及相对图标相对可执行文件的路径，以方方便加载。
+- 脚本继承到CMake目标中，每次添加新图标，只需要重新生成一遍头文件即可，头文件添加到版本管理。
+- 提供单例图标管理器加载所有图标，以及从图标枚举获取到纹理ID的方法，即可无缝集成到ImGui中。
+
 
 ## 功能实现顺序
 

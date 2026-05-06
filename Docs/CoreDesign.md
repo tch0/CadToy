@@ -15,6 +15,7 @@
     - [具体设计细节](#%E5%85%B7%E4%BD%93%E8%AE%BE%E8%AE%A1%E7%BB%86%E8%8A%82)
     - [完整的生成与绘制流程设计](#%E5%AE%8C%E6%95%B4%E7%9A%84%E7%94%9F%E6%88%90%E4%B8%8E%E7%BB%98%E5%88%B6%E6%B5%81%E7%A8%8B%E8%AE%BE%E8%AE%A1)
   - [性能测试与优化](#%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E4%B8%8E%E4%BC%98%E5%8C%96)
+  - [选择集与选择功能实现](#%E9%80%89%E6%8B%A9%E9%9B%86%E4%B8%8E%E9%80%89%E6%8B%A9%E5%8A%9F%E8%83%BD%E5%AE%9E%E7%8E%B0)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 

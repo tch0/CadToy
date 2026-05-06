@@ -43,12 +43,3 @@ GLuint createShaderProgramFromSource(const std::string& vertexShader, const std:
     const std::string& fragmentShader, const std::string& geometryShader = "",
     const std::source_location& loc = std::source_location::current());
 
-// load texture to OpenGL texture object
-GLuint loadTexture(const std::string& textureImagePath, const std::source_location& loc = std::source_location::current());
-
-// load cube map texture to OpenGL texture object
-GLuint loadCubeMap(const std::string& rightImage, const std::string& leftImage,
-    const std::string& topImage, const std::string& bottomImage,
-    const std::string& frontImage, const std::string& backImage,
-    const std::source_location& loc = std::source_location::current());
-
