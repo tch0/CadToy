@@ -13,6 +13,7 @@
 #include "CanvasRenderer.h"
 #include "EntityRenderer.h"
 #include "TransformManager.h"
+#include "IconDefines.h"
 
 namespace tch {
 
@@ -140,6 +141,11 @@ private:
     static void initializeImGui();              // 初始化ImGui
     static void cleanupImGui();                 // 清理ImGui
     static void drawCursorTestWindow();      // 光标测试窗口
+    
+    // 状态栏图标绘制
+    static void drawStatusBarIcons(float height);
+    static bool drawStatusBarIconToggle(IconID iconId, const ImVec2& size, bool enabled, const char* id, const std::string& tooltip);
+    static bool drawStatusBarIcon(IconID iconId, const ImVec2& size, const char* id, const std::string& tooltip);
 };
 
 } // namespace tch

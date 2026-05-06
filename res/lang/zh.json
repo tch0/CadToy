@@ -30,6 +30,13 @@
   "commandLine.prompt.unknownCommand": "未知命令: \"{}\"，按 F1 查看帮助。",
   "commandLine.inputPrompt": "在此输入命令",
 
+  "statusBar.dynamicInput": "动态输入 - {}\nDYNMODE",
+  "statusBar.orthogonal": "光标正交模式 - {}\nORTHOMODE",
+  "statusBar.lineWeight": "显示/隐藏线宽 - {}\nLWDISPLAY",
+  "statusBar.fullScreen": "全屏显示 - {}",
+  "statusBar.common.on": "开",
+  "statusBar.common.off": "关",
+
   "propertyBar.title": "属性",
 
   "optionsDialog.title": "选项",

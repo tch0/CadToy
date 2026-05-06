@@ -27,6 +27,8 @@
 #include "PropertyBarContent.h"
 #include "StringUtils.h"
 #include "IconManager.h"
+#include "IconDefines.h"
+#include "Database.h"
 
 namespace tch {
 
@@ -521,7 +523,122 @@ void Renderer::drawStatusBar() {
     s_cursorPosWorld = getTransformManager().screenToWorld(InputHandler::getCursorPosition());
     ImGui::Text("%.4f, %.4f, %.4f", s_cursorPosWorld.x, s_cursorPosWorld.y, s_cursorPosWorld.z);
     
+    // 绘制状态栏图标
+    drawStatusBarIcons(statusBarHeight - ImGui::GetStyle().WindowPadding.y * 2);
+    
     ImGui::End();
+}
+
+// 绘制状态栏图标
+void Renderer::drawStatusBarIcons(float height) {
+    IconManager& iconMgr = IconManager::getInstance();
+    if (!iconMgr.isInitialized()) {
+        return;
+    }
+
+    // 获取当前文档的数据库
+    Database* pDb = DocManager::getCurrentDocument().getDatabase();
+    if (!pDb) {
+        return;
+    }
+
+    // 计算图标大小（正方形，与状态栏高度相同）
+    ImVec2 iconSize(height, height);
+
+    // 定制图标间隔
+    float customSpacing = Utils::getUIScaleFactor() * 2.0f;
+
+    // 设置自定义间隔
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(customSpacing, 0));
+
+    // 右对齐
+    ImGui::SameLine();
+    int buttonCount = 4; // 每次新增图标都要修改这里
+    float windowWidth = ImGui::GetWindowWidth();
+    float iconsTotalWidth = height * buttonCount + customSpacing * (buttonCount - 1) * 2 + ImGui::GetStyle().FramePadding.x * buttonCount * 2;
+    ImGui::SetCursorPosX(windowWidth - iconsTotalWidth);
+
+    auto& loc = LocalizationManager::getInstance();
+    static bool fullScreenEnabled = false;
+
+    // 绘制动态输入图标
+    bool dynMode = pDb->dynMode();
+    std::string dynTooltip = StringUtils::format(loc.get("statusBar.dynamicInput"),
+        dynMode ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarDynamicMode, iconSize, dynMode, "DynMode", dynTooltip)) {
+        pDb->setDynMode(!dynMode);
+    }
+
+    // 绘制正交模式图标
+    bool orthoMode = pDb->orthoMode();
+    std::string orthoTooltip = StringUtils::format(loc.get("statusBar.orthogonal"),
+        orthoMode ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarOrthogonal, iconSize, orthoMode, "Ortho", orthoTooltip)) {
+        pDb->setOrthoMode(!orthoMode);
+    }
+
+    // 绘制线宽显示图标
+    bool lineWeightDisplay = pDb->lineWeightDisplay();
+    std::string lwTooltip = StringUtils::format(loc.get("statusBar.lineWeight"),
+        lineWeightDisplay ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarLineWeight, iconSize, lineWeightDisplay, "LineWeight", lwTooltip)) {
+        pDb->setLineWeightDisplay(!lineWeightDisplay);
+    }
+
+    // 绘制全屏显示图标
+    std::string fsTooltip = StringUtils::format(loc.get("statusBar.fullScreen"),
+        fullScreenEnabled ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarFullScreen, iconSize, fullScreenEnabled, "FullScreen", fsTooltip)) {
+        fullScreenEnabled = !fullScreenEnabled;
+    }
+
+    // 恢复默认间隔
+    ImGui::PopStyleVar();
+}
+
+// 绘制可切换的状态栏图标，返回是否被点击
+bool Renderer::drawStatusBarIconToggle(IconID iconId, const ImVec2& size, bool enabled, const char* id, const std::string& tooltip) {
+    ImTextureID icon = IconManager::getInstance().getIcon(iconId);
+    if (!icon) {
+        return false;
+    }
+
+    // 根据状态设置按钮样式
+    if (enabled) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    }
+
+    bool clicked = ImGui::ImageButton(id, icon, size);
+
+    if (enabled) {
+        ImGui::PopStyleColor();
+    }
+
+    // 设置 tooltip
+    if (!tooltip.empty()) {
+        ImGui::SetItemTooltip("%s", tooltip.c_str());
+    }
+
+    ImGui::SameLine();
+    return clicked;
+}
+
+// 绘制普通状态栏图标，返回是否被点击
+bool Renderer::drawStatusBarIcon(IconID iconId, const ImVec2& size, const char* id, const std::string& tooltip) {
+    ImTextureID icon = IconManager::getInstance().getIcon(iconId);
+    if (!icon) {
+        return false;
+    }
+
+    bool clicked = ImGui::ImageButton(id, icon, size);
+
+    // 设置 tooltip
+    if (!tooltip.empty()) {
+        ImGui::SetItemTooltip("%s", tooltip.c_str());
+    }
+
+    ImGui::SameLine();
+    return clicked;
 }
 
 // 绘制菜单栏
