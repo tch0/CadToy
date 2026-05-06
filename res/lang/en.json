@@ -30,6 +30,8 @@
   "commandLine.prompt.unknownCommand": "Unknown command: \"{}\", press F1 for help.",
   "commandLine.inputPrompt": "Input Command Here",
 
+  "statusBar.grid": "Show Grid - {}",
+  "statusBar.axes": "Show Axes - {}",
   "statusBar.dynamicInput": "Dynamic Input - {}\nDYNMODE",
   "statusBar.orthogonal": "Orthogonal Mode - {}\nORTHOMODE",
   "statusBar.lineWeight": "Show/Hide Line Weight - {}\nLWDISPLAY",

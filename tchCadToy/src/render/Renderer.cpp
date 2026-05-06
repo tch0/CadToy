@@ -29,6 +29,7 @@
 #include "IconManager.h"
 #include "IconDefines.h"
 #include "Database.h"
+#include "Document.h"
 
 namespace tch {
 
@@ -551,15 +552,34 @@ void Renderer::drawStatusBarIcons(float height) {
     // 设置自定义间隔
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(customSpacing, 0));
 
+    // 获取当前文档
+    Document& doc = DocManager::getCurrentDocument();
+
     // 右对齐
     ImGui::SameLine();
-    int buttonCount = 4; // 每次新增图标都要修改这里
+    int buttonCount = 6; // 每次新增图标都要修改这里
     float windowWidth = ImGui::GetWindowWidth();
     float iconsTotalWidth = height * buttonCount + customSpacing * (buttonCount - 1) * 2 + ImGui::GetStyle().FramePadding.x * buttonCount * 2;
     ImGui::SetCursorPosX(windowWidth - iconsTotalWidth);
 
     auto& loc = LocalizationManager::getInstance();
     static bool fullScreenEnabled = false;
+
+    // 绘制栅格显示图标
+    bool showGrid = doc.isShowGrid();
+    std::string gridTooltip = StringUtils::format(loc.get("statusBar.grid"),
+        showGrid ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarGrid, iconSize, showGrid, "Grid", gridTooltip)) {
+        doc.setShowGrid(!showGrid);
+    }
+
+    // 绘制坐标轴显示图标
+    bool showAxes = doc.isShowAxes();
+    std::string axesTooltip = StringUtils::format(loc.get("statusBar.axes"),
+        showAxes ? loc.get("statusBar.common.on") : loc.get("statusBar.common.off"));
+    if (drawStatusBarIconToggle(IconID::kStatusBarAxes, iconSize, showAxes, "Axes", axesTooltip)) {
+        doc.setShowAxes(!showAxes);
+    }
 
     // 绘制动态输入图标
     bool dynMode = pDb->dynMode();

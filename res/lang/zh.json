@@ -30,6 +30,8 @@
   "commandLine.prompt.unknownCommand": "未知命令: \"{}\"，按 F1 查看帮助。",
   "commandLine.inputPrompt": "在此输入命令",
 
+  "statusBar.grid": "显示栅格 - {}",
+  "statusBar.axes": "显示坐标轴 - {}",
   "statusBar.dynamicInput": "动态输入 - {}\nDYNMODE",
   "statusBar.orthogonal": "光标正交模式 - {}\nORTHOMODE",
   "statusBar.lineWeight": "显示/隐藏线宽 - {}\nLWDISPLAY",
