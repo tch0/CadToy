@@ -168,6 +168,12 @@ void GraphicsDataCache::onEntityPreSelected(ObjectId id) {
     if (it == m_cacheData.end()) {
         return;
     }
+    
+    // 如果实体已被选中，不进行预选高亮
+    if (it->second.activeStates & DataCacheVertex::kFlagSelected) {
+        return;
+    }
+    
     it->second.activeStates |= DataCacheVertex::kFlagPreSelected;
     it->second.modulatedDirty = true;
 }

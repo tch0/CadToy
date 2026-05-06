@@ -402,9 +402,12 @@ CommandTest::TestState CommandTest::runTest4() {
         {{0, 0, 0}, 20.0, 10.0, Geometry::PI / 6.0, -Geometry::PI / 3.0, Geometry::PI / 3.0},  // 中心区域 - 长轴倾斜30度 -60~60度
     };
     
-    auto layerId = pDb->addLayer("1");
-    auto* pLayer = pDb->getLayer(layerId);
-    pLayer->setLocked(true);
+    ObjectId layerId = 0;
+    pDb->addLayer("1");
+    if (auto* pLayer = pDb->getLayerByName("1")) {
+        pLayer->setLocked(true);
+        layerId = pLayer->id();
+    }
     
     // ========== 创建 XLine ==========
     for (const auto& param : xlineParams) {
