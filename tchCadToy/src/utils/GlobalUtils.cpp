@@ -370,7 +370,7 @@ void showMessageBox(bool& bShow, const std::string& message, const std::string& 
         
         // 确定按钮（底部居中，Enter键或Esc键都可以关闭）
         ImGui::SetCursorPos(ImVec2(startX, btnY));
-        if (ImGui::Button(loc.get("messageBox.button.ok").c_str(), ImVec2(btnWidth, btnHeight))
+        if (ImGui::Button(loc.get("messageBox.ok").c_str(), ImVec2(btnWidth, btnHeight))
             || ImGui::IsKeyPressed(ImGuiKey_Enter)
             || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             bShow = false;

@@ -30,6 +30,7 @@
 #include "IconDefines.h"
 #include "Database.h"
 #include "Document.h"
+#include "LayerWindow.h"
 
 namespace tch {
 
@@ -1030,6 +1031,9 @@ void Renderer::drawNonModalWindows() {
     
     // 绘制光标测试窗口
     drawCursorTestWindow();
+    
+    // 绘制图层窗口
+    LayerWindow::getInstance().draw();
 }
 
 // 判断点是否在视口内
