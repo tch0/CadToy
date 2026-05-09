@@ -66,8 +66,12 @@ void DbLayer::setTransparency(float t) {
 
 void DbLayer::setName(const std::string& name) {
     if (m_name != name) {
+        std::string oldName = m_name;
         m_name = name;
-        notifyModified();
+        // 名称会导致数据库更新图层名称索引，需要执行特殊通知逻辑
+        if (m_pDb && m_id != 0) {
+            m_pDb->onLayerNameModified(m_id, oldName); // 传递旧名称
+        }
     }
 }
 

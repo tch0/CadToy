@@ -931,6 +931,23 @@ void Database::onLayerModified(ObjectId id) {
     }
 }
 
+// 图层名称被修改
+void Database::onLayerNameModified(ObjectId id, const std::string& oldName) {
+    m_modified = true;
+    // 更新图层名称索引
+    if (!oldName.empty()) {
+        m_layerNameMap.erase(oldName);
+    }
+    DbLayer* pLayer = getLayer(id);
+    if (pLayer) {
+        const std::string& newName = pLayer->name();
+        if (!newName.empty()) {
+            m_layerNameMap[newName] = id;
+        }
+    }
+    // 图层名修改不影响图形显示，无需通知图形缓存
+}
+
 // =======================================================================================
 // 选择查询接口
 // =======================================================================================
