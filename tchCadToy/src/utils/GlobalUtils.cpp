@@ -371,8 +371,9 @@ void showMessageBox(bool& bShow, const std::string& message, const std::string& 
         // 确定按钮（底部居中，Enter键或Esc键都可以关闭）
         ImGui::SetCursorPos(ImVec2(startX, btnY));
         if (ImGui::Button(loc.get("messageBox.ok").c_str(), ImVec2(btnWidth, btnHeight))
-            || ImGui::IsKeyPressed(ImGuiKey_Enter)
-            || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            // 第一帧时不检测Enter/Esc，因为消息框有可能是通过Enter/Esc按键触发了某个窗口的逻辑从而被调用显示的，此时如果后续同一帧调用showMessageBox则会直接被这里检测到，所以第一帧应该排除按键消息
+            || (!isFirstFrame && (ImGui::IsKeyPressed(ImGuiKey_Enter)
+                                  || ImGui::IsKeyPressed(ImGuiKey_Escape)))) {
             bShow = false;
             ImGui::CloseCurrentPopup();
         }

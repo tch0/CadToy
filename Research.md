@@ -146,6 +146,7 @@ TODO：
 - buildCwd获取可执行文件所在目录的逻辑可能没有那么鲁棒，可能需要调用平台API，但绝大部分场景基本已经足够。
 - Undo时恢复可能在命令中修改的系统变量：目前有LastPoint。
 - 为各种状态栏图标定义快捷键、输出显示，是否需要？
+- 图层管理：Ctrl+Shift多选，图层Undo/Redo实现（如果上一个Group是layer则自动合并，特殊处理一下更为合理），颜色、线型、线宽、对话框实现。
 
 其他待实现细节研究：
 - 第三方R树（或者自己实现）实现空间索引（如Boost.Geometry 或 libspatialindex），`boost::geometry::index::rtree`

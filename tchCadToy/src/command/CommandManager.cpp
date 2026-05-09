@@ -16,15 +16,15 @@
 #include "CommandSave.h"
 #include "CommandSaveAs.h"
 #include "CommandLine.h"
+#include "CommandCircle.h"
 #include "CommandRegen.h"
 #include "CommandOptions.h"
 #include "CommandProperties.h"
+#include "CommandLayer.h"
 #include "CommandUndo.h"
 #include "CommandU.h"
 #include "CommandRedo.h"
 #include "CommandMRedo.h"
-#include "CommandCircle.h"
-#include "CommandLayer.h"
 #include "Logger.h"
 #include "DocManager.h"
 #include "InputContext.h"
@@ -63,7 +63,6 @@ CommandManager::CommandManager() :
     registerCommand<CommandOptions>("OPTIONS", {"OP"});
     registerCommand<CommandPropertiesShow>("PROPERTIES", {"PR"});
     registerCommand<CommandPropertiesClose>("PROPERTIESCLOSE", {"PRCLOSE"});
-    // 图层类命令
     registerCommand<CommandLayerShow>("LAYER", {"LA"});
     registerCommand<CommandLayerClose>("LAYERCLOSE", {"LACLOSE"});
     // undo/redo类命令

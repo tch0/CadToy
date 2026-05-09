@@ -93,6 +93,9 @@ private:
     // 获取线宽显示字符串
     std::string getLineWeightString(DbLineWeight lw) const;
 
+    // 提交图层名称（检查冲突，冲突时弹窗并拒绝）
+    void commitLayerName(DbLayer* pLayer);
+
     // ================================================================================================
     // 成员变量
     // ================================================================================================
@@ -114,9 +117,16 @@ private:
     bool m_descEditActive = false;
     std::string m_descEditOriginal;
 
+    // 消息框标题（动态构造：窗口标题 + 操作名）
+    std::string m_layerMessageBoxTitle;
+
     // 删除错误消息框
     bool m_showDeleteError = false;
     std::string m_layerDeleteErrorMsg;
+
+    // 重命名错误消息框
+    bool m_showRenameError = false;
+    std::string m_layerRenameErrorMsg;
 };
 
 } // namespace tch

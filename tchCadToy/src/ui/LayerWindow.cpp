@@ -16,6 +16,8 @@
 #include "IconManager.h"
 #include "IconDefines.h"
 #include "GlobalUtils.h"
+#include "LocalizationManager.h"
+#include "StringUtils.h"
 
 namespace tch {
 
@@ -59,9 +61,11 @@ void LayerWindow::draw() {
         return;
     }
 
+    auto& loc = LocalizationManager::getInstance();
+
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-    if (ImGui::Begin("图层", &m_visible, flags)) {
+    if (ImGui::Begin(loc.get("window.layer.title").c_str(), &m_visible, flags)) { // 图层管理器
         // 悬停时自动获得焦点，以方便选中检测等行为，让交互变得更丝滑
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
             ImGui::SetWindowFocus();
@@ -69,9 +73,21 @@ void LayerWindow::draw() {
         drawLayerTable();
     }
     ImGui::End();
+    
+    // 图层窗口中可能弹出的所有模态对话框，注意不能再ImGui::Begin/End之间显示模态对话框，会扰乱ImGui的窗口堆栈管理，导致闪烁
+    // 删除错误消息框
+    if (m_showDeleteError) {
+        Utils::showMessageBox(m_showDeleteError, m_layerDeleteErrorMsg, m_layerMessageBoxTitle);
+    }
+
+    // 重命名错误消息框
+    if (m_showRenameError) {
+        Utils::showMessageBox(m_showRenameError, m_layerRenameErrorMsg, m_layerMessageBoxTitle);
+    }
 }
 
 void LayerWindow::drawLayerTable() {
+    auto& loc = LocalizationManager::getInstance();
     ImGuiTableFlags tableFlags =
         ImGuiTableFlags_Resizable |
         ImGuiTableFlags_BordersV |
@@ -81,7 +97,7 @@ void LayerWindow::drawLayerTable() {
 
     // 新建 / 置为当前 / 删除 图层按钮
     ImGui::Spacing();
-    if (ImGui::Button("新建图层", ImVec2(0, 0))) {
+    if (ImGui::Button(loc.get("window.layer.operations.new").c_str(), ImVec2(0, 0))) { // 新建图层
         Database* pDb = DocManager::getCurrentDocument().getDatabase();
         if (pDb) {
             std::string name;
@@ -93,11 +109,13 @@ void LayerWindow::drawLayerTable() {
             ObjectId newId = pDb->addLayer(name);
             if (newId != 0) {
                 m_selectedLayerId = newId;
+                // 创建新图层成功后，进入名称编辑状态
+                m_editingNameId = m_selectedLayerId;
             }
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("置为当前", ImVec2(0, 0))) {
+    if (ImGui::Button(loc.get("window.layer.operations.setCurrent").c_str(), ImVec2(0, 0))) { // 置为当前
         if (m_selectedLayerId != 0) {
             Database* pDb = DocManager::getCurrentDocument().getDatabase();
             if (pDb) {
@@ -106,17 +124,29 @@ void LayerWindow::drawLayerTable() {
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("删除图层", ImVec2(0, 0))) {
+    if (ImGui::Button(loc.get("window.layer.operations.delete").c_str(), ImVec2(0, 0))) { // 删除图层
         if (m_selectedLayerId != 0) {
             Database* pDb = DocManager::getCurrentDocument().getDatabase();
             DbLayer* pLayer = pDb ? pDb->getLayer(m_selectedLayerId) : nullptr;
             if (pLayer) {
                 ObjectId currentLayerId = pDb->currentLayer() ? pDb->currentLayer()->id() : 0;
-                if (m_selectedLayerId == currentLayerId) {
-                    m_layerDeleteErrorMsg = "不能删除当前图层";
+
+                // 构造消息框标题：图层管理器 - 删除图层
+                m_layerMessageBoxTitle = StringUtils::format(
+                    "{} - {}",
+                    loc.get("window.layer.title"),      // 图层管理器
+                    loc.get("window.layer.operations.delete")); // 删除图层
+
+                if (pLayer->name() == "0") {
+                    m_layerDeleteErrorMsg = loc.get("window.layer.prompts.cannotDeleteLayer0"); // 无法删除图层0。
+                    m_showDeleteError = true;
+                } else if (m_selectedLayerId == currentLayerId) {
+                    m_layerDeleteErrorMsg = loc.get("window.layer.prompts.cannotDeleteCurrent"); // 无法删除当前图层。
                     m_showDeleteError = true;
                 } else if (!pDb->getEntitiesOnLayer(m_selectedLayerId).empty()) {
-                    m_layerDeleteErrorMsg = "图层 \"" + pLayer->name() + "\" 上有实体，不能删除";
+                    m_layerDeleteErrorMsg = StringUtils::format(
+                        loc.get("window.layer.prompts.cannotDeleteHasEntities"), // 图层 "{}" 上有实体，不能删除。
+                        pLayer->name());
                     m_showDeleteError = true;
                 } else {
                     // 查找上一个图层作为删除后的选中项
@@ -139,22 +169,17 @@ void LayerWindow::drawLayerTable() {
         }
     }
 
-    // 删除错误消息框
-    if (m_showDeleteError) {
-        Utils::showMessageBox(m_showDeleteError, m_layerDeleteErrorMsg, "错误");
-    }
-
     if (ImGui::BeginTable("layer_table", 9, tableFlags)) {
         // 列定义（由 ImGui 自动管理宽度，列宽信息跨帧缓存）
-        ImGui::TableSetupColumn("状态");
-        ImGui::TableSetupColumn("名称");
-        ImGui::TableSetupColumn("冻结");
-        ImGui::TableSetupColumn("锁定");
-        ImGui::TableSetupColumn("颜色");
-        ImGui::TableSetupColumn("线型");
-        ImGui::TableSetupColumn("线宽");
-        ImGui::TableSetupColumn("透明度");
-        ImGui::TableSetupColumn("说明");
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.status").c_str());        // 状态
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.name").c_str());          // 名称
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.frozen").c_str());        // 冻结
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.locked").c_str());        // 锁定
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.color").c_str());         // 颜色
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.linetype").c_str());      // 线型
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.lineweight").c_str());    // 线宽
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.transparency").c_str());  // 透明度
+        ImGui::TableSetupColumn(loc.get("window.layer.columns.description").c_str());   // 说明
 
         // 表头
         ImGui::TableHeadersRow();
@@ -171,7 +196,7 @@ void LayerWindow::drawLayerTable() {
         DbLayer* pCurrentLayer = pDb->currentLayer();
         ObjectId currentLayerId = pCurrentLayer ? pCurrentLayer->id() : 0;
 
-        // 选中初始化：窗口打开或选中图层被删除时，默认选中当前图层
+        // 选中初始化：窗口打开或选中图层被删除或文档切换导致选中图层ID失效时，默认选中当前图层
         if (m_selectedLayerId == 0 || pDb->getLayer(m_selectedLayerId) == nullptr) {
             if (pCurrentLayer) {
                 m_selectedLayerId = currentLayerId;
@@ -302,19 +327,17 @@ void LayerWindow::drawNameColumn(DbLayer* pLayer, ObjectId layerId) {
             std::copy(name.begin(), name.begin() + copyLen, m_nameEditBuffer);
             m_nameEditBuffer[copyLen] = '\0';
             m_nameEditActive = true;
-            ImGui::SetKeyboardFocusHere(); // TODO: 不知道为什么没有生效
         }
 
         // 在 InputText 之前检测 Esc（此时 InputText 尚未消费该按键）
         bool cancelByEscape = ImGui::IsKeyPressed(ImGuiKey_Escape);
 
+        ImGui::SetKeyboardFocusHere();
         // 输入框（EscapeClearsAll: Esc 清除缓冲区；EnterReturnsTrue: Enter 提交）
         if (ImGui::InputText("##name_edit", m_nameEditBuffer, sizeof(m_nameEditBuffer),
                              ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
-            // 按回车提交
-            if (strlen(m_nameEditBuffer) > 0) {
-                pLayer->setName(m_nameEditBuffer);
-            }
+            // 按回车提交，检查名称冲突
+            commitLayerName(pLayer);
             m_editingNameId = 0;
             m_nameEditActive = false;
         }
@@ -330,11 +353,9 @@ void LayerWindow::drawNameColumn(DbLayer* pLayer, ObjectId layerId) {
             m_nameEditActive = false;
         }
 
-        // 失去焦点且未被 Esc 取消 → 自动提交
+        // 失去焦点且未被 Esc 取消 → 自动提交，检查名称冲突
         if (m_editingNameId == layerId && ImGui::IsItemDeactivated()) {
-            if (strlen(m_nameEditBuffer) > 0) {
-                pLayer->setName(m_nameEditBuffer);
-            }
+            commitLayerName(pLayer);
             m_editingNameId = 0;
             m_nameEditActive = false;
         }
@@ -363,8 +384,19 @@ void LayerWindow::drawNameColumn(DbLayer* pLayer, ObjectId layerId) {
             } else if (singleClicked) {
                 // 单击：已选中则进入编辑（选中由行级处理）
                 if (m_selectedLayerId == layerId) {
-                    m_editingNameId = layerId;
-                    m_nameEditActive = false;
+                    // 图层0不能重命名
+                    if (pLayer->name() == "0") {
+                        auto& loc = LocalizationManager::getInstance();
+                        m_layerMessageBoxTitle = StringUtils::format(
+                            "{} - {}",
+                            loc.get("window.layer.title"),              // 图层管理器
+                            loc.get("window.layer.operations.rename")); // 重命名
+                        m_layerRenameErrorMsg = loc.get("window.layer.prompts.cannotRenameLayer0"); // 图层0不能重命名。
+                        m_showRenameError = true;
+                    } else {
+                        m_editingNameId = layerId;
+                        m_nameEditActive = false;
+                    }
                 }
             }
         }
@@ -529,12 +561,12 @@ void LayerWindow::drawDescriptionColumn(DbLayer* pLayer, ObjectId layerId) {
             std::copy(desc.begin(), desc.begin() + copyLen, m_descEditBuffer);
             m_descEditBuffer[copyLen] = '\0';
             m_descEditActive = true;
-            ImGui::SetKeyboardFocusHere();
         }
 
         // 在 InputText 之前检测 Esc
         bool cancelByEscape = ImGui::IsKeyPressed(ImGuiKey_Escape);
 
+        ImGui::SetKeyboardFocusHere();
         // 输入框
         if (ImGui::InputText("##desc_edit", m_descEditBuffer, sizeof(m_descEditBuffer),
                              ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
@@ -591,9 +623,33 @@ void LayerWindow::drawDescriptionColumn(DbLayer* pLayer, ObjectId layerId) {
     }
 }
 
+void LayerWindow::commitLayerName(DbLayer* pLayer) {
+    std::string newName(m_nameEditBuffer);
+    if (newName.empty()) {
+        return;
+    }
+
+    if (newName != m_nameEditOriginal) {
+        Database* pDb = DocManager::getCurrentDocument().getDatabase();
+        if (pDb && pDb->layerExists(newName)) {
+            auto& loc = LocalizationManager::getInstance();
+            m_layerMessageBoxTitle = StringUtils::format(
+                "{} - {}",
+                loc.get("window.layer.title"),              // 图层管理器
+                loc.get("window.layer.operations.rename")); // 重命名
+            m_layerRenameErrorMsg = StringUtils::format(
+                loc.get("window.layer.prompts.nameInUse"), // 图层名称"{}"已经在使用，请输入其他名称。
+                newName);
+            m_showRenameError = true;
+            return;
+        }
+    }
+    pLayer->setName(newName);
+}
+
 std::string LayerWindow::getLineWeightString(DbLineWeight lw) const {
     if (lw == DbLineWeight::kByLwDefault) {
-        return "默认";
+        return LocalizationManager::getInstance().get("window.layer.defaultLineWeight"); // 默认
     } else if (lw == DbLineWeight::kByLayer) {
         return "ByLayer";
     } else if (lw == DbLineWeight::kByBlock) {
