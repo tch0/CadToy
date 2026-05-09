@@ -3,8 +3,7 @@
 
 // C++ 标准库
 #include <cstring>
-#include <sstream>
-#include <iomanip>
+#include <format>
 
 // 第三方库
 #include <imgui.h>
@@ -63,6 +62,10 @@ void LayerWindow::draw() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
     if (ImGui::Begin("图层", &m_visible, flags)) {
+        // 悬停时自动获得焦点，以方便选中检测等行为，让交互变得更丝滑
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+            ImGui::SetWindowFocus();
+        }
         drawLayerTable();
     }
     ImGui::End();
@@ -248,7 +251,10 @@ void LayerWindow::drawLayerRow(ObjectId layerId, bool isCurrent, Database* pDb) 
         // 这里第三个参数必须传入false，不对传入矩形进行剪切，默认true会根据imgui内部设置进行剪切之后才判断悬停，会剪切到最后一列的位置，则只有点击最后一列才能切换
         if (ImGui::IsMouseHoveringRect(rowMin, rowMax, false)) {
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                m_selectedLayerId = layerId;
+                // 因为通过悬停和鼠标获取不会考虑窗口焦点，在有上层重叠窗口和模态对话框打开时也会响应，所以需要附带检测窗口焦点
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+                    m_selectedLayerId = layerId;
+                }
             }
         }
     }
@@ -595,9 +601,7 @@ std::string LayerWindow::getLineWeightString(DbLineWeight lw) const {
     } else {
         // 转换为 mm 显示
         float mm = static_cast<float>(lw) / 100.0f;
-        std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << mm << "mm";
-        return oss.str();
+        return std::format("{:.2f}mm", mm);
     }
 }
 
