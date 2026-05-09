@@ -721,17 +721,13 @@ void Renderer::drawMenuBar() {
         
         // Tools菜单
         if (ImGui::BeginMenu(loc.get("menu.tools").c_str())) {
-            if (ImGui::MenuItem(loc.get("menu.tools.options").c_str())) {
+            if (ImGui::MenuItem(loc.get("menu.tools.options").c_str(), "OPTIONS")) {
                 CommandManager::getInstance().cancelCurrentCommandAndExecute("options");
             }
-            ImGui::MenuItem(loc.get("menu.tools.properties").c_str(), nullptr, &s_propertyBarVisible);
-            ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.tools.demo").c_str(), nullptr, &s_demoWindowVisible);
-            ImGui::MenuItem(loc.get("menu.tools.metrics").c_str(), nullptr, &s_metricsWindowVisible);
-            ImGui::Separator();
-            ImGui::MenuItem(loc.get("menu.tools.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
-            ImGui::MenuItem(loc.get("menu.tools.inputTextInfo").c_str(), nullptr, &InputContext::getInstance().getInputContextInfoVisible());
-            ImGui::MenuItem(loc.get("menu.tools.cursorTestWindow").c_str(), nullptr, &s_cursorTestWindowVisible);
+            ImGui::MenuItem(loc.get("menu.tools.properties").c_str(), "PROERTIES/PROPRTIESCLOSE", &s_propertyBarVisible);
+            if (ImGui::MenuItem(loc.get("menu.tools.layer").c_str(), "LAYER/LAYERCLOSE", LayerWindow::getInstance().isVisible())) {
+                LayerWindow::getInstance().toggle();
+            }
             ImGui::EndMenu();
         }
         
@@ -743,6 +739,17 @@ void Renderer::drawMenuBar() {
             if (ImGui::MenuItem("中文", nullptr, loc.getCurrentLanguage() == "zh")) {
                 loc.setLanguage("zh");
             }
+            ImGui::EndMenu();
+        }
+        
+        // Debug菜单
+        if (ImGui::BeginMenu(loc.get("menu.debug").c_str())) {
+            ImGui::MenuItem(loc.get("menu.debug.demo").c_str(), nullptr, &s_demoWindowVisible);
+            ImGui::MenuItem(loc.get("menu.debug.metrics").c_str(), nullptr, &s_metricsWindowVisible);
+            ImGui::Separator();
+            ImGui::MenuItem(loc.get("menu.debug.renderingInfo").c_str(), nullptr, &s_renderingInfoVisible);
+            ImGui::MenuItem(loc.get("menu.debug.inputTextInfo").c_str(), nullptr, &InputContext::getInstance().getInputContextInfoVisible());
+            ImGui::MenuItem(loc.get("menu.debug.cursorTestWindow").c_str(), nullptr, &s_cursorTestWindowVisible);
             ImGui::EndMenu();
         }
         
