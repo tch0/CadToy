@@ -26,7 +26,7 @@ CompileFlags:
 
 # 第三方库相关文件
 If:
-  PathMatch: "(3rdparty|imgui|3rdparty-install)/.*"
+  PathMatch: "(3rdparty|3rdparty-install|3rdparty-src)/.*"
 Diagnostics:
   # 禁用所有诊断
   Suppress: ["*"]

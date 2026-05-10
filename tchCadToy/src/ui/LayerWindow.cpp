@@ -66,8 +66,9 @@ void LayerWindow::draw() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
     if (ImGui::Begin(loc.get("window.layer.title").c_str(), &m_visible, flags)) { // 图层管理器
-        // 悬停时自动获得焦点，以方便选中检测等行为，让交互变得更丝滑
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+        // 悬停时如果还没有获得焦点则自动获得焦点，以方便选中检测等行为，让交互变得更丝滑，仅鼠标进入时设置一次，避免每帧都设置（会导致内部窗口内部弹出的菜单失焦）
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
+            && !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
             ImGui::SetWindowFocus();
         }
         drawLayerTable();
@@ -342,13 +343,9 @@ void LayerWindow::drawNameColumn(DbLayer* pLayer, ObjectId layerId) {
             m_nameEditActive = false;
         }
 
-        // Esc 取消（恢复原始值，不提交）
+        // Esc 取消，清除缓冲区，结束编辑
         if (cancelByEscape) {
-            // 缓冲区已被 EscapeClearsAll 清空，恢复原始值
-            std::copy(m_nameEditOriginal.begin(),
-                      m_nameEditOriginal.begin() + std::min(m_nameEditOriginal.size(), sizeof(m_nameEditBuffer) - 1),
-                      m_nameEditBuffer);
-            m_nameEditBuffer[std::min(m_nameEditOriginal.size(), sizeof(m_nameEditBuffer) - 1)] = '\0';
+            m_nameEditBuffer[0] = '\0';
             m_editingNameId = 0;
             m_nameEditActive = false;
         }
@@ -576,12 +573,9 @@ void LayerWindow::drawDescriptionColumn(DbLayer* pLayer, ObjectId layerId) {
             m_descEditActive = false;
         }
 
-        // Esc 取消（恢复原始值，不提交）
+        // Esc 取消，清除缓冲区，结束编辑
         if (cancelByEscape) {
-            std::copy(m_descEditOriginal.begin(),
-                      m_descEditOriginal.begin() + std::min(m_descEditOriginal.size(), sizeof(m_descEditBuffer) - 1),
-                      m_descEditBuffer);
-            m_descEditBuffer[std::min(m_descEditOriginal.size(), sizeof(m_descEditBuffer) - 1)] = '\0';
+            m_descEditBuffer[0] = '\0';
             m_editingDescId = 0;
             m_descEditActive = false;
         }
