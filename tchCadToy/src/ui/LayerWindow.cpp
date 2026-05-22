@@ -66,7 +66,7 @@ void LayerWindow::draw() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
     if (ImGui::Begin(loc.get("window.layer.title").c_str(), &m_visible, flags)) { // 图层管理器
-        // 悬停时如果还没有获得焦点则自动获得焦点，以方便选中检测等行为，让交互变得更丝滑，仅鼠标进入时设置一次，避免每帧都设置（会导致内部窗口内部弹出的菜单失焦）
+        // 悬停时如果还没有获得焦点则自动获得焦点，以方便选中检测等行为，让交互变得更丝滑，仅鼠标进入时设置一次，避免每帧都设置（会导致窗口内部弹出的菜单失焦）
         if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
             && !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
             ImGui::SetWindowFocus();
@@ -278,7 +278,7 @@ void LayerWindow::drawLayerRow(ObjectId layerId, bool isCurrent, Database* pDb) 
         if (ImGui::IsMouseHoveringRect(rowMin, rowMax, false)) {
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 // 因为通过悬停和鼠标获取不会考虑窗口焦点，在有上层重叠窗口和模态对话框打开时也会响应，所以需要附带检测窗口焦点
-                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow)) {
                     m_selectedLayerId = layerId;
                 }
             }

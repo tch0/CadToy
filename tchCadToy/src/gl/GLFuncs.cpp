@@ -64,14 +64,12 @@ void printShaderLog(GLuint shader, const std::source_location& loc)
 {
     GLint len = 0;
     GLint chWritten = 0;
-    char* log = nullptr;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
     if (len > 0)
     {
-        log = new char[len];
-        glGetShaderInfoLog(shader, len, &chWritten, log);
+        std::string log(len, 0);
+        glGetShaderInfoLog(shader, len, &chWritten, log.data());
         globalLogger().info(std::format("Shader Info Log: \n{}", log), loc);
-        delete[] log;
     }
 }
 // for GLSL link error
@@ -79,14 +77,12 @@ void printProgramLog(GLuint program, const std::source_location& loc)
 {
     GLint len = 0;
     GLint chWritten = 0;
-    char* log = nullptr;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
     if (len > 0)
     {
-        log = new char[len];
-        glGetProgramInfoLog(program, len, &chWritten, log);
+        std::string log(len, 0);
+        glGetProgramInfoLog(program, len, &chWritten, log.data());
         globalLogger().info(std::format("Shader Info Log: \n{}", log), loc);
-        delete[] log;
     }
 }
 
